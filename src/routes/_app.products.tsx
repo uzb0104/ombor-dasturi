@@ -32,7 +32,12 @@ function ProductsPage() {
     return true;
   }), [products, search, cat, veh, vehicleFilter]);
 
-  const [form, setForm] = useState({
+  type FormState = {
+    name: string; sku: string; barcode: string;
+    vehicle: typeof VEHICLE_BRANDS[number]; category: typeof CATEGORIES[number];
+    supplierId: string; buyPrice: number; sellPrice: number; quantity: number; minQty: number;
+  };
+  const [form, setForm] = useState<FormState>({
     name: "", sku: "", barcode: "", vehicle: VEHICLE_BRANDS[0], category: CATEGORIES[0],
     supplierId: "", buyPrice: 0, sellPrice: 0, quantity: 0, minQty: 5,
   });
