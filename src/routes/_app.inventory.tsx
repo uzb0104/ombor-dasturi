@@ -8,7 +8,7 @@ import { Package, Warehouse, AlertTriangle, Car, ChevronLeft, Search } from "luc
 import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { motion } from "framer-motion";
+
 
 export const Route = createFileRoute("/_app/inventory")({ component: InventoryPage });
 
