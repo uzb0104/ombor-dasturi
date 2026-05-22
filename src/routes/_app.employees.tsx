@@ -11,14 +11,15 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogT
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, HandCoins } from "lucide-react";
+import { Plus, HandCoins, Edit, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_app/employees")({ component: EmployeesPage });
 
 function EmployeesPage() {
-  const { employees, addEmployee, updateEmployee } = useStore();
+  const { employees, addEmployee, updateEmployee, deleteEmployee } = useStore();
+  const [editing, setEditing] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
   const [advanceFor, setAdvanceFor] = useState<string | null>(null);
   const [advanceAmount, setAdvanceAmount] = useState(0);
@@ -29,12 +30,26 @@ function EmployeesPage() {
 
   const submit = () => {
     if (!form.name) { toast.error("Ism majburiy"); return; }
-    addEmployee({
-      id: `emp_${Math.random().toString(36).slice(2,9)}`,
-      ...form, role: form.role as any, advance: 0, status: "Faol",
-    });
-    toast.success("Xodim qo'shildi"); setOpen(false);
+    if (editing) {
+      updateEmployee(editing, { ...form, role: form.role as any });
+      toast.success("Yangilandi");
+    } else {
+      addEmployee({
+        id: `emp_${Math.random().toString(36).slice(2,9)}`,
+        ...form, role: form.role as any, advance: 0, status: "Faol",
+      });
+      toast.success("Xodim qo'shildi");
+    }
+    setOpen(false); setEditing(null);
     setForm({ name: "", phone: "", role: ROLES[1], salary: 4000000, hireDate: new Date().toISOString().slice(0,10) });
+  };
+
+  const startEdit = (id: string) => {
+    const e = employees.find(x => x.id === id);
+    if (!e) return;
+    setEditing(id);
+    setForm({ name: e.name, phone: e.phone, role: e.role, salary: e.salary, hireDate: e.hireDate });
+    setOpen(true);
   };
 
   const giveAdvance = () => {
@@ -49,10 +64,10 @@ function EmployeesPage() {
   return (
     <div className="space-y-5">
       <PageHeader title="Xodimlar" subtitle={`${employees.length} ta xodim`} actions={
-        <Dialog open={open} onOpenChange={setOpen}>
+        <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) setEditing(null); }}>
           <DialogTrigger asChild><Button><Plus className="h-4 w-4 mr-1" />Yangi xodim</Button></DialogTrigger>
           <DialogContent>
-            <DialogHeader><DialogTitle>Yangi xodim</DialogTitle></DialogHeader>
+            <DialogHeader><DialogTitle>{editing ? "Xodimni tahrirlash" : "Yangi xodim"}</DialogTitle></DialogHeader>
             <div className="space-y-3">
               <div><Label>F.I.SH</Label><Input value={form.name} onChange={(e) => setForm({...form, name: e.target.value})} /></div>
               <div><Label>Telefon</Label><Input value={form.phone} onChange={(e) => setForm({...form, phone: e.target.value})} /></div>
@@ -99,6 +114,10 @@ function EmployeesPage() {
                   <TableCell className="text-right">
                     <Button size="sm" variant="outline" onClick={() => { setAdvanceFor(e.id); setAdvanceAmount(0); }}>
                       <HandCoins className="h-3 w-3 mr-1" />Avans
+                    </Button>
+                    <Button variant="ghost" size="icon" onClick={() => startEdit(e.id)}><Edit className="h-4 w-4" /></Button>
+                    <Button variant="ghost" size="icon" onClick={() => { if (confirm(`${e.name} ni o'chirish?`)) { deleteEmployee(e.id); toast.success("O'chirildi"); } }}>
+                      <Trash2 className="h-4 w-4 text-destructive" />
                     </Button>
                   </TableCell>
                 </TableRow>
