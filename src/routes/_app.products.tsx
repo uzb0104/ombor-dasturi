@@ -34,11 +34,13 @@ function ProductsPage() {
 
   type FormState = {
     name: string; sku: string; barcode: string;
-    vehicle: typeof VEHICLE_BRANDS[number]; category: typeof CATEGORIES[number];
+    vehicle: (typeof VEHICLE_BRANDS)[number]; category: (typeof CATEGORIES)[number];
     supplierId: string; buyPrice: number; sellPrice: number; quantity: number; minQty: number;
   };
   const [form, setForm] = useState<FormState>({
-    name: "", sku: "", barcode: "", vehicle: VEHICLE_BRANDS[0], category: CATEGORIES[0],
+    name: "", sku: "", barcode: "",
+    vehicle: VEHICLE_BRANDS[0] as (typeof VEHICLE_BRANDS)[number],
+    category: CATEGORIES[0] as (typeof CATEGORIES)[number],
     supplierId: "", buyPrice: 0, sellPrice: 0, quantity: 0, minQty: 5,
   });
 
