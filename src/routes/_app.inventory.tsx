@@ -101,15 +101,11 @@ function InventoryPage() {
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-        {brandStats.map((b, i) => (
-          <motion.button
+        {brandStats.map((b) => (
+          <button
             key={b.brand}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.03 }}
-            whileHover={{ y: -3 }}
             onClick={() => setSelected(b.brand)}
-            className="text-left group rounded-2xl border bg-card p-5 shadow-sm hover:shadow-lg hover:border-primary/40 transition-all"
+            className="text-left group rounded-2xl border bg-card p-5 shadow-sm hover:shadow-lg hover:-translate-y-0.5 hover:border-primary/40 transition-all animate-fade-in"
           >
             <div className="flex items-start justify-between">
               <div className="h-12 w-12 rounded-xl bg-primary/10 text-primary grid place-items-center group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
@@ -129,7 +125,7 @@ function InventoryPage() {
               <span className="text-muted-foreground">Qiymati: </span>
               <span className="font-semibold">{formatSom(b.value)}</span>
             </div>
-          </motion.button>
+          </button>
         ))}
       </div>
     </div>
