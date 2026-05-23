@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { PageHeader, StatusBadge } from "@/components/ui-kit";
 import { useStore } from "@/lib/store";
-import { CATEGORIES, VEHICLE_BRANDS, formatSom } from "@/lib/constants";
+import { VEHICLE_BRANDS, formatSom } from "@/lib/constants";
 import { useMemo, useState } from "react";
 import { Plus, Search, Edit, Trash2, Package, ScanBarcode } from "lucide-react";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -17,25 +17,25 @@ export const Route = createFileRoute("/_app/products")({ component: ProductsPage
 
 type FormState = {
   name: string; barcode: string;
-  vehicle: (typeof VEHICLE_BRANDS)[number]; category: (typeof CATEGORIES)[number];
+  vehicle: (typeof VEHICLE_BRANDS)[number]; category: string;
   supplierId: string; buyPrice: number; sellPrice: number; quantity: number; minQty: number;
 };
 
-const emptyForm = (): FormState => ({
+const emptyForm = (firstCategory: string): FormState => ({
   name: "", barcode: "",
   vehicle: VEHICLE_BRANDS[0] as (typeof VEHICLE_BRANDS)[number],
-  category: CATEGORIES[0] as (typeof CATEGORIES)[number],
+  category: firstCategory,
   supplierId: "", buyPrice: 0, sellPrice: 0, quantity: 0, minQty: 5,
 });
 
 function ProductsPage() {
-  const { products, suppliers, addProduct, updateProduct, deleteProduct, vehicleFilter } = useStore();
+  const { products, suppliers, categories, addProduct, updateProduct, deleteProduct, vehicleFilter } = useStore();
   const [search, setSearch] = useState("");
   const [cat, setCat] = useState<string>("all");
   const [veh, setVeh] = useState<string>("all");
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<string | null>(null);
-  const [form, setForm] = useState<FormState>(emptyForm());
+  const [form, setForm] = useState<FormState>(emptyForm(categories[0] || ""));
 
   const filtered = useMemo(() => products.filter(p => {
     const s = search.toLowerCase();
@@ -60,25 +60,35 @@ function ProductsPage() {
   };
 
   const generateBarcode = () => {
-    setForm(f => ({ ...f, barcode: `486${Math.floor(100000000 + Math.random() * 899999999)}` }));
+    let code = "";
+    do {
+      code = `486${Math.floor(100000000 + Math.random() * 899999999)}`;
+    } while (products.some(p => p.barcode === code));
+    setForm(f => ({ ...f, barcode: code }));
     toast.success("Barkod yaratildi");
   };
 
   const submit = () => {
     if (!form.name.trim()) { toast.error("Tovar nomi majburiy"); return; }
+    const bc = form.barcode.trim();
+    if (bc) {
+      const dup = products.find(p => p.barcode === bc && p.id !== editing);
+      if (dup) { toast.error(`Bu barkod allaqachon mavjud: ${dup.name}`); return; }
+    }
     if (editing) {
-      updateProduct(editing, { ...form, sku: "" });
+      updateProduct(editing, { ...form, barcode: bc, sku: "" });
       toast.success("Tovar yangilandi");
     } else {
       addProduct({
         id: `prd_${Math.random().toString(36).slice(2, 9)}`,
         sku: "",
         ...form,
+        barcode: bc,
         supplierId: form.supplierId || suppliers[0]?.id || "",
       });
       toast.success("Tovar qo'shildi");
     }
-    setOpen(false); setEditing(null); setForm(emptyForm());
+    setOpen(false); setEditing(null); setForm(emptyForm(categories[0] || ""));
   };
 
   return (
@@ -87,7 +97,7 @@ function ProductsPage() {
         title="Tovarlar"
         subtitle={`Jami ${products.length} ta tovar`}
         actions={
-          <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) { setEditing(null); setForm(emptyForm()); } }}>
+          <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) { setEditing(null); setForm(emptyForm(categories[0] || "")); } }}>
             <DialogTrigger asChild>
               <Button><Plus className="h-4 w-4 mr-1" />Yangi tovar</Button>
             </DialogTrigger>
@@ -98,10 +108,18 @@ function ProductsPage() {
                 <div className="col-span-2">
                   <Label>Barkod (ixtiyoriy)</Label>
                   <div className="flex gap-2">
-                    <Input value={form.barcode} onChange={(e) => setForm({ ...form, barcode: e.target.value })} placeholder="Skanerlash yoki qo'lda kiriting" className="font-mono" />
-                    <Button type="button" variant="outline" onClick={generateBarcode}><ScanBarcode className="h-4 w-4 mr-1" />Yaratish</Button>
+                    <Input
+                      value={form.barcode}
+                      onChange={(e) => setForm({ ...form, barcode: e.target.value })}
+                      placeholder="Skanerlang yoki qo'lda kiriting"
+                      className="font-mono"
+                      autoFocus={!editing}
+                    />
+                    <Button type="button" variant="outline" onClick={generateBarcode}>
+                      <ScanBarcode className="h-4 w-4 mr-1" />Yaratish
+                    </Button>
                   </div>
-                  <p className="text-xs text-muted-foreground mt-1">Bo'sh qoldirilsa, tovar barkodsiz saqlanadi.</p>
+                  <p className="text-xs text-muted-foreground mt-1">USB skaner avtomatik kiritadi. Bo'sh qoldirilsa, tovar barkodsiz saqlanadi.</p>
                 </div>
                 <div><Label>Brend</Label>
                   <Select value={form.vehicle} onValueChange={(v) => setForm({ ...form, vehicle: v as FormState["vehicle"] })}>
@@ -110,9 +128,9 @@ function ProductsPage() {
                   </Select>
                 </div>
                 <div><Label>Kategoriya</Label>
-                  <Select value={form.category} onValueChange={(v) => setForm({ ...form, category: v as FormState["category"] })}>
+                  <Select value={form.category} onValueChange={(v) => setForm({ ...form, category: v })}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>{CATEGORIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
+                    <SelectContent>{categories.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
                   </Select>
                 </div>
                 <div className="col-span-2"><Label>Yetkazib beruvchi</Label>
@@ -144,7 +162,7 @@ function ProductsPage() {
           </Select>
           <Select value={cat} onValueChange={setCat}>
             <SelectTrigger className="w-[180px]"><SelectValue placeholder="Kategoriya" /></SelectTrigger>
-            <SelectContent><SelectItem value="all">Barcha kategoriyalar</SelectItem>{CATEGORIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
+            <SelectContent><SelectItem value="all">Barcha kategoriyalar</SelectItem>{categories.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
           </Select>
         </div>
 
@@ -187,7 +205,7 @@ function ProductsPage() {
                   <TableCell><StatusBadge qty={p.quantity} min={p.minQty} /></TableCell>
                   <TableCell className="text-right">
                     <Button variant="ghost" size="icon" onClick={() => startEdit(p.id)}><Edit className="h-4 w-4" /></Button>
-                    <Button variant="ghost" size="icon" onClick={() => { deleteProduct(p.id); toast.success("O'chirildi"); }}>
+                    <Button variant="ghost" size="icon" onClick={() => { if (confirm(`"${p.name}" o'chirilsinmi?`)) { deleteProduct(p.id); toast.success("O'chirildi"); } }}>
                       <Trash2 className="h-4 w-4 text-destructive" />
                     </Button>
                   </TableCell>
