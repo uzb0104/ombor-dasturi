@@ -5,11 +5,12 @@ export const VEHICLE_BRANDS = [
 ] as const;
 export type VehicleBrand = (typeof VEHICLE_BRANDS)[number];
 
-export const CATEGORIES = [
+export const DEFAULT_CATEGORIES = [
   "Dvigatel", "Tormoz tizimi", "Elektr", "Shinalar", "Akkumulyator",
   "Filtrlar", "Moy", "Kuzov qismlari", "Podveska",
 ] as const;
-export type Category = (typeof CATEGORIES)[number];
+export const CATEGORIES = DEFAULT_CATEGORIES; // backward compat
+export type Category = string;
 
 export const WAREHOUSES = ["Asosiy ombor", "Filial 1", "Filial 2"] as const;
 export type Warehouse = (typeof WAREHOUSES)[number];
@@ -33,6 +34,10 @@ export const NAV = [
   { to: "/barcode", label: "Barkod", icon: "ScanBarcode" },
   { to: "/settings", label: "Sozlamalar", icon: "Settings" },
 ] as const;
+
+// Modules user can be granted access to (settings always available to admin)
+export const PERMISSION_MODULES = NAV.filter(n => n.to !== "/settings").map(n => ({ path: n.to, label: n.label }));
+export const ALL_PERMISSIONS = PERMISSION_MODULES.map(m => m.path);
 
 export const formatSom = (n: number) =>
   new Intl.NumberFormat("uz-UZ").format(Math.round(n)) + " so'm";
