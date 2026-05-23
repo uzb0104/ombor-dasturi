@@ -48,7 +48,7 @@ export type Employee = {
 export type Sale = {
   id: string;
   date: string;
-  customerId: string;
+  customerId: string | null;
   sellerId: string;
   items: { productId: string; qty: number; price: number; buyPrice: number }[];
   discount: number;
