@@ -4,7 +4,7 @@ import {
   Users, Truck, Wallet, UserCog, Receipt, BarChart3, ScanBarcode, Settings,
   Bell, Search, Sun, Moon, LogOut, ChevronDown, Menu, Car, X,
 } from "lucide-react";
-import { NAV, VEHICLE_BRANDS, WAREHOUSES } from "@/lib/constants";
+import { NAV, WAREHOUSES } from "@/lib/constants";
 import { useStore } from "@/lib/store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
