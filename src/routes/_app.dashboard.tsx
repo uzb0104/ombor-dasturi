@@ -205,7 +205,7 @@ function Dashboard() {
               <div key={p.id} className="flex items-center justify-between p-2 rounded-lg hover:bg-muted/50">
                 <div className="min-w-0">
                   <div className="font-medium text-sm truncate">{p.name}</div>
-                  <div className="text-xs text-muted-foreground">{p.vehicle} · {p.sku}</div>
+                  <div className="text-xs text-muted-foreground">{p.vehicle} · {p.category}</div>
                 </div>
                 <Badge variant="destructive" className="ml-2">{p.quantity} dona</Badge>
               </div>
