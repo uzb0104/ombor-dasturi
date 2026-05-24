@@ -26,7 +26,7 @@ const emptyUser = (): UserForm => ({
 });
 
 function SettingsPage() {
-  const { user, theme, toggleTheme, resetData, appUsers, addAppUser, updateAppUser, deleteAppUser } = useStore();
+  const { user, theme, toggleTheme, resetData, appUsers, addAppUser, updateAppUser, deleteAppUser, vehicleBrands, products, addVehicleBrand, updateVehicleBrand, deleteVehicleBrand } = useStore();
   const isAdmin = user?.role === "Admin";
 
   return (
