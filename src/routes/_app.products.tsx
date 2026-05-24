@@ -17,13 +17,13 @@ export const Route = createFileRoute("/_app/products")({ component: ProductsPage
 
 type FormState = {
   name: string; barcode: string;
-  vehicle: (typeof VEHICLE_BRANDS)[number]; category: string;
+  vehicle: string; category: string;
   supplierId: string; buyPrice: number; sellPrice: number; quantity: number; minQty: number;
 };
 
-const emptyForm = (firstCategory: string): FormState => ({
+const emptyForm = (firstCategory: string, firstBrand: string): FormState => ({
   name: "", barcode: "",
-  vehicle: VEHICLE_BRANDS[0] as (typeof VEHICLE_BRANDS)[number],
+  vehicle: firstBrand,
   category: firstCategory,
   supplierId: "", buyPrice: 0, sellPrice: 0, quantity: 0, minQty: 5,
 });
