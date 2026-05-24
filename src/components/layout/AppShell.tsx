@@ -4,7 +4,7 @@ import {
   Users, Truck, Wallet, UserCog, Receipt, BarChart3, ScanBarcode, Settings,
   Bell, Search, Sun, Moon, LogOut, ChevronDown, Menu, Car, X,
 } from "lucide-react";
-import { NAV, VEHICLE_BRANDS, WAREHOUSES } from "@/lib/constants";
+import { NAV, WAREHOUSES } from "@/lib/constants";
 import { useStore } from "@/lib/store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,7 +23,7 @@ const ICONS = {
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const navigate = useNavigate();
-  const { user, logout, theme, toggleTheme, warehouse, setWarehouse, vehicleFilter, setVehicleFilter } = useStore();
+  const { user, logout, theme, toggleTheme, warehouse, setWarehouse, vehicleFilter, setVehicleFilter, vehicleBrands } = useStore();
   const path = useRouterState({ select: (s) => s.location.pathname });
   const [mobileOpen, setMobileOpen] = useState(false);
   const [now, setNow] = useState(new Date());
@@ -82,7 +82,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Barchasi</SelectItem>
-              {VEHICLE_BRANDS.map((b) => <SelectItem key={b} value={b}>{b}</SelectItem>)}
+              {vehicleBrands.map((b: string) => <SelectItem key={b} value={b}>{b}</SelectItem>)}
             </SelectContent>
           </Select>
         </div>

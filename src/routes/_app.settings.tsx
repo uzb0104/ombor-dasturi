@@ -14,7 +14,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useStore, type AppUser } from "@/lib/store";
 import { ROLES, PERMISSION_MODULES, ALL_PERMISSIONS } from "@/lib/constants";
 import { toast } from "sonner";
-import { Plus, Edit, Trash2, Shield, User as UserIcon, Lock, Sun, AlertTriangle } from "lucide-react";
+import { Plus, Edit, Trash2, Shield, User as UserIcon, Lock, Sun, AlertTriangle, Car } from "lucide-react";
 import { useState } from "react";
 
 export const Route = createFileRoute("/_app/settings")({ component: SettingsPage });
@@ -26,7 +26,7 @@ const emptyUser = (): UserForm => ({
 });
 
 function SettingsPage() {
-  const { user, theme, toggleTheme, resetData, appUsers, addAppUser, updateAppUser, deleteAppUser } = useStore();
+  const { user, theme, toggleTheme, resetData, appUsers, addAppUser, updateAppUser, deleteAppUser, vehicleBrands, products, addVehicleBrand, updateVehicleBrand, deleteVehicleBrand } = useStore();
   const isAdmin = user?.role === "Admin";
 
   return (
@@ -34,9 +34,10 @@ function SettingsPage() {
       <PageHeader title="Sozlamalar" subtitle="Profil, foydalanuvchilar va tizim sozlamalari" />
 
       <Tabs defaultValue="profile">
-        <TabsList>
+        <TabsList className="flex flex-wrap h-auto">
           <TabsTrigger value="profile"><UserIcon className="h-4 w-4 mr-1.5" />Profil</TabsTrigger>
           {isAdmin && <TabsTrigger value="users"><Shield className="h-4 w-4 mr-1.5" />Foydalanuvchilar</TabsTrigger>}
+          {isAdmin && <TabsTrigger value="brands"><Car className="h-4 w-4 mr-1.5" />Avtomobil brendlari</TabsTrigger>}
           <TabsTrigger value="security"><Lock className="h-4 w-4 mr-1.5" />Xavfsizlik</TabsTrigger>
           <TabsTrigger value="appearance"><Sun className="h-4 w-4 mr-1.5" />Ko'rinish</TabsTrigger>
           {isAdmin && <TabsTrigger value="danger" className="text-destructive"><AlertTriangle className="h-4 w-4 mr-1.5" />Xavfli zona</TabsTrigger>}
@@ -58,6 +59,12 @@ function SettingsPage() {
         {isAdmin && (
           <TabsContent value="users" className="mt-5">
             <UsersManagement appUsers={appUsers} add={addAppUser} update={updateAppUser} remove={deleteAppUser} />
+          </TabsContent>
+        )}
+
+        {isAdmin && (
+          <TabsContent value="brands" className="mt-5">
+            <BrandsManagement brands={vehicleBrands} products={products} add={addVehicleBrand} update={updateVehicleBrand} remove={deleteVehicleBrand} />
           </TabsContent>
         )}
 
@@ -232,6 +239,81 @@ function UsersManagement({
             ))}
           </TableBody>
         </Table>
+      </div>
+    </Card>
+  );
+}
+
+function BrandsManagement({
+  brands, products, add, update, remove,
+}: {
+  brands: string[];
+  products: { vehicle: string }[];
+  add: (b: string) => void;
+  update: (oldName: string, newName: string) => void;
+  remove: (b: string) => void;
+}) {
+  const [newBrand, setNewBrand] = useState("");
+  const [editing, setEditing] = useState<string | null>(null);
+  const [editValue, setEditValue] = useState("");
+
+  const addBrand = () => {
+    const n = newBrand.trim();
+    if (!n) { toast.error("Brend nomini kiriting"); return; }
+    if (brands.includes(n)) { toast.error("Bu brend allaqachon mavjud"); return; }
+    add(n); setNewBrand(""); toast.success("Brend qo'shildi");
+  };
+
+  const saveEdit = (oldName: string) => {
+    const n = editValue.trim();
+    if (!n) return;
+    if (n !== oldName && brands.includes(n)) { toast.error("Bunday brend bor"); return; }
+    update(oldName, n); setEditing(null); toast.success("Yangilandi");
+  };
+
+  const removeBrand = (b: string) => {
+    const count = products.filter(p => p.vehicle === b).length;
+    if (count > 0) {
+      if (!confirm(`"${b}" brendiga ${count} ta tovar bog'langan. Baribir o'chirilsinmi?`)) return;
+    } else if (!confirm(`"${b}" brendi o'chirilsinmi?`)) return;
+    remove(b); toast.success("O'chirildi");
+  };
+
+  return (
+    <Card className="rounded-2xl">
+      <div className="p-4 border-b">
+        <h3 className="font-semibold">Avtomobil brendlari</h3>
+        <p className="text-xs text-muted-foreground mt-0.5">Yangi avtomobil brendlarini qo'shing yoki mavjudlarini tahrirlang</p>
+        <div className="flex flex-col sm:flex-row gap-2 mt-3 max-w-lg">
+          <Input value={newBrand} onChange={(e) => setNewBrand(e.target.value)} placeholder="Masalan: BYD" onKeyDown={(e) => e.key === "Enter" && addBrand()} />
+          <Button onClick={addBrand}><Plus className="h-4 w-4 mr-1" />Qo'shish</Button>
+        </div>
+      </div>
+      <div className="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+        {brands.map(b => {
+          const count = products.filter(p => p.vehicle === b).length;
+          const isEditing = editing === b;
+          return (
+            <div key={b} className="flex items-center gap-2 rounded-lg border p-2 bg-card">
+              {isEditing ? (
+                <>
+                  <Input autoFocus value={editValue} onChange={(e) => setEditValue(e.target.value)} onKeyDown={(e) => e.key === "Enter" && saveEdit(b)} className="h-8" />
+                  <Button size="sm" onClick={() => saveEdit(b)}>OK</Button>
+                  <Button size="sm" variant="ghost" onClick={() => setEditing(null)}>X</Button>
+                </>
+              ) : (
+                <>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-medium text-sm truncate">{b}</div>
+                    <div className="text-xs text-muted-foreground">{count} ta tovar</div>
+                  </div>
+                  <Button variant="ghost" size="icon" onClick={() => { setEditing(b); setEditValue(b); }}><Edit className="h-4 w-4" /></Button>
+                  <Button variant="ghost" size="icon" onClick={() => removeBrand(b)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                </>
+              )}
+            </div>
+          );
+        })}
       </div>
     </Card>
   );

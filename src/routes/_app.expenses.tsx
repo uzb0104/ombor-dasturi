@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Plus, Receipt, TrendingUp, TrendingDown } from "lucide-react";
+import { Plus, Receipt, TrendingUp, TrendingDown, Edit, Trash2 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
@@ -18,10 +18,14 @@ const CATS = ["Ish haqi","Soliq","Transport","Elektr","Ombor ijarasi","Ta'mirlas
 
 export const Route = createFileRoute("/_app/expenses")({ component: ExpensesPage });
 
+type Form = { category: string; amount: number; note: string };
+const empty = (): Form => ({ category: CATS[0]!, amount: 0, note: "" });
+
 function ExpensesPage() {
-  const { expenses, addExpense, sales } = useStore();
+  const { expenses, addExpense, updateExpense, deleteExpense, sales } = useStore();
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState({ category: CATS[0]!, amount: 0, note: "" });
+  const [editing, setEditing] = useState<string | null>(null);
+  const [form, setForm] = useState<Form>(empty());
 
   const total = expenses.reduce((a,e) => a + e.amount, 0);
   const profit = sales.reduce((a,s) => a + s.profit, 0);
@@ -32,20 +36,33 @@ function ExpensesPage() {
     return Array.from(m.entries()).map(([name, value]) => ({ name, value }));
   }, [expenses]);
 
+  const startEdit = (id: string) => {
+    const e = expenses.find(x => x.id === id);
+    if (!e) return;
+    setEditing(id);
+    setForm({ category: e.category, amount: e.amount, note: e.note });
+    setOpen(true);
+  };
+
   const submit = () => {
     if (!form.amount) { toast.error("Summa kiriting"); return; }
-    addExpense({ id: `exp_${Math.random().toString(36).slice(2,9)}`, date: new Date().toISOString(), ...form });
-    toast.success("Xarajat qo'shildi"); setOpen(false);
-    setForm({ category: CATS[0]!, amount: 0, note: "" });
+    if (editing) {
+      updateExpense(editing, form);
+      toast.success("Yangilandi");
+    } else {
+      addExpense({ id: `exp_${Math.random().toString(36).slice(2,9)}`, date: new Date().toISOString(), ...form });
+      toast.success("Xarajat qo'shildi");
+    }
+    setOpen(false); setEditing(null); setForm(empty());
   };
 
   return (
     <div className="space-y-5">
       <PageHeader title="Xarajatlar" subtitle={`${expenses.length} ta yozuv`} actions={
-        <Dialog open={open} onOpenChange={setOpen}>
+        <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) { setEditing(null); setForm(empty()); } }}>
           <DialogTrigger asChild><Button><Plus className="h-4 w-4 mr-1" />Yangi xarajat</Button></DialogTrigger>
           <DialogContent>
-            <DialogHeader><DialogTitle>Yangi xarajat</DialogTitle></DialogHeader>
+            <DialogHeader><DialogTitle>{editing ? "Xarajatni tahrirlash" : "Yangi xarajat"}</DialogTitle></DialogHeader>
             <div className="space-y-3">
               <div><Label>Turi</Label>
                 <Select value={form.category} onValueChange={(v) => setForm({...form, category: v})}>
@@ -61,9 +78,9 @@ function ExpensesPage() {
         </Dialog>
       } />
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4">
         <StatCard label="Jami xarajatlar" value={formatSom(total)} icon={Receipt} accent="warning" />
-        <StatCard label="Jami foyda" value={formatSom(profit)} icon={TrendingUp} accent="success" />
+        <StatCard label="Yalpi foyda" value={formatSom(profit)} icon={TrendingUp} accent="success" />
         <StatCard label="Sof foyda" value={formatSom(profit - total)} icon={TrendingDown} accent={profit - total > 0 ? "success" : "destructive"} />
       </div>
 
@@ -83,19 +100,32 @@ function ExpensesPage() {
       </Card>
 
       <Card className="rounded-2xl">
-        <Table>
-          <TableHeader><TableRow><TableHead>Sana</TableHead><TableHead>Turi</TableHead><TableHead>Izoh</TableHead><TableHead className="text-right">Summa</TableHead></TableRow></TableHeader>
-          <TableBody>
-            {expenses.map(e => (
-              <TableRow key={e.id} className="hover:bg-muted/40">
-                <TableCell className="text-sm">{new Date(e.date).toLocaleDateString("uz-UZ")}</TableCell>
-                <TableCell><span className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-xs">{e.category}</span></TableCell>
-                <TableCell className="text-sm text-muted-foreground">{e.note}</TableCell>
-                <TableCell className="text-right tabular-nums font-semibold">{formatSom(e.amount)}</TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader><TableRow>
+              <TableHead>Sana</TableHead><TableHead>Turi</TableHead>
+              <TableHead className="hidden sm:table-cell">Izoh</TableHead>
+              <TableHead className="text-right">Summa</TableHead>
+              <TableHead className="text-right">Amallar</TableHead>
+            </TableRow></TableHeader>
+            <TableBody>
+              {expenses.map(e => (
+                <TableRow key={e.id} className="hover:bg-muted/40">
+                  <TableCell className="text-sm">{new Date(e.date).toLocaleDateString("uz-UZ")}</TableCell>
+                  <TableCell><span className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-xs">{e.category}</span></TableCell>
+                  <TableCell className="hidden sm:table-cell text-sm text-muted-foreground">{e.note}</TableCell>
+                  <TableCell className="text-right tabular-nums font-semibold">{formatSom(e.amount)}</TableCell>
+                  <TableCell className="text-right whitespace-nowrap">
+                    <Button variant="ghost" size="icon" onClick={() => startEdit(e.id)}><Edit className="h-4 w-4" /></Button>
+                    <Button variant="ghost" size="icon" onClick={() => { if (confirm("Xarajatni o'chirish?")) { deleteExpense(e.id); toast.success("O'chirildi"); } }}>
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
       </Card>
     </div>
   );

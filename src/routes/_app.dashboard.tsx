@@ -38,7 +38,8 @@ function Dashboard() {
   const monthSales = sum(filtered.sales.filter(s => new Date(s.date) >= monthAgo));
   const totalProfit = filtered.sales.reduce((a, s) => a + s.profit, 0);
   const totalExpenses = expenses.reduce((a, e) => a + e.amount, 0);
-  const salaryExpense = employees.reduce((a, e) => a + e.salary, 0);
+  const salaryExpense = employees.filter(e => e.status === "Faol").reduce((a, e) => a + e.salary, 0);
+  const netProfit = totalProfit - totalExpenses;
   const totalDebt = customers.reduce((a, c) => a + c.debt, 0) + suppliers.reduce((a, s) => a + s.debt, 0);
 
   const dailyData = useMemo(() => {
@@ -105,14 +106,15 @@ function Dashboard() {
         subtitle={vehicleFilter === "all" ? "Umumiy ko'rsatkichlar" : `Filter: ${vehicleFilter}`}
       />
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4">
         <StatCard label="Ombor qiymati" value={formatSom(warehouseValue)} icon={Wallet} accent="primary" />
         <StatCard label="Bugungi sotuv" value={formatSom(todaySales)} icon={TrendingUp} accent="success" />
         <StatCard label="Haftalik sotuv" value={formatSom(weekSales)} icon={Calendar} accent="info" />
         <StatCard label="Oylik sotuv" value={formatSom(monthSales)} icon={CalendarDays} accent="info" />
-        <StatCard label="Sof foyda" value={formatSom(totalProfit)} icon={PiggyBank} accent="success" />
+        <StatCard label="Yalpi foyda" value={formatSom(totalProfit)} icon={PiggyBank} accent="success" />
         <StatCard label="Xarajatlar" value={formatSom(totalExpenses)} icon={Receipt} accent="warning" />
-        <StatCard label="Ish haqi" value={formatSom(salaryExpense)} icon={Users} accent="primary" />
+        <StatCard label="Ish haqi (oylik)" value={formatSom(salaryExpense)} icon={Users} accent="primary" />
+        <StatCard label="Sof foyda" value={formatSom(netProfit)} icon={netProfit >= 0 ? PiggyBank : AlertTriangle} accent={netProfit >= 0 ? "success" : "destructive"} />
         <StatCard label="Qarzdorlik" value={formatSom(totalDebt)} icon={AlertTriangle} accent="destructive" />
       </div>
 
@@ -203,7 +205,7 @@ function Dashboard() {
               <div key={p.id} className="flex items-center justify-between p-2 rounded-lg hover:bg-muted/50">
                 <div className="min-w-0">
                   <div className="font-medium text-sm truncate">{p.name}</div>
-                  <div className="text-xs text-muted-foreground">{p.vehicle} · {p.sku}</div>
+                  <div className="text-xs text-muted-foreground">{p.vehicle} · {p.category}</div>
                 </div>
                 <Badge variant="destructive" className="ml-2">{p.quantity} dona</Badge>
               </div>

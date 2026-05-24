@@ -3,7 +3,7 @@ import { Card } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { PageHeader } from "@/components/ui-kit";
 import { useStore } from "@/lib/store";
-import { formatSom, VEHICLE_BRANDS } from "@/lib/constants";
+import { formatSom } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,13 +17,13 @@ import { Badge } from "@/components/ui/badge";
 export const Route = createFileRoute("/_app/customers")({ component: CustomersPage });
 
 type Form = { name: string; phone: string; address: string; vehicle: string };
-const empty = (): Form => ({ name: "", phone: "", address: "", vehicle: VEHICLE_BRANDS[0] });
+const empty = (firstBrand: string): Form => ({ name: "", phone: "", address: "", vehicle: firstBrand });
 
 function CustomersPage() {
-  const { customers, addCustomer, updateCustomer, deleteCustomer } = useStore();
+  const { customers, vehicleBrands, addCustomer, updateCustomer, deleteCustomer } = useStore();
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<string | null>(null);
-  const [form, setForm] = useState<Form>(empty());
+  const [form, setForm] = useState<Form>(empty(vehicleBrands[0] || ""));
 
   const startEdit = (id: string) => {
     const c = customers.find(x => x.id === id);
@@ -42,13 +42,13 @@ function CustomersPage() {
       addCustomer({ id: `cust_${Math.random().toString(36).slice(2, 9)}`, ...form, vehicle: form.vehicle as any, totalPurchases: 0, debt: 0 });
       toast.success("Mijoz qo'shildi");
     }
-    setOpen(false); setEditing(null); setForm(empty());
+    setOpen(false); setEditing(null); setForm(empty(vehicleBrands[0] || ""));
   };
 
   return (
     <div className="space-y-5">
       <PageHeader title="Mijozlar (CRM)" subtitle={`${customers.length} ta mijoz`} actions={
-        <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) { setEditing(null); setForm(empty()); } }}>
+        <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) { setEditing(null); setForm(empty(vehicleBrands[0] || "")); } }}>
           <DialogTrigger asChild><Button><Plus className="h-4 w-4 mr-1" />Yangi mijoz</Button></DialogTrigger>
           <DialogContent>
             <DialogHeader><DialogTitle>{editing ? "Mijozni tahrirlash" : "Yangi mijoz"}</DialogTitle></DialogHeader>
@@ -59,7 +59,7 @@ function CustomersPage() {
               <div><Label>Avtomobil</Label>
                 <Select value={form.vehicle} onValueChange={(v) => setForm({ ...form, vehicle: v })}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>{VEHICLE_BRANDS.map(b => <SelectItem key={b} value={b}>{b}</SelectItem>)}</SelectContent>
+                  <SelectContent>{vehicleBrands.map((b: string) => <SelectItem key={b} value={b}>{b}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
             </div>
