@@ -82,7 +82,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Barchasi</SelectItem>
-              {VEHICLE_BRANDS.map((b) => <SelectItem key={b} value={b}>{b}</SelectItem>)}
+              {vehicleBrands.map((b: string) => <SelectItem key={b} value={b}>{b}</SelectItem>)}
             </SelectContent>
           </Select>
         </div>
