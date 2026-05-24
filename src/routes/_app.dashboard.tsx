@@ -106,7 +106,7 @@ function Dashboard() {
         subtitle={vehicleFilter === "all" ? "Umumiy ko'rsatkichlar" : `Filter: ${vehicleFilter}`}
       />
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4">
         <StatCard label="Ombor qiymati" value={formatSom(warehouseValue)} icon={Wallet} accent="primary" />
         <StatCard label="Bugungi sotuv" value={formatSom(todaySales)} icon={TrendingUp} accent="success" />
         <StatCard label="Haftalik sotuv" value={formatSom(weekSales)} icon={Calendar} accent="info" />
