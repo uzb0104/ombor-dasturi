@@ -39,7 +39,7 @@ const emptyForm = (): Form => ({
 });
 
 function SalesPage() {
-  const { sales, customers, products, employees, addSale, addCustomer } = useStore();
+  const { sales, customers, products, employees, vehicleBrands, addSale, addCustomer } = useStore();
   const [period, setPeriod] = useState("all");
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<Mode>("cash");
