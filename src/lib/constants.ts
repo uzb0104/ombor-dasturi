@@ -1,9 +1,10 @@
 // Uzbek labels and constants
-export const VEHICLE_BRANDS = [
+export const DEFAULT_VEHICLE_BRANDS = [
   "Shineray T30", "JAC", "FAW", "ISUZU", "Chevrolet",
   "Hyundai", "Kia", "Toyota", "Nexia", "Damas", "Labo",
 ] as const;
-export type VehicleBrand = (typeof VEHICLE_BRANDS)[number];
+export const VEHICLE_BRANDS = DEFAULT_VEHICLE_BRANDS; // backward compat
+export type VehicleBrand = string;
 
 export const DEFAULT_CATEGORIES = [
   "Dvigatel", "Tormoz tizimi", "Elektr", "Shinalar", "Akkumulyator",
@@ -35,7 +36,6 @@ export const NAV = [
   { to: "/settings", label: "Sozlamalar", icon: "Settings" },
 ] as const;
 
-// Modules user can be granted access to (settings always available to admin)
 export const PERMISSION_MODULES = NAV.filter(n => n.to !== "/settings").map(n => ({ path: n.to, label: n.label }));
 export const ALL_PERMISSIONS = PERMISSION_MODULES.map(m => m.path);
 
