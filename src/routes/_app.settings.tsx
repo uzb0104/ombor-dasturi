@@ -34,9 +34,10 @@ function SettingsPage() {
       <PageHeader title="Sozlamalar" subtitle="Profil, foydalanuvchilar va tizim sozlamalari" />
 
       <Tabs defaultValue="profile">
-        <TabsList>
+        <TabsList className="flex flex-wrap h-auto">
           <TabsTrigger value="profile"><UserIcon className="h-4 w-4 mr-1.5" />Profil</TabsTrigger>
           {isAdmin && <TabsTrigger value="users"><Shield className="h-4 w-4 mr-1.5" />Foydalanuvchilar</TabsTrigger>}
+          {isAdmin && <TabsTrigger value="brands"><Car className="h-4 w-4 mr-1.5" />Avtomobil brendlari</TabsTrigger>}
           <TabsTrigger value="security"><Lock className="h-4 w-4 mr-1.5" />Xavfsizlik</TabsTrigger>
           <TabsTrigger value="appearance"><Sun className="h-4 w-4 mr-1.5" />Ko'rinish</TabsTrigger>
           {isAdmin && <TabsTrigger value="danger" className="text-destructive"><AlertTriangle className="h-4 w-4 mr-1.5" />Xavfli zona</TabsTrigger>}
