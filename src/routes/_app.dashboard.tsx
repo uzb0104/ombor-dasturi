@@ -38,7 +38,8 @@ function Dashboard() {
   const monthSales = sum(filtered.sales.filter(s => new Date(s.date) >= monthAgo));
   const totalProfit = filtered.sales.reduce((a, s) => a + s.profit, 0);
   const totalExpenses = expenses.reduce((a, e) => a + e.amount, 0);
-  const salaryExpense = employees.reduce((a, e) => a + e.salary, 0);
+  const salaryExpense = employees.filter(e => e.status === "Faol").reduce((a, e) => a + e.salary, 0);
+  const netProfit = totalProfit - totalExpenses;
   const totalDebt = customers.reduce((a, c) => a + c.debt, 0) + suppliers.reduce((a, s) => a + s.debt, 0);
 
   const dailyData = useMemo(() => {
