@@ -1,23 +1,22 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { generateMockData, type Product, type Customer, type Supplier, type Employee, type Sale, type Expense, type IncomingStock } from "./mock-data";
-import type { VehicleBrand, Warehouse, Role } from "./constants";
-import { DEFAULT_CATEGORIES, ALL_PERMISSIONS } from "./constants";
+import type { Warehouse, Role } from "./constants";
+import { DEFAULT_CATEGORIES, DEFAULT_VEHICLE_BRANDS, ALL_PERMISSIONS } from "./constants";
 
 export type AppUser = {
   id: string;
   name: string;
   email: string;
-  password: string; // demo only
+  password: string;
   role: Role;
-  permissions: string[]; // route paths (admins ignore this and get all)
+  permissions: string[];
   active: boolean;
 };
 
 type SessionUser = { id: string; name: string; email: string; role: Role; permissions: string[] };
 
 type State = {
-  // auth
   user: SessionUser | null;
   appUsers: AppUser[];
   login: (email: string, password: string, remember?: boolean) => boolean;
@@ -26,17 +25,15 @@ type State = {
   updateAppUser: (id: string, u: Partial<AppUser>) => void;
   deleteAppUser: (id: string) => void;
 
-  // ui
   theme: "light" | "dark";
   toggleTheme: () => void;
   sidebarOpen: boolean;
   toggleSidebar: () => void;
   warehouse: Warehouse;
   setWarehouse: (w: Warehouse) => void;
-  vehicleFilter: VehicleBrand | "all";
-  setVehicleFilter: (v: VehicleBrand | "all") => void;
+  vehicleFilter: string;
+  setVehicleFilter: (v: string) => void;
 
-  // data
   products: Product[];
   customers: Customer[];
   suppliers: Supplier[];
@@ -45,8 +42,8 @@ type State = {
   expenses: Expense[];
   incoming: IncomingStock[];
   categories: string[];
+  vehicleBrands: string[];
 
-  // actions
   addProduct: (p: Product) => void;
   updateProduct: (id: string, p: Partial<Product>) => void;
   deleteProduct: (id: string) => void;
@@ -64,12 +61,22 @@ type State = {
   deleteEmployee: (id: string) => void;
 
   addSale: (s: Sale) => void;
+  deleteSale: (id: string) => void;
+
   addExpense: (e: Expense) => void;
+  updateExpense: (id: string, e: Partial<Expense>) => void;
+  deleteExpense: (id: string) => void;
+
   addIncoming: (i: IncomingStock) => void;
+  deleteIncoming: (id: string) => void;
 
   addCategory: (c: string) => void;
   updateCategory: (oldName: string, newName: string) => void;
   deleteCategory: (c: string) => void;
+
+  addVehicleBrand: (b: string) => void;
+  updateVehicleBrand: (oldName: string, newName: string) => void;
+  deleteVehicleBrand: (b: string) => void;
 
   resetData: () => void;
 };
@@ -93,7 +100,6 @@ export const useStore = create<State>()(
           set({ user: { id: u.id, name: u.name, email: u.email, role: u.role, permissions: perms } });
           return true;
         }
-        // fallback: allow admin@autoerp.uz with any pwd (demo)
         if (email.toLowerCase() === "admin@autoerp.uz") {
           set({ user: { id: "u_admin", name: "Bosh admin", email, role: "Admin", permissions: ALL_PERMISSIONS } });
           return true;
@@ -126,6 +132,7 @@ export const useStore = create<State>()(
       expenses: seed.expenses,
       incoming: seed.incoming,
       categories: [...DEFAULT_CATEGORIES],
+      vehicleBrands: [...DEFAULT_VEHICLE_BRANDS],
 
       addProduct: (p) => set({ products: [p, ...get().products] }),
       updateProduct: (id, p) => set({ products: get().products.map(x => x.id === id ? { ...x, ...p } : x) }),
@@ -148,7 +155,6 @@ export const useStore = create<State>()(
           const item = s.items.find(i => i.productId === p.id);
           return item ? { ...p, quantity: Math.max(0, p.quantity - item.qty) } : p;
         });
-        // if credit sale with customer, increase customer's debt + totalPurchases
         const customers = get().customers.map(c => {
           if (c.id !== s.customerId) return c;
           const debtDelta = s.paymentType === "Qarz" ? s.total : 0;
@@ -156,16 +162,41 @@ export const useStore = create<State>()(
         });
         set({ sales: [s, ...get().sales], products, customers });
       },
+      deleteSale: (id) => {
+        const s = get().sales.find(x => x.id === id);
+        if (!s) return;
+        // restock items
+        const products = get().products.map(p => {
+          const item = s.items.find(i => i.productId === p.id);
+          return item ? { ...p, quantity: p.quantity + item.qty } : p;
+        });
+        // reverse customer debt/purchases
+        const customers = get().customers.map(c => {
+          if (c.id !== s.customerId) return c;
+          const debtDelta = s.paymentType === "Qarz" ? s.total : 0;
+          return { ...c, debt: Math.max(0, c.debt - debtDelta), totalPurchases: Math.max(0, c.totalPurchases - s.total) };
+        });
+        set({ sales: get().sales.filter(x => x.id !== id), products, customers });
+      },
+
       addExpense: (e) => set({ expenses: [e, ...get().expenses] }),
+      updateExpense: (id, e) => set({ expenses: get().expenses.map(x => x.id === id ? { ...x, ...e } : x) }),
+      deleteExpense: (id) => set({ expenses: get().expenses.filter(x => x.id !== id) }),
+
       addIncoming: (i) => {
         const products = get().products.map(p => p.id === i.productId ? { ...p, quantity: p.quantity + i.qty } : p);
         set({ incoming: [i, ...get().incoming], products });
       },
+      deleteIncoming: (id) => {
+        const inc = get().incoming.find(x => x.id === id);
+        if (!inc) return;
+        const products = get().products.map(p => p.id === inc.productId ? { ...p, quantity: Math.max(0, p.quantity - inc.qty) } : p);
+        set({ incoming: get().incoming.filter(x => x.id !== id), products });
+      },
 
       addCategory: (c) => {
         const name = c.trim();
-        if (!name) return;
-        if (get().categories.includes(name)) return;
+        if (!name || get().categories.includes(name)) return;
         set({ categories: [...get().categories, name] });
       },
       updateCategory: (oldName, newName) => {
@@ -178,24 +209,41 @@ export const useStore = create<State>()(
       },
       deleteCategory: (c) => set({ categories: get().categories.filter(x => x !== c) }),
 
+      addVehicleBrand: (b) => {
+        const n = b.trim();
+        if (!n || get().vehicleBrands.includes(n)) return;
+        set({ vehicleBrands: [...get().vehicleBrands, n] });
+      },
+      updateVehicleBrand: (oldName, newName) => {
+        const n = newName.trim();
+        if (!n) return;
+        set({
+          vehicleBrands: get().vehicleBrands.map(b => b === oldName ? n : b),
+          products: get().products.map(p => p.vehicle === oldName ? { ...p, vehicle: n } : p),
+          customers: get().customers.map(c => c.vehicle === oldName ? { ...c, vehicle: n } : c),
+        });
+      },
+      deleteVehicleBrand: (b) => set({ vehicleBrands: get().vehicleBrands.filter(x => x !== b) }),
+
       resetData: () => {
         const fresh = generateMockData();
-        set({ ...fresh, categories: [...DEFAULT_CATEGORIES] });
+        set({ ...fresh, categories: [...DEFAULT_CATEGORIES], vehicleBrands: [...DEFAULT_VEHICLE_BRANDS] });
       },
     }),
     {
       name: "autoerp-pro-v1",
-      version: 2,
+      version: 3,
       partialize: (s) => ({
         user: s.user, appUsers: s.appUsers, theme: s.theme, warehouse: s.warehouse, vehicleFilter: s.vehicleFilter,
         products: s.products, customers: s.customers, suppliers: s.suppliers,
         employees: s.employees, sales: s.sales, expenses: s.expenses, incoming: s.incoming,
-        categories: s.categories,
+        categories: s.categories, vehicleBrands: s.vehicleBrands,
       }),
       migrate: (persisted: any) => {
         if (!persisted) return persisted;
         if (!persisted.appUsers) persisted.appUsers = defaultAppUsers;
         if (!persisted.categories) persisted.categories = [...DEFAULT_CATEGORIES];
+        if (!persisted.vehicleBrands) persisted.vehicleBrands = [...DEFAULT_VEHICLE_BRANDS];
         if (persisted.user && !persisted.user.permissions) {
           persisted.user.permissions = ALL_PERMISSIONS;
         }
