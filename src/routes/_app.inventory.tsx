@@ -22,7 +22,7 @@ function InventoryPage() {
   const low = products.filter(p => p.quantity <= p.minQty).length;
 
   const brandStats = useMemo(() =>
-    VEHICLE_BRANDS.map(b => {
+    vehicleBrands.map((b: string) => {
       const items = products.filter(p => p.vehicle === b);
       return {
         brand: b,
@@ -31,7 +31,7 @@ function InventoryPage() {
         value: items.reduce((a, p) => a + p.buyPrice * p.quantity, 0),
         low: items.filter(p => p.quantity <= p.minQty).length,
       };
-    }), [products]);
+    }), [products, vehicleBrands]);
 
   const brandProducts = useMemo(() => {
     if (!selected) return [];
