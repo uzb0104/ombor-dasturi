@@ -3,18 +3,19 @@ import { Card } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { PageHeader, StatCard, StatusBadge } from "@/components/ui-kit";
 import { useStore } from "@/lib/store";
-import { formatSom, formatNumber, VEHICLE_BRANDS, type VehicleBrand } from "@/lib/constants";
-import { Package, Warehouse, AlertTriangle, Car, ChevronLeft, Search } from "lucide-react";
+import { formatSom, formatNumber } from "@/lib/constants";
+import { Package, Warehouse, AlertTriangle, Car, ChevronLeft, Search, Edit, Trash2 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { toast } from "sonner";
 
 
 export const Route = createFileRoute("/_app/inventory")({ component: InventoryPage });
 
 function InventoryPage() {
-  const { products } = useStore();
-  const [selected, setSelected] = useState<VehicleBrand | null>(null);
+  const { products, vehicleBrands, deleteProduct } = useStore();
+  const [selected, setSelected] = useState<string | null>(null);
   const [search, setSearch] = useState("");
 
   const total = products.reduce((a, p) => a + p.buyPrice * p.quantity, 0);
