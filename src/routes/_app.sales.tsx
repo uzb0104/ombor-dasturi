@@ -85,7 +85,7 @@ function SalesPage() {
         const newId = `cust_${Math.random().toString(36).slice(2, 9)}`;
         addCustomer({
           id: newId, name: form.custName.trim(), phone: form.custPhone.trim(),
-          address: form.custAddress.trim(), vehicle: (form.vehicle as any) || VEHICLE_BRANDS[0],
+          address: form.custAddress.trim(), vehicle: (form.vehicle as any) || (vehicleBrands[0] || ""),
           totalPurchases: 0, debt: 0,
         });
         customerId = newId;
@@ -154,7 +154,7 @@ function SalesPage() {
                 <Label>Avtomobil modeli *</Label>
                 <Select value={form.vehicle} onValueChange={(v) => setForm({ ...form, vehicle: v, productId: "", price: 0 })}>
                   <SelectTrigger><SelectValue placeholder="Modelni tanlang" /></SelectTrigger>
-                  <SelectContent>{VEHICLE_BRANDS.map(b => <SelectItem key={b} value={b}>{b}</SelectItem>)}</SelectContent>
+                  <SelectContent>{vehicleBrands.map((b: string) => <SelectItem key={b} value={b}>{b}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
               <div>
