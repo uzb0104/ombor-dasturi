@@ -23,7 +23,7 @@ const ICONS = {
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const navigate = useNavigate();
-  const { user, logout, theme, toggleTheme, warehouse, setWarehouse, vehicleFilter, setVehicleFilter } = useStore();
+  const { user, logout, theme, toggleTheme, warehouse, setWarehouse, vehicleFilter, setVehicleFilter, vehicleBrands } = useStore();
   const path = useRouterState({ select: (s) => s.location.pathname });
   const [mobileOpen, setMobileOpen] = useState(false);
   const [now, setNow] = useState(new Date());
