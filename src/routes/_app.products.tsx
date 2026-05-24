@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { PageHeader, StatusBadge } from "@/components/ui-kit";
 import { useStore } from "@/lib/store";
-import { VEHICLE_BRANDS, formatSom } from "@/lib/constants";
+import { formatSom } from "@/lib/constants";
 import { useMemo, useState } from "react";
 import { Plus, Search, Edit, Trash2, Package, ScanBarcode } from "lucide-react";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -29,13 +29,13 @@ const emptyForm = (firstCategory: string, firstBrand: string): FormState => ({
 });
 
 function ProductsPage() {
-  const { products, suppliers, categories, addProduct, updateProduct, deleteProduct, vehicleFilter } = useStore();
+  const { products, suppliers, categories, vehicleBrands, addProduct, updateProduct, deleteProduct, vehicleFilter } = useStore();
   const [search, setSearch] = useState("");
   const [cat, setCat] = useState<string>("all");
   const [veh, setVeh] = useState<string>("all");
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<string | null>(null);
-  const [form, setForm] = useState<FormState>(emptyForm(categories[0] || ""));
+  const [form, setForm] = useState<FormState>(emptyForm(categories[0] || "", vehicleBrands[0] || ""));
 
   const filtered = useMemo(() => products.filter(p => {
     const s = search.toLowerCase();
@@ -88,7 +88,7 @@ function ProductsPage() {
       });
       toast.success("Tovar qo'shildi");
     }
-    setOpen(false); setEditing(null); setForm(emptyForm(categories[0] || ""));
+    setOpen(false); setEditing(null); setForm(emptyForm(categories[0] || "", vehicleBrands[0] || ""));
   };
 
   return (
@@ -97,15 +97,15 @@ function ProductsPage() {
         title="Tovarlar"
         subtitle={`Jami ${products.length} ta tovar`}
         actions={
-          <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) { setEditing(null); setForm(emptyForm(categories[0] || "")); } }}>
+          <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) { setEditing(null); setForm(emptyForm(categories[0] || "", vehicleBrands[0] || "")); } }}>
             <DialogTrigger asChild>
               <Button><Plus className="h-4 w-4 mr-1" />Yangi tovar</Button>
             </DialogTrigger>
-            <DialogContent className="max-w-2xl">
+            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
               <DialogHeader><DialogTitle>{editing ? "Tovarni tahrirlash" : "Yangi tovar"}</DialogTitle></DialogHeader>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="col-span-2"><Label>Nomi *</Label><Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Masalan: Tormoz kolodkasi" /></div>
-                <div className="col-span-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="sm:col-span-2"><Label>Nomi *</Label><Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Masalan: Tormoz kolodkasi" /></div>
+                <div className="sm:col-span-2">
                   <Label>Barkod (ixtiyoriy)</Label>
                   <div className="flex gap-2">
                     <Input
@@ -119,12 +119,12 @@ function ProductsPage() {
                       <ScanBarcode className="h-4 w-4 mr-1" />Yaratish
                     </Button>
                   </div>
-                  <p className="text-xs text-muted-foreground mt-1">USB skaner avtomatik kiritadi. Bo'sh qoldirilsa, tovar barkodsiz saqlanadi.</p>
+                  <p className="text-xs text-muted-foreground mt-1">USB/HID skaner avtomatik kiritadi. Bo'sh qoldirilsa, tovar barkodsiz saqlanadi.</p>
                 </div>
                 <div><Label>Brend</Label>
-                  <Select value={form.vehicle} onValueChange={(v) => setForm({ ...form, vehicle: v as FormState["vehicle"] })}>
+                  <Select value={form.vehicle} onValueChange={(v) => setForm({ ...form, vehicle: v })}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>{VEHICLE_BRANDS.map(b => <SelectItem key={b} value={b}>{b}</SelectItem>)}</SelectContent>
+                    <SelectContent>{vehicleBrands.map(b => <SelectItem key={b} value={b}>{b}</SelectItem>)}</SelectContent>
                   </Select>
                 </div>
                 <div><Label>Kategoriya</Label>
@@ -133,7 +133,7 @@ function ProductsPage() {
                     <SelectContent>{categories.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
                   </Select>
                 </div>
-                <div className="col-span-2"><Label>Yetkazib beruvchi</Label>
+                <div className="sm:col-span-2"><Label>Yetkazib beruvchi</Label>
                   <Select value={form.supplierId || suppliers[0]?.id} onValueChange={(v) => setForm({ ...form, supplierId: v })}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>{suppliers.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
@@ -150,35 +150,35 @@ function ProductsPage() {
         }
       />
 
-      <Card className="p-4 rounded-2xl">
-        <div className="flex flex-wrap gap-3 mb-4">
-          <div className="relative flex-1 min-w-[220px]">
+      <Card className="p-3 md:p-4 rounded-2xl">
+        <div className="flex flex-col sm:flex-row sm:flex-wrap gap-2 sm:gap-3 mb-4">
+          <div className="relative flex-1 min-w-[180px]">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input placeholder="Nom yoki barkod..." className="pl-9" value={search} onChange={(e) => setSearch(e.target.value)} />
           </div>
           <Select value={veh} onValueChange={setVeh}>
-            <SelectTrigger className="w-[180px]"><SelectValue placeholder="Brend" /></SelectTrigger>
-            <SelectContent><SelectItem value="all">Barcha brendlar</SelectItem>{VEHICLE_BRANDS.map(b => <SelectItem key={b} value={b}>{b}</SelectItem>)}</SelectContent>
+            <SelectTrigger className="sm:w-[180px]"><SelectValue placeholder="Brend" /></SelectTrigger>
+            <SelectContent><SelectItem value="all">Barcha brendlar</SelectItem>{vehicleBrands.map(b => <SelectItem key={b} value={b}>{b}</SelectItem>)}</SelectContent>
           </Select>
           <Select value={cat} onValueChange={setCat}>
-            <SelectTrigger className="w-[180px]"><SelectValue placeholder="Kategoriya" /></SelectTrigger>
+            <SelectTrigger className="sm:w-[180px]"><SelectValue placeholder="Kategoriya" /></SelectTrigger>
             <SelectContent><SelectItem value="all">Barcha kategoriyalar</SelectItem>{categories.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
           </Select>
         </div>
 
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto -mx-3 md:mx-0">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead></TableHead>
+                <TableHead className="hidden sm:table-cell"></TableHead>
                 <TableHead>Nomi</TableHead>
-                <TableHead>Barkod</TableHead>
-                <TableHead>Brend</TableHead>
-                <TableHead>Kategoriya</TableHead>
+                <TableHead className="hidden md:table-cell">Barkod</TableHead>
+                <TableHead className="hidden sm:table-cell">Brend</TableHead>
+                <TableHead className="hidden lg:table-cell">Kategoriya</TableHead>
                 <TableHead className="text-right">Miqdor</TableHead>
-                <TableHead className="text-right">Sotib olish</TableHead>
+                <TableHead className="hidden md:table-cell text-right">Sotib olish</TableHead>
                 <TableHead className="text-right">Sotuv</TableHead>
-                <TableHead>Holat</TableHead>
+                <TableHead className="hidden sm:table-cell">Holat</TableHead>
                 <TableHead className="text-right">Amallar</TableHead>
               </TableRow>
             </TableHeader>
@@ -188,22 +188,25 @@ function ProductsPage() {
               )}
               {filtered.map(p => (
                 <TableRow key={p.id} className="hover:bg-muted/40">
-                  <TableCell>
+                  <TableCell className="hidden sm:table-cell">
                     <div className="h-9 w-9 rounded-lg bg-muted grid place-items-center">
                       <Package className="h-4 w-4 text-muted-foreground" />
                     </div>
                   </TableCell>
-                  <TableCell className="font-medium">{p.name}</TableCell>
-                  <TableCell className="text-xs font-mono text-muted-foreground">
+                  <TableCell className="font-medium">
+                    {p.name}
+                    <div className="sm:hidden text-xs text-muted-foreground mt-0.5">{p.vehicle} · {p.category}</div>
+                  </TableCell>
+                  <TableCell className="hidden md:table-cell text-xs font-mono text-muted-foreground">
                     {p.barcode ? p.barcode : <span className="italic">barkodsiz</span>}
                   </TableCell>
-                  <TableCell>{p.vehicle}</TableCell>
-                  <TableCell className="text-sm">{p.category}</TableCell>
+                  <TableCell className="hidden sm:table-cell">{p.vehicle}</TableCell>
+                  <TableCell className="hidden lg:table-cell text-sm">{p.category}</TableCell>
                   <TableCell className="text-right tabular-nums">{p.quantity}</TableCell>
-                  <TableCell className="text-right tabular-nums text-sm">{formatSom(p.buyPrice)}</TableCell>
+                  <TableCell className="hidden md:table-cell text-right tabular-nums text-sm">{formatSom(p.buyPrice)}</TableCell>
                   <TableCell className="text-right tabular-nums text-sm font-semibold">{formatSom(p.sellPrice)}</TableCell>
-                  <TableCell><StatusBadge qty={p.quantity} min={p.minQty} /></TableCell>
-                  <TableCell className="text-right">
+                  <TableCell className="hidden sm:table-cell"><StatusBadge qty={p.quantity} min={p.minQty} /></TableCell>
+                  <TableCell className="text-right whitespace-nowrap">
                     <Button variant="ghost" size="icon" onClick={() => startEdit(p.id)}><Edit className="h-4 w-4" /></Button>
                     <Button variant="ghost" size="icon" onClick={() => { if (confirm(`"${p.name}" o'chirilsinmi?`)) { deleteProduct(p.id); toast.success("O'chirildi"); } }}>
                       <Trash2 className="h-4 w-4 text-destructive" />
