@@ -17,13 +17,13 @@ import { Badge } from "@/components/ui/badge";
 export const Route = createFileRoute("/_app/customers")({ component: CustomersPage });
 
 type Form = { name: string; phone: string; address: string; vehicle: string };
-const empty = (): Form => ({ name: "", phone: "", address: "", vehicle: VEHICLE_BRANDS[0] });
+const empty = (firstBrand: string): Form => ({ name: "", phone: "", address: "", vehicle: firstBrand });
 
 function CustomersPage() {
-  const { customers, addCustomer, updateCustomer, deleteCustomer } = useStore();
+  const { customers, vehicleBrands, addCustomer, updateCustomer, deleteCustomer } = useStore();
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<string | null>(null);
-  const [form, setForm] = useState<Form>(empty());
+  const [form, setForm] = useState<Form>(empty(vehicleBrands[0] || ""));
 
   const startEdit = (id: string) => {
     const c = customers.find(x => x.id === id);
