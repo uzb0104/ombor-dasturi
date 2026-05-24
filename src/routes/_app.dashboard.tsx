@@ -111,9 +111,10 @@ function Dashboard() {
         <StatCard label="Bugungi sotuv" value={formatSom(todaySales)} icon={TrendingUp} accent="success" />
         <StatCard label="Haftalik sotuv" value={formatSom(weekSales)} icon={Calendar} accent="info" />
         <StatCard label="Oylik sotuv" value={formatSom(monthSales)} icon={CalendarDays} accent="info" />
-        <StatCard label="Sof foyda" value={formatSom(totalProfit)} icon={PiggyBank} accent="success" />
+        <StatCard label="Yalpi foyda" value={formatSom(totalProfit)} icon={PiggyBank} accent="success" />
         <StatCard label="Xarajatlar" value={formatSom(totalExpenses)} icon={Receipt} accent="warning" />
-        <StatCard label="Ish haqi" value={formatSom(salaryExpense)} icon={Users} accent="primary" />
+        <StatCard label="Ish haqi (oylik)" value={formatSom(salaryExpense)} icon={Users} accent="primary" />
+        <StatCard label="Sof foyda" value={formatSom(netProfit)} icon={netProfit >= 0 ? PiggyBank : AlertTriangle} accent={netProfit >= 0 ? "success" : "destructive"} />
         <StatCard label="Qarzdorlik" value={formatSom(totalDebt)} icon={AlertTriangle} accent="destructive" />
       </div>
 
