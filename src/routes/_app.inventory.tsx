@@ -62,26 +62,35 @@ function InventoryPage() {
             <Table>
               <TableHeader><TableRow>
                 <TableHead>Tovar</TableHead>
-                <TableHead>Kategoriya</TableHead>
+                <TableHead className="hidden md:table-cell">Kategoriya</TableHead>
                 <TableHead className="text-right">Miqdor</TableHead>
-                <TableHead className="text-right">Sotib olish</TableHead>
-                <TableHead className="text-right">Sotuv</TableHead>
-                <TableHead className="text-right">Umumiy qiymati</TableHead>
-                <TableHead>Holat</TableHead>
+                <TableHead className="hidden sm:table-cell text-right">Sotib olish</TableHead>
+                <TableHead className="hidden sm:table-cell text-right">Sotuv</TableHead>
+                <TableHead className="hidden lg:table-cell text-right">Umumiy qiymati</TableHead>
+                <TableHead className="hidden sm:table-cell">Holat</TableHead>
+                <TableHead className="text-right">Amallar</TableHead>
               </TableRow></TableHeader>
               <TableBody>
                 {brandProducts.length === 0 && (
-                  <TableRow><TableCell colSpan={7} className="text-center py-10 text-muted-foreground">Bu brendda tovar yo'q</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={8} className="text-center py-10 text-muted-foreground">Bu brendda tovar yo'q</TableCell></TableRow>
                 )}
                 {brandProducts.map(p => (
                   <TableRow key={p.id} className="hover:bg-muted/40">
-                    <TableCell className="font-medium">{p.name}</TableCell>
-                    <TableCell className="text-sm">{p.category}</TableCell>
+                    <TableCell className="font-medium">{p.name}
+                      <div className="md:hidden text-xs text-muted-foreground">{p.category}</div>
+                    </TableCell>
+                    <TableCell className="hidden md:table-cell text-sm">{p.category}</TableCell>
                     <TableCell className="text-right tabular-nums">{p.quantity}</TableCell>
-                    <TableCell className="text-right tabular-nums text-sm">{formatSom(p.buyPrice)}</TableCell>
-                    <TableCell className="text-right tabular-nums text-sm">{formatSom(p.sellPrice)}</TableCell>
-                    <TableCell className="text-right tabular-nums text-sm font-semibold">{formatSom(p.buyPrice * p.quantity)}</TableCell>
-                    <TableCell><StatusBadge qty={p.quantity} min={p.minQty} /></TableCell>
+                    <TableCell className="hidden sm:table-cell text-right tabular-nums text-sm">{formatSom(p.buyPrice)}</TableCell>
+                    <TableCell className="hidden sm:table-cell text-right tabular-nums text-sm">{formatSom(p.sellPrice)}</TableCell>
+                    <TableCell className="hidden lg:table-cell text-right tabular-nums text-sm font-semibold">{formatSom(p.buyPrice * p.quantity)}</TableCell>
+                    <TableCell className="hidden sm:table-cell"><StatusBadge qty={p.quantity} min={p.minQty} /></TableCell>
+                    <TableCell className="text-right whitespace-nowrap">
+                      <Button variant="ghost" size="icon" disabled title="Tovarni Tovarlar sahifasida tahrirlang"><Edit className="h-4 w-4 opacity-30" /></Button>
+                      <Button variant="ghost" size="icon" onClick={() => { if (confirm(`"${p.name}" o'chirilsinmi?`)) { deleteProduct(p.id); toast.success("O'chirildi"); } }}>
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
