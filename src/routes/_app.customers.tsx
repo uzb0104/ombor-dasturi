@@ -42,13 +42,13 @@ function CustomersPage() {
       addCustomer({ id: `cust_${Math.random().toString(36).slice(2, 9)}`, ...form, vehicle: form.vehicle as any, totalPurchases: 0, debt: 0 });
       toast.success("Mijoz qo'shildi");
     }
-    setOpen(false); setEditing(null); setForm(empty());
+    setOpen(false); setEditing(null); setForm(empty(vehicleBrands[0] || ""));
   };
 
   return (
     <div className="space-y-5">
       <PageHeader title="Mijozlar (CRM)" subtitle={`${customers.length} ta mijoz`} actions={
-        <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) { setEditing(null); setForm(empty()); } }}>
+        <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) { setEditing(null); setForm(empty(vehicleBrands[0] || "")); } }}>
           <DialogTrigger asChild><Button><Plus className="h-4 w-4 mr-1" />Yangi mijoz</Button></DialogTrigger>
           <DialogContent>
             <DialogHeader><DialogTitle>{editing ? "Mijozni tahrirlash" : "Yangi mijoz"}</DialogTitle></DialogHeader>
@@ -59,7 +59,7 @@ function CustomersPage() {
               <div><Label>Avtomobil</Label>
                 <Select value={form.vehicle} onValueChange={(v) => setForm({ ...form, vehicle: v })}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>{VEHICLE_BRANDS.map(b => <SelectItem key={b} value={b}>{b}</SelectItem>)}</SelectContent>
+                  <SelectContent>{vehicleBrands.map((b: string) => <SelectItem key={b} value={b}>{b}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
             </div>
