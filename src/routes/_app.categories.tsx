@@ -25,6 +25,7 @@ function CategoriesPage() {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<string | null>(null);
   const [name, setName] = useState("");
+  const { confirm, confirmNode } = useConfirm();
 
   const submit = () => {
     const n = name.trim();
@@ -41,10 +42,13 @@ function CategoriesPage() {
     setOpen(false); setEditing(null); setName("");
   };
 
-  const remove = (c: string) => {
+  const remove = async (c: string) => {
     const count = products.filter(p => p.category === c).length;
-    if (count > 0 && !confirm(`Bu kategoriyada ${count} ta tovar bor. O'chirilsinmi?`)) return;
-    if (count === 0 && !confirm(`"${c}" o'chirilsinmi?`)) return;
+    const desc = count > 0
+      ? `Bu kategoriyada ${count} ta tovar bor. Baribir o'chirilsinmi?`
+      : `"${c}" o'chirilsinmi?`;
+    const ok = await confirm({ title: "Kategoriyani o'chirish", description: desc, destructive: true, confirmText: "O'chirish" });
+    if (!ok) return;
     deleteCategory(c);
     toast.success("O'chirildi");
   };
