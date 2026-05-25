@@ -1,13 +1,14 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Card } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { PageHeader, StatCard, StatusBadge } from "@/components/ui-kit";
+import { PageHeader, StatCard, StatusBadge, useConfirm, usePagination, PaginationBar, useSelection, BulkBar, SelectCell } from "@/components/ui-kit";
 import { useStore } from "@/lib/store";
 import { formatSom, formatNumber } from "@/lib/constants";
 import { Package, Warehouse, AlertTriangle, Car, ChevronLeft, Search, Edit, Trash2 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 
 
@@ -17,6 +18,8 @@ function InventoryPage() {
   const { products, vehicleBrands, deleteProduct } = useStore();
   const [selected, setSelected] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+  const { confirm, confirmNode } = useConfirm();
+  const sel = useSelection();
 
   const total = products.reduce((a, p) => a + p.buyPrice * p.quantity, 0);
   const low = products.filter(p => p.quantity <= p.minQty).length;
