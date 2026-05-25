@@ -44,14 +44,31 @@ function InventoryPage() {
       .filter(p => !search || p.name.toLowerCase().includes(s) || (p.barcode || "").includes(search));
   }, [products, selected, search]);
 
+  const pg = usePagination(brandProducts, 12);
+  const pageIds = pg.paged.map(p => p.id);
+  const allChecked = pageIds.length > 0 && pageIds.every(id => sel.has(id));
+
+  const removeOne = async (id: string, name: string) => {
+    const ok = await confirm({ title: "Tovarni o'chirish", description: `"${name}" o'chirilsinmi?`, destructive: true, confirmText: "O'chirish" });
+    if (ok) { deleteProduct(id); toast.success("O'chirildi"); }
+  };
+  const removeBulk = async () => {
+    const ok = await confirm({ title: "Tanlanganlarni o'chirish", description: `${sel.count} ta tovar o'chiriladi.`, destructive: true, confirmText: "O'chirish" });
+    if (!ok) return;
+    const n = sel.count;
+    sel.selected.forEach(id => deleteProduct(id));
+    sel.clear(); toast.success(`${n} ta tovar o'chirildi`);
+  };
+
   if (selected) {
     return (
       <div className="space-y-5">
+        {confirmNode}
         <PageHeader
           title={selected}
           subtitle={`${brandProducts.length} ta tovar`}
           actions={
-            <Button variant="outline" onClick={() => { setSelected(null); setSearch(""); }}>
+            <Button variant="outline" onClick={() => { setSelected(null); setSearch(""); sel.clear(); }}>
               <ChevronLeft className="h-4 w-4 mr-1" />Brendlarga qaytish
             </Button>
           }
@@ -61,9 +78,11 @@ function InventoryPage() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input placeholder="Tovar nomi yoki barkod..." className="pl-9" value={search} onChange={(e) => setSearch(e.target.value)} />
           </div>
+          <BulkBar count={sel.count} onDelete={removeBulk} onClear={sel.clear} label="tovar tanlandi" />
           <div className="overflow-x-auto">
             <Table>
               <TableHeader><TableRow>
+                <TableHead className="w-10"><Checkbox checked={allChecked} onCheckedChange={(v) => sel.toggleAll(pageIds, !!v)} /></TableHead>
                 <TableHead>Tovar</TableHead>
                 <TableHead className="hidden md:table-cell">Kategoriya</TableHead>
                 <TableHead className="text-right">Miqdor</TableHead>
@@ -74,11 +93,12 @@ function InventoryPage() {
                 <TableHead className="text-right">Amallar</TableHead>
               </TableRow></TableHeader>
               <TableBody>
-                {brandProducts.length === 0 && (
-                  <TableRow><TableCell colSpan={8} className="text-center py-10 text-muted-foreground">Bu brendda tovar yo'q</TableCell></TableRow>
+                {pg.paged.length === 0 && (
+                  <TableRow><TableCell colSpan={9} className="text-center py-10 text-muted-foreground">Bu brendda tovar yo'q</TableCell></TableRow>
                 )}
-                {brandProducts.map(p => (
-                  <TableRow key={p.id} className="hover:bg-muted/40">
+                {pg.paged.map(p => (
+                  <TableRow key={p.id} className="hover:bg-muted/40" data-state={sel.has(p.id) ? "selected" : undefined}>
+                    <TableCell><SelectCell checked={sel.has(p.id)} onChange={() => sel.toggle(p.id)} /></TableCell>
                     <TableCell className="font-medium">{p.name}
                       <div className="md:hidden text-xs text-muted-foreground">{p.category}</div>
                     </TableCell>
@@ -90,7 +110,7 @@ function InventoryPage() {
                     <TableCell className="hidden sm:table-cell"><StatusBadge qty={p.quantity} min={p.minQty} /></TableCell>
                     <TableCell className="text-right whitespace-nowrap">
                       <Button variant="ghost" size="icon" disabled title="Tovarni Tovarlar sahifasida tahrirlang"><Edit className="h-4 w-4 opacity-30" /></Button>
-                      <Button variant="ghost" size="icon" onClick={() => { if (confirm(`"${p.name}" o'chirilsinmi?`)) { deleteProduct(p.id); toast.success("O'chirildi"); } }}>
+                      <Button variant="ghost" size="icon" onClick={() => removeOne(p.id, p.name)}>
                         <Trash2 className="h-4 w-4 text-destructive" />
                       </Button>
                     </TableCell>
@@ -99,6 +119,7 @@ function InventoryPage() {
               </TableBody>
             </Table>
           </div>
+          <PaginationBar {...pg} />
         </Card>
       </div>
     );
