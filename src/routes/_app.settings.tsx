@@ -166,6 +166,7 @@ function UsersManagement({
 
   return (
     <Card className="rounded-2xl">
+      {confirmNode}
       <div className="flex items-center justify-between p-4 border-b">
         <div>
           <h3 className="font-semibold">Foydalanuvchilar va ruxsatlar</h3>
