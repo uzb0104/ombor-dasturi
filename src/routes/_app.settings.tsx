@@ -270,6 +270,7 @@ function BrandsManagement({
   const [newBrand, setNewBrand] = useState("");
   const [editing, setEditing] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
+  const { confirm, confirmNode } = useConfirm();
 
   const addBrand = () => {
     const n = newBrand.trim();
@@ -285,11 +286,13 @@ function BrandsManagement({
     update(oldName, n); setEditing(null); toast.success("Yangilandi");
   };
 
-  const removeBrand = (b: string) => {
+  const removeBrand = async (b: string) => {
     const count = products.filter(p => p.vehicle === b).length;
-    if (count > 0) {
-      if (!confirm(`"${b}" brendiga ${count} ta tovar bog'langan. Baribir o'chirilsinmi?`)) return;
-    } else if (!confirm(`"${b}" brendi o'chirilsinmi?`)) return;
+    const desc = count > 0
+      ? `"${b}" brendiga ${count} ta tovar bog'langan. Baribir o'chirilsinmi?`
+      : `"${b}" brendi o'chirilsinmi?`;
+    const ok = await confirm({ title: "Brendni o'chirish", description: desc, destructive: true, confirmText: "O'chirish" });
+    if (!ok) return;
     remove(b); toast.success("O'chirildi");
   };
 
