@@ -244,7 +244,7 @@ function UsersManagement({
                 </TableCell>
                 <TableCell className="text-right">
                   <Button variant="ghost" size="icon" onClick={() => startEdit(u)}><Edit className="h-4 w-4" /></Button>
-                  <Button variant="ghost" size="icon" disabled={u.id === "u_admin"} onClick={() => { if (confirm(`${u.name} ni o'chirish?`)) { remove(u.id); toast.success("O'chirildi"); } }}>
+                  <Button variant="ghost" size="icon" disabled={u.id === "u_admin"} onClick={() => removeUser(u)}>
                     <Trash2 className="h-4 w-4 text-destructive" />
                   </Button>
                 </TableCell>
