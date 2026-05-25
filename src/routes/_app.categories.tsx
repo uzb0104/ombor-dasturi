@@ -55,6 +55,7 @@ function CategoriesPage() {
 
   return (
     <div className="space-y-5">
+      {confirmNode}
       <PageHeader title="Kategoriyalar" subtitle="Avtomobil ehtiyot qismlari turlari" actions={
         <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) { setEditing(null); setName(""); } }}>
           <DialogTrigger asChild><Button><Plus className="h-4 w-4 mr-1" />Yangi</Button></DialogTrigger>
