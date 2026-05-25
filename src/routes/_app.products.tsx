@@ -3,11 +3,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { PageHeader, StatusBadge } from "@/components/ui-kit";
+import { PageHeader, StatusBadge, useConfirm, usePagination, PaginationBar, useSelection, BulkBar, SelectCell } from "@/components/ui-kit";
 import { useStore } from "@/lib/store";
 import { formatSom } from "@/lib/constants";
 import { useMemo, useState } from "react";
 import { Plus, Search, Edit, Trash2, Package, ScanBarcode } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
@@ -36,6 +37,8 @@ function ProductsPage() {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<string | null>(null);
   const [form, setForm] = useState<FormState>(emptyForm(categories[0] || "", vehicleBrands[0] || ""));
+  const { confirm, confirmNode } = useConfirm();
+  const sel = useSelection();
 
   const filtered = useMemo(() => products.filter(p => {
     const s = search.toLowerCase();
@@ -45,6 +48,10 @@ function ProductsPage() {
     if (v && p.vehicle !== v) return false;
     return true;
   }), [products, search, cat, veh, vehicleFilter]);
+
+  const pg = usePagination(filtered, 12);
+  const pageIds = pg.paged.map(p => p.id);
+  const allChecked = pageIds.length > 0 && pageIds.every(id => sel.has(id));
 
   const startEdit = (id: string) => {
     const p = products.find(x => x.id === id);
@@ -61,9 +68,8 @@ function ProductsPage() {
 
   const generateBarcode = () => {
     let code = "";
-    do {
-      code = `486${Math.floor(100000000 + Math.random() * 899999999)}`;
-    } while (products.some(p => p.barcode === code));
+    do { code = `486${Math.floor(100000000 + Math.random() * 899999999)}`; }
+    while (products.some(p => p.barcode === code));
     setForm(f => ({ ...f, barcode: code }));
     toast.success("Barkod yaratildi");
   };
@@ -81,9 +87,7 @@ function ProductsPage() {
     } else {
       addProduct({
         id: `prd_${Math.random().toString(36).slice(2, 9)}`,
-        sku: "",
-        ...form,
-        barcode: bc,
+        sku: "", ...form, barcode: bc,
         supplierId: form.supplierId || suppliers[0]?.id || "",
       });
       toast.success("Tovar qo'shildi");
@@ -91,8 +95,22 @@ function ProductsPage() {
     setOpen(false); setEditing(null); setForm(emptyForm(categories[0] || "", vehicleBrands[0] || ""));
   };
 
+  const removeOne = async (id: string, name: string) => {
+    const ok = await confirm({ title: "Tovarni o'chirish", description: `"${name}" o'chirilsinmi?`, destructive: true, confirmText: "O'chirish" });
+    if (ok) { deleteProduct(id); toast.success("O'chirildi"); }
+  };
+
+  const removeBulk = async () => {
+    const ok = await confirm({ title: "Tanlanganlarni o'chirish", description: `${sel.count} ta tovar o'chiriladi. Davom etilsinmi?`, destructive: true, confirmText: "O'chirish" });
+    if (!ok) return;
+    sel.selected.forEach(id => deleteProduct(id));
+    sel.clear();
+    toast.success(`${sel.count} ta tovar o'chirildi`);
+  };
+
   return (
     <div className="space-y-5">
+      {confirmNode}
       <PageHeader
         title="Tovarlar"
         subtitle={`Jami ${products.length} ta tovar`}
@@ -108,13 +126,8 @@ function ProductsPage() {
                 <div className="sm:col-span-2">
                   <Label>Barkod (ixtiyoriy)</Label>
                   <div className="flex gap-2">
-                    <Input
-                      value={form.barcode}
-                      onChange={(e) => setForm({ ...form, barcode: e.target.value })}
-                      placeholder="Skanerlang yoki qo'lda kiriting"
-                      className="font-mono"
-                      autoFocus={!editing}
-                    />
+                    <Input value={form.barcode} onChange={(e) => setForm({ ...form, barcode: e.target.value })}
+                      placeholder="Skanerlang yoki qo'lda kiriting" className="font-mono" autoFocus={!editing} />
                     <Button type="button" variant="outline" onClick={generateBarcode}>
                       <ScanBarcode className="h-4 w-4 mr-1" />Yaratish
                     </Button>
@@ -166,11 +179,15 @@ function ProductsPage() {
           </Select>
         </div>
 
+        <BulkBar count={sel.count} onDelete={removeBulk} onClear={sel.clear} label="tovar tanlandi" />
+
         <div className="overflow-x-auto -mx-3 md:mx-0">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="hidden sm:table-cell"></TableHead>
+                <TableHead className="w-10">
+                  <Checkbox checked={allChecked} onCheckedChange={(v) => sel.toggleAll(pageIds, !!v)} aria-label="Hammasi" />
+                </TableHead>
                 <TableHead>Nomi</TableHead>
                 <TableHead className="hidden md:table-cell">Barkod</TableHead>
                 <TableHead className="hidden sm:table-cell">Brend</TableHead>
@@ -183,19 +200,20 @@ function ProductsPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filtered.length === 0 && (
+              {pg.paged.length === 0 && (
                 <TableRow><TableCell colSpan={10} className="text-center py-10 text-muted-foreground">Tovarlar topilmadi</TableCell></TableRow>
               )}
-              {filtered.map(p => (
-                <TableRow key={p.id} className="hover:bg-muted/40">
-                  <TableCell className="hidden sm:table-cell">
-                    <div className="h-9 w-9 rounded-lg bg-muted grid place-items-center">
-                      <Package className="h-4 w-4 text-muted-foreground" />
-                    </div>
-                  </TableCell>
+              {pg.paged.map(p => (
+                <TableRow key={p.id} className="hover:bg-muted/40" data-state={sel.has(p.id) ? "selected" : undefined}>
+                  <TableCell><SelectCell checked={sel.has(p.id)} onChange={() => sel.toggle(p.id)} /></TableCell>
                   <TableCell className="font-medium">
-                    {p.name}
-                    <div className="sm:hidden text-xs text-muted-foreground mt-0.5">{p.vehicle} · {p.category}</div>
+                    <div className="flex items-center gap-2">
+                      <div className="h-8 w-8 rounded-lg bg-muted grid place-items-center shrink-0"><Package className="h-4 w-4 text-muted-foreground" /></div>
+                      <div className="min-w-0">
+                        <div className="truncate">{p.name}</div>
+                        <div className="sm:hidden text-xs text-muted-foreground">{p.vehicle} · {p.category}</div>
+                      </div>
+                    </div>
                   </TableCell>
                   <TableCell className="hidden md:table-cell text-xs font-mono text-muted-foreground">
                     {p.barcode ? p.barcode : <span className="italic">barkodsiz</span>}
@@ -208,7 +226,7 @@ function ProductsPage() {
                   <TableCell className="hidden sm:table-cell"><StatusBadge qty={p.quantity} min={p.minQty} /></TableCell>
                   <TableCell className="text-right whitespace-nowrap">
                     <Button variant="ghost" size="icon" onClick={() => startEdit(p.id)}><Edit className="h-4 w-4" /></Button>
-                    <Button variant="ghost" size="icon" onClick={() => { if (confirm(`"${p.name}" o'chirilsinmi?`)) { deleteProduct(p.id); toast.success("O'chirildi"); } }}>
+                    <Button variant="ghost" size="icon" onClick={() => removeOne(p.id, p.name)}>
                       <Trash2 className="h-4 w-4 text-destructive" />
                     </Button>
                   </TableCell>
@@ -217,6 +235,7 @@ function ProductsPage() {
             </TableBody>
           </Table>
         </div>
+        <PaginationBar {...pg} />
       </Card>
     </div>
   );

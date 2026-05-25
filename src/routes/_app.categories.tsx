@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Card } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { PageHeader } from "@/components/ui-kit";
+import { PageHeader, useConfirm } from "@/components/ui-kit";
 import { useStore } from "@/lib/store";
 import { VEHICLE_BRANDS } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
@@ -25,6 +25,7 @@ function CategoriesPage() {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<string | null>(null);
   const [name, setName] = useState("");
+  const { confirm, confirmNode } = useConfirm();
 
   const submit = () => {
     const n = name.trim();
@@ -41,16 +42,20 @@ function CategoriesPage() {
     setOpen(false); setEditing(null); setName("");
   };
 
-  const remove = (c: string) => {
+  const remove = async (c: string) => {
     const count = products.filter(p => p.category === c).length;
-    if (count > 0 && !confirm(`Bu kategoriyada ${count} ta tovar bor. O'chirilsinmi?`)) return;
-    if (count === 0 && !confirm(`"${c}" o'chirilsinmi?`)) return;
+    const desc = count > 0
+      ? `Bu kategoriyada ${count} ta tovar bor. Baribir o'chirilsinmi?`
+      : `"${c}" o'chirilsinmi?`;
+    const ok = await confirm({ title: "Kategoriyani o'chirish", description: desc, destructive: true, confirmText: "O'chirish" });
+    if (!ok) return;
     deleteCategory(c);
     toast.success("O'chirildi");
   };
 
   return (
     <div className="space-y-5">
+      {confirmNode}
       <PageHeader title="Kategoriyalar" subtitle="Avtomobil ehtiyot qismlari turlari" actions={
         <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) { setEditing(null); setName(""); } }}>
           <DialogTrigger asChild><Button><Plus className="h-4 w-4 mr-1" />Yangi</Button></DialogTrigger>

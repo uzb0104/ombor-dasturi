@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Card } from "@/components/ui/card";
-import { PageHeader } from "@/components/ui-kit";
+import { PageHeader, useConfirm } from "@/components/ui-kit";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -28,9 +28,16 @@ const emptyUser = (): UserForm => ({
 function SettingsPage() {
   const { user, theme, toggleTheme, resetData, appUsers, addAppUser, updateAppUser, deleteAppUser, vehicleBrands, products, addVehicleBrand, updateVehicleBrand, deleteVehicleBrand } = useStore();
   const isAdmin = user?.role === "Admin";
+  const { confirm, confirmNode } = useConfirm();
+
+  const resetAll = async () => {
+    const ok = await confirm({ title: "Demo ma'lumotlarni tiklash", description: "Barcha ma'lumotlar dastlabki holatga qaytariladi. Bu amalni qaytarib bo'lmaydi.", destructive: true, confirmText: "Tiklash" });
+    if (ok) { resetData(); toast.success("Ma'lumotlar tiklandi"); }
+  };
 
   return (
     <div className="space-y-5">
+      {confirmNode}
       <PageHeader title="Sozlamalar" subtitle="Profil, foydalanuvchilar va tizim sozlamalari" />
 
       <Tabs defaultValue="profile">
@@ -98,7 +105,7 @@ function SettingsPage() {
             <Card className="p-6 rounded-2xl space-y-3 border-destructive/30 max-w-2xl">
               <h3 className="font-semibold text-destructive">Xavfli zona</h3>
               <p className="text-sm text-muted-foreground">Barcha demo ma'lumotlarni dastlabki holatga qaytarish. Bu amalni qaytarib bo'lmaydi.</p>
-              <Button variant="destructive" onClick={() => { if (confirm("Haqiqatan ham barcha ma'lumotlarni tiklamoqchimisiz?")) { resetData(); toast.success("Ma'lumotlar tiklandi"); } }}>
+              <Button variant="destructive" onClick={resetAll}>
                 Demo ma'lumotlarni tiklash
               </Button>
             </Card>
@@ -120,6 +127,12 @@ function UsersManagement({
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<string | null>(null);
   const [form, setForm] = useState<UserForm>(emptyUser());
+  const { confirm, confirmNode } = useConfirm();
+
+  const removeUser = async (u: AppUser) => {
+    const ok = await confirm({ title: "Foydalanuvchini o'chirish", description: `${u.name} o'chirilsinmi?`, destructive: true, confirmText: "O'chirish" });
+    if (ok) { remove(u.id); toast.success("O'chirildi"); }
+  };
 
   const startEdit = (u: AppUser) => {
     setEditing(u.id);
@@ -153,6 +166,7 @@ function UsersManagement({
 
   return (
     <Card className="rounded-2xl">
+      {confirmNode}
       <div className="flex items-center justify-between p-4 border-b">
         <div>
           <h3 className="font-semibold">Foydalanuvchilar va ruxsatlar</h3>
@@ -231,7 +245,7 @@ function UsersManagement({
                 </TableCell>
                 <TableCell className="text-right">
                   <Button variant="ghost" size="icon" onClick={() => startEdit(u)}><Edit className="h-4 w-4" /></Button>
-                  <Button variant="ghost" size="icon" disabled={u.id === "u_admin"} onClick={() => { if (confirm(`${u.name} ni o'chirish?`)) { remove(u.id); toast.success("O'chirildi"); } }}>
+                  <Button variant="ghost" size="icon" disabled={u.id === "u_admin"} onClick={() => removeUser(u)}>
                     <Trash2 className="h-4 w-4 text-destructive" />
                   </Button>
                 </TableCell>
@@ -256,6 +270,7 @@ function BrandsManagement({
   const [newBrand, setNewBrand] = useState("");
   const [editing, setEditing] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
+  const { confirm, confirmNode } = useConfirm();
 
   const addBrand = () => {
     const n = newBrand.trim();
@@ -271,16 +286,19 @@ function BrandsManagement({
     update(oldName, n); setEditing(null); toast.success("Yangilandi");
   };
 
-  const removeBrand = (b: string) => {
+  const removeBrand = async (b: string) => {
     const count = products.filter(p => p.vehicle === b).length;
-    if (count > 0) {
-      if (!confirm(`"${b}" brendiga ${count} ta tovar bog'langan. Baribir o'chirilsinmi?`)) return;
-    } else if (!confirm(`"${b}" brendi o'chirilsinmi?`)) return;
+    const desc = count > 0
+      ? `"${b}" brendiga ${count} ta tovar bog'langan. Baribir o'chirilsinmi?`
+      : `"${b}" brendi o'chirilsinmi?`;
+    const ok = await confirm({ title: "Brendni o'chirish", description: desc, destructive: true, confirmText: "O'chirish" });
+    if (!ok) return;
     remove(b); toast.success("O'chirildi");
   };
 
   return (
     <Card className="rounded-2xl">
+      {confirmNode}
       <div className="p-4 border-b">
         <h3 className="font-semibold">Avtomobil brendlari</h3>
         <p className="text-xs text-muted-foreground mt-0.5">Yangi avtomobil brendlarini qo'shing yoki mavjudlarini tahrirlang</p>
