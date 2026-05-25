@@ -105,7 +105,7 @@ function SettingsPage() {
             <Card className="p-6 rounded-2xl space-y-3 border-destructive/30 max-w-2xl">
               <h3 className="font-semibold text-destructive">Xavfli zona</h3>
               <p className="text-sm text-muted-foreground">Barcha demo ma'lumotlarni dastlabki holatga qaytarish. Bu amalni qaytarib bo'lmaydi.</p>
-              <Button variant="destructive" onClick={() => { if (confirm("Haqiqatan ham barcha ma'lumotlarni tiklamoqchimisiz?")) { resetData(); toast.success("Ma'lumotlar tiklandi"); } }}>
+              <Button variant="destructive" onClick={resetAll}>
                 Demo ma'lumotlarni tiklash
               </Button>
             </Card>
