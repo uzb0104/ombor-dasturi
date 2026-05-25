@@ -28,9 +28,16 @@ const emptyUser = (): UserForm => ({
 function SettingsPage() {
   const { user, theme, toggleTheme, resetData, appUsers, addAppUser, updateAppUser, deleteAppUser, vehicleBrands, products, addVehicleBrand, updateVehicleBrand, deleteVehicleBrand } = useStore();
   const isAdmin = user?.role === "Admin";
+  const { confirm, confirmNode } = useConfirm();
+
+  const resetAll = async () => {
+    const ok = await confirm({ title: "Demo ma'lumotlarni tiklash", description: "Barcha ma'lumotlar dastlabki holatga qaytariladi. Bu amalni qaytarib bo'lmaydi.", destructive: true, confirmText: "Tiklash" });
+    if (ok) { resetData(); toast.success("Ma'lumotlar tiklandi"); }
+  };
 
   return (
     <div className="space-y-5">
+      {confirmNode}
       <PageHeader title="Sozlamalar" subtitle="Profil, foydalanuvchilar va tizim sozlamalari" />
 
       <Tabs defaultValue="profile">
