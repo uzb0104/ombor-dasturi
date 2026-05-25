@@ -127,6 +127,12 @@ function UsersManagement({
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<string | null>(null);
   const [form, setForm] = useState<UserForm>(emptyUser());
+  const { confirm, confirmNode } = useConfirm();
+
+  const removeUser = async (u: AppUser) => {
+    const ok = await confirm({ title: "Foydalanuvchini o'chirish", description: `${u.name} o'chirilsinmi?`, destructive: true, confirmText: "O'chirish" });
+    if (ok) { remove(u.id); toast.success("O'chirildi"); }
+  };
 
   const startEdit = (u: AppUser) => {
     setEditing(u.id);
