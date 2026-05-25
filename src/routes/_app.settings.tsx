@@ -298,6 +298,7 @@ function BrandsManagement({
 
   return (
     <Card className="rounded-2xl">
+      {confirmNode}
       <div className="p-4 border-b">
         <h3 className="font-semibold">Avtomobil brendlari</h3>
         <p className="text-xs text-muted-foreground mt-0.5">Yangi avtomobil brendlarini qo'shing yoki mavjudlarini tahrirlang</p>
