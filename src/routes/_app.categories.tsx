@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Card } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { PageHeader } from "@/components/ui-kit";
+import { PageHeader, useConfirm } from "@/components/ui-kit";
 import { useStore } from "@/lib/store";
 import { VEHICLE_BRANDS } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
