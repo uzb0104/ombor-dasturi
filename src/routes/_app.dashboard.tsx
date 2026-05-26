@@ -1,9 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useStore } from "@/lib/store";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatCard, PageHeader } from "@/components/ui-kit";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { formatSom } from "@/lib/constants";
 import {
   Wallet, TrendingUp, Calendar, CalendarDays, PiggyBank, Receipt, Users, AlertTriangle,
