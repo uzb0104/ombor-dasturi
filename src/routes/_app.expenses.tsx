@@ -162,3 +162,66 @@ function ExpensesPage() {
     </div>
   );
 }
+
+type DetailKind = "expenses" | "profit" | "net" | null;
+function ExpenseDetailDialog({
+  open, onClose, expenses, sales,
+}: {
+  open: DetailKind;
+  onClose: () => void;
+  expenses: ReturnType<typeof useStore.getState>["expenses"];
+  sales: ReturnType<typeof useStore.getState>["sales"];
+}) {
+  if (!open) return null;
+  const title =
+    open === "expenses" ? "Jami xarajatlar — barcha tranzaksiyalar"
+    : open === "profit" ? "Yalpi foyda — sotuvlar bo'yicha"
+    : "Sof foyda — sotuvlar va xarajatlar";
+
+  const expRows = [...expenses].sort((a,b) => +new Date(b.date) - +new Date(a.date));
+  const saleRows = [...sales].sort((a,b) => +new Date(b.date) - +new Date(a.date));
+
+  return (
+    <Dialog open={!!open} onOpenChange={(v) => !v && onClose()}>
+      <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
+        <DialogHeader><DialogTitle>{title}</DialogTitle></DialogHeader>
+        <div className="space-y-4 text-sm">
+          {(open === "expenses" || open === "net") && (
+            <div>
+              <div className="font-semibold mb-2 text-warning-foreground">Xarajatlar ({expRows.length})</div>
+              <div className="border rounded-lg divide-y max-h-72 overflow-y-auto">
+                {expRows.map(e => (
+                  <div key={e.id} className="flex items-center justify-between px-3 py-2">
+                    <div>
+                      <div className="font-medium">{e.category}</div>
+                      <div className="text-xs text-muted-foreground">{new Date(e.date).toLocaleDateString("uz-UZ")} · {e.note || "—"}</div>
+                    </div>
+                    <div className="tabular-nums text-destructive">−{formatSom(e.amount)}</div>
+                  </div>
+                ))}
+                {expRows.length === 0 && <div className="px-3 py-4 text-muted-foreground text-center">Yo'q</div>}
+              </div>
+            </div>
+          )}
+          {(open === "profit" || open === "net") && (
+            <div>
+              <div className="font-semibold mb-2 text-success">Sotuvlar foydasi ({saleRows.length})</div>
+              <div className="border rounded-lg divide-y max-h-72 overflow-y-auto">
+                {saleRows.map(s => (
+                  <div key={s.id} className="flex items-center justify-between px-3 py-2">
+                    <div>
+                      <div className="font-medium">#{s.id.slice(-6).toUpperCase()}</div>
+                      <div className="text-xs text-muted-foreground">{new Date(s.date).toLocaleDateString("uz-UZ")} · {s.paymentType} · sotuv {formatSom(s.total)}</div>
+                    </div>
+                    <div className="tabular-nums text-success font-semibold">+{formatSom(s.profit)}</div>
+                  </div>
+                ))}
+                {saleRows.length === 0 && <div className="px-3 py-4 text-muted-foreground text-center">Yo'q</div>}
+              </div>
+            </div>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
