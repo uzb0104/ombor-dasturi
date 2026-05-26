@@ -27,6 +27,7 @@ function ExpensesPage() {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<string | null>(null);
   const [form, setForm] = useState<Form>(empty());
+  const [detail, setDetail] = useState<"expenses" | "profit" | "net" | null>(null);
   const { confirm, confirmNode } = useConfirm();
   const sel = useSelection();
 
@@ -62,14 +63,21 @@ function ExpensesPage() {
 
   const removeOne = async (id: string) => {
     const ok = await confirm({ title: "Xarajatni o'chirish", description: "Bu xarajat yozuvi o'chirilsinmi?", destructive: true, confirmText: "O'chirish" });
-    if (ok) { deleteExpense(id); toast.success("O'chirildi"); }
+    if (!ok) return;
+    const snap = expenses.find(e => e.id === id);
+    deleteExpense(id);
+    toast.success("O'chirildi", { action: snap ? { label: "Qaytarish", onClick: () => addExpense(snap) } : undefined });
   };
   const removeBulk = async () => {
     const ok = await confirm({ title: "Tanlanganlarni o'chirish", description: `${sel.count} ta xarajat o'chiriladi.`, destructive: true, confirmText: "O'chirish" });
     if (!ok) return;
-    const n = sel.count;
-    sel.selected.forEach(id => deleteExpense(id));
-    sel.clear(); toast.success(`${n} ta xarajat o'chirildi`);
+    const snaps = expenses.filter(e => sel.has(e.id));
+    snaps.forEach(e => deleteExpense(e.id));
+    sel.clear();
+    toast.success(`${snaps.length} ta xarajat o'chirildi`, {
+      description: snaps.slice(0, 5).map(e => `${e.category}: ${formatSom(e.amount)}`).join(" · "),
+      action: { label: "Qaytarish", onClick: () => snaps.forEach(e => addExpense(e)) },
+    });
   };
 
   return (
@@ -96,10 +104,13 @@ function ExpensesPage() {
       } />
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4">
-        <StatCard label="Jami xarajatlar" value={formatSom(total)} icon={Receipt} accent="warning" />
-        <StatCard label="Yalpi foyda" value={formatSom(profit)} icon={TrendingUp} accent="success" />
-        <StatCard label="Sof foyda" value={formatSom(profit - total)} icon={TrendingDown} accent={profit - total > 0 ? "success" : "destructive"} />
+        <StatCard label="Jami xarajatlar" value={formatSom(total)} icon={Receipt} accent="warning" onClick={() => setDetail("expenses")} />
+        <StatCard label="Yalpi foyda" value={formatSom(profit)} icon={TrendingUp} accent="success" onClick={() => setDetail("profit")} />
+        <StatCard label="Sof foyda" value={formatSom(profit - total)} icon={TrendingDown} accent={profit - total > 0 ? "success" : "destructive"} onClick={() => setDetail("net")} />
       </div>
+
+      <ExpenseDetailDialog open={detail} onClose={() => setDetail(null)} expenses={sortedExpenses} sales={sales} />
+
 
       <Card className="rounded-2xl">
         <CardHeader><CardTitle className="text-base">Toifalar bo'yicha</CardTitle></CardHeader>
