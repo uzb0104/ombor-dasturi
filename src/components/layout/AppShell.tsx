@@ -171,3 +171,20 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     </div>
   );
 }
+
+function LangSwitcher() {
+  const { lang, setLang } = useLang();
+  return (
+    <Select value={lang} onValueChange={(v) => setLang(v as Lang)}>
+      <SelectTrigger className="h-9 w-auto gap-1 px-2" aria-label="Til">
+        <Languages className="h-4 w-4" />
+        <span className="hidden sm:inline text-xs">{LANG_LABELS[lang]}</span>
+      </SelectTrigger>
+      <SelectContent align="end">
+        {(Object.keys(LANG_LABELS) as Lang[]).map((l) => (
+          <SelectItem key={l} value={l}>{LANG_LABELS[l]}</SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+}
