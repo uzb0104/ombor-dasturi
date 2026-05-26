@@ -67,19 +67,23 @@ function ProductsPage() {
   };
 
   const generateBarcode = () => {
+    // Generates a short alphanumeric box-code (e.g. B7RTC, 48RCT3303)
+    const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
     let code = "";
-    do { code = `486${Math.floor(100000000 + Math.random() * 899999999)}`; }
-    while (products.some(p => p.barcode === code));
+    do {
+      const len = 5 + Math.floor(Math.random() * 4);
+      code = Array.from({ length: len }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
+    } while (products.some(p => p.barcode === code));
     setForm(f => ({ ...f, barcode: code }));
-    toast.success("Barkod yaratildi");
+    toast.success("Kod yaratildi");
   };
 
   const submit = () => {
     if (!form.name.trim()) { toast.error("Tovar nomi majburiy"); return; }
-    const bc = form.barcode.trim();
+    const bc = form.barcode.trim().toUpperCase();
     if (bc) {
       const dup = products.find(p => p.barcode === bc && p.id !== editing);
-      if (dup) { toast.error(`Bu barkod allaqachon mavjud: ${dup.name}`); return; }
+      if (dup) { toast.error(`Bu kod allaqachon mavjud: ${dup.name}`); return; }
     }
     if (editing) {
       updateProduct(editing, { ...form, barcode: bc, sku: "" });
@@ -97,15 +101,25 @@ function ProductsPage() {
 
   const removeOne = async (id: string, name: string) => {
     const ok = await confirm({ title: "Tovarni o'chirish", description: `"${name}" o'chirilsinmi?`, destructive: true, confirmText: "O'chirish" });
-    if (ok) { deleteProduct(id); toast.success("O'chirildi"); }
+    if (!ok) return;
+    const snap = products.find(p => p.id === id);
+    deleteProduct(id);
+    toast.success(`O'chirildi: ${name}`, {
+      action: snap ? { label: "Qaytarish", onClick: () => addProduct(snap) } : undefined,
+    });
   };
 
   const removeBulk = async () => {
     const ok = await confirm({ title: "Tanlanganlarni o'chirish", description: `${sel.count} ta tovar o'chiriladi. Davom etilsinmi?`, destructive: true, confirmText: "O'chirish" });
     if (!ok) return;
-    sel.selected.forEach(id => deleteProduct(id));
+    const snaps = products.filter(p => sel.has(p.id));
+    const names = snaps.map(p => p.name);
+    snaps.forEach(p => deleteProduct(p.id));
     sel.clear();
-    toast.success(`${sel.count} ta tovar o'chirildi`);
+    toast.success(`${snaps.length} ta tovar o'chirildi`, {
+      description: names.slice(0, 5).join(", ") + (names.length > 5 ? `, +${names.length - 5}` : ""),
+      action: { label: "Qaytarish", onClick: () => snaps.forEach(p => addProduct(p)) },
+    });
   };
 
   return (
