@@ -15,6 +15,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { useEffect, useState } from "react";
+import { useLang, LANG_LABELS, type Lang } from "@/lib/i18n";
+import { Languages } from "lucide-react";
 
 const ICONS = {
   LayoutDashboard, Warehouse: WarehouseIcon, Package, Tags, ShoppingCart, PackagePlus,
@@ -124,6 +126,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               </SelectContent>
             </Select>
 
+            <LangSwitcher />
+
             <Button variant="ghost" size="icon" onClick={toggleTheme}>
               {theme === "light" ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
             </Button>
@@ -165,5 +169,22 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </main>
       </div>
     </div>
+  );
+}
+
+function LangSwitcher() {
+  const { lang, setLang } = useLang();
+  return (
+    <Select value={lang} onValueChange={(v) => setLang(v as Lang)}>
+      <SelectTrigger className="h-9 w-auto gap-1 px-2" aria-label="Til">
+        <Languages className="h-4 w-4" />
+        <span className="hidden sm:inline text-xs">{LANG_LABELS[lang]}</span>
+      </SelectTrigger>
+      <SelectContent align="end">
+        {(Object.keys(LANG_LABELS) as Lang[]).map((l) => (
+          <SelectItem key={l} value={l}>{LANG_LABELS[l]}</SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
   );
 }
