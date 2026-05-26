@@ -18,6 +18,8 @@ export const Route = createFileRoute("/_app/dashboard")({ component: Dashboard }
 
 function Dashboard() {
   const { products, sales, expenses, employees, customers, suppliers, vehicleFilter } = useStore();
+  const [detail, setDetail] = useState<null | "warehouse" | "today" | "week" | "month" | "profit" | "expenses" | "salary" | "net" | "debt">(null);
+
 
   const filtered = useMemo(() => {
     if (vehicleFilter === "all") return { products, sales };
@@ -108,16 +110,23 @@ function Dashboard() {
       />
 
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4">
-        <StatCard label="Ombor qiymati" value={formatSom(warehouseValue)} icon={Wallet} accent="primary" />
-        <StatCard label="Bugungi sotuv" value={formatSom(todaySales)} icon={TrendingUp} accent="success" />
-        <StatCard label="Haftalik sotuv" value={formatSom(weekSales)} icon={Calendar} accent="info" />
-        <StatCard label="Oylik sotuv" value={formatSom(monthSales)} icon={CalendarDays} accent="info" />
-        <StatCard label="Yalpi foyda" value={formatSom(totalProfit)} icon={PiggyBank} accent="success" />
-        <StatCard label="Xarajatlar" value={formatSom(totalExpenses)} icon={Receipt} accent="warning" />
-        <StatCard label="Ish haqi (oylik)" value={formatSom(salaryExpense)} icon={Users} accent="primary" />
-        <StatCard label="Sof foyda" value={formatSom(netProfit)} icon={netProfit >= 0 ? PiggyBank : AlertTriangle} accent={netProfit >= 0 ? "success" : "destructive"} />
-        <StatCard label="Qarzdorlik" value={formatSom(totalDebt)} icon={AlertTriangle} accent="destructive" />
+        <StatCard label="Ombor qiymati" value={formatSom(warehouseValue)} icon={Wallet} accent="primary" onClick={() => setDetail("warehouse")} />
+        <StatCard label="Bugungi sotuv" value={formatSom(todaySales)} icon={TrendingUp} accent="success" onClick={() => setDetail("today")} />
+        <StatCard label="Haftalik sotuv" value={formatSom(weekSales)} icon={Calendar} accent="info" onClick={() => setDetail("week")} />
+        <StatCard label="Oylik sotuv" value={formatSom(monthSales)} icon={CalendarDays} accent="info" onClick={() => setDetail("month")} />
+        <StatCard label="Yalpi foyda" value={formatSom(totalProfit)} icon={PiggyBank} accent="success" onClick={() => setDetail("profit")} />
+        <StatCard label="Xarajatlar" value={formatSom(totalExpenses)} icon={Receipt} accent="warning" onClick={() => setDetail("expenses")} />
+        <StatCard label="Ish haqi (oylik)" value={formatSom(salaryExpense)} icon={Users} accent="primary" onClick={() => setDetail("salary")} />
+        <StatCard label="Sof foyda" value={formatSom(netProfit)} icon={netProfit >= 0 ? PiggyBank : AlertTriangle} accent={netProfit >= 0 ? "success" : "destructive"} onClick={() => setDetail("net")} />
+        <StatCard label="Qarzdorlik" value={formatSom(totalDebt)} icon={AlertTriangle} accent="destructive" onClick={() => setDetail("debt")} />
       </div>
+
+      <DetailDialog
+        kind={detail}
+        onClose={() => setDetail(null)}
+        ctx={{ products: filtered.products, sales: filtered.sales, expenses, employees, customers, suppliers }}
+      />
+
 
       {(lowStock.length > 0 || outStock.length > 0) && (
         <div className="rounded-2xl border border-warning/40 bg-warning/10 p-4 flex items-start gap-3">
