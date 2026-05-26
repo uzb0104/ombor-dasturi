@@ -15,6 +15,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { useEffect, useState } from "react";
+import { useLang, LANG_LABELS, type Lang } from "@/lib/i18n";
+import { Languages } from "lucide-react";
 
 const ICONS = {
   LayoutDashboard, Warehouse: WarehouseIcon, Package, Tags, ShoppingCart, PackagePlus,
@@ -123,6 +125,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 {WAREHOUSES.map((w) => <SelectItem key={w} value={w}>{w}</SelectItem>)}
               </SelectContent>
             </Select>
+
+            <LangSwitcher />
 
             <Button variant="ghost" size="icon" onClick={toggleTheme}>
               {theme === "light" ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
