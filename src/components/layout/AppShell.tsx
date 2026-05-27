@@ -122,7 +122,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <Select value={warehouse} onValueChange={(v) => setWarehouse(v as any)}>
               <SelectTrigger className="hidden sm:flex h-9 w-[160px]"><SelectValue /></SelectTrigger>
               <SelectContent>
-                {WAREHOUSES.map((w) => <SelectItem key={w} value={w}>{w}</SelectItem>)}
+                {branches.map((w) => <SelectItem key={w} value={w}>{w}</SelectItem>)}
               </SelectContent>
             </Select>
 
