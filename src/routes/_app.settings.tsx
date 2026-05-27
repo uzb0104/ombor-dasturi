@@ -76,6 +76,12 @@ function SettingsPage() {
           </TabsContent>
         )}
 
+        {isAdmin && (
+          <TabsContent value="branches" className="mt-5">
+            <BranchesManagement branches={branches} add={addBranch} update={updateBranch} remove={deleteBranch} />
+          </TabsContent>
+        )}
+
         <TabsContent value="security" className="mt-5">
           <Card className="p-6 rounded-2xl space-y-4 max-w-2xl">
             <h3 className="font-semibold">Parolni o'zgartirish</h3>
