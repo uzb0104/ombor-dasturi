@@ -89,6 +89,15 @@ type State = {
   updateVehicleBrand: (oldName: string, newName: string) => void;
   deleteVehicleBrand: (b: string) => void;
 
+  branches: string[];
+  addBranch: (b: string) => void;
+  updateBranch: (oldName: string, newName: string) => void;
+  deleteBranch: (b: string) => void;
+
+  auditLog: AuditEntry[];
+  logAudit: (e: Omit<AuditEntry, "id" | "ts" | "userId" | "userName">) => void;
+  clearAudit: () => void;
+
   resetData: () => void;
 };
 
