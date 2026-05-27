@@ -195,6 +195,43 @@ function ProductsPage() {
                     <SelectContent>{suppliers.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
                   </Select>
                 </div>
+                <div className="sm:col-span-2"><Label>Mahsulot brendi (ixtiyoriy)</Label>
+                  <Input value={form.unitBrand} onChange={(e) => setForm({ ...form, unitBrand: e.target.value })} placeholder="Masalan: Bosch, Varta, Michelin" />
+                </div>
+                {isBattery(form.category) && (
+                  <>
+                    <div><Label>Amperaj (Ah) *</Label>
+                      <Input value={form.amperage} onChange={(e) => setForm({ ...form, amperage: e.target.value })} placeholder="60, 75, 100" />
+                    </div>
+                    <div><Label>Kuchlanish</Label>
+                      <Select value={form.voltage} onValueChange={(v) => setForm({ ...form, voltage: v })}>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="6V">6V</SelectItem>
+                          <SelectItem value="12V">12V</SelectItem>
+                          <SelectItem value="24V">24V</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </>
+                )}
+                {isTire(form.category) && (
+                  <>
+                    <div><Label>Balon o'lchami *</Label>
+                      <Input value={form.tireSize} onChange={(e) => setForm({ ...form, tireSize: e.target.value })} placeholder="175/70 R13" />
+                    </div>
+                    <div><Label>Mavsum</Label>
+                      <Select value={form.tireSeason} onValueChange={(v) => setForm({ ...form, tireSeason: v })}>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Yozgi">Yozgi</SelectItem>
+                          <SelectItem value="Qishki">Qishki</SelectItem>
+                          <SelectItem value="Universal">Universal</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </>
+                )}
                 <div><Label>Miqdor</Label><Input type="number" value={form.quantity} onChange={(e) => setForm({ ...form, quantity: +e.target.value })} /></div>
                 <div><Label>Min. miqdor</Label><Input type="number" value={form.minQty} onChange={(e) => setForm({ ...form, minQty: +e.target.value })} /></div>
                 <div><Label>Sotib olish narxi</Label><Input type="number" value={form.buyPrice} onChange={(e) => setForm({ ...form, buyPrice: +e.target.value })} /></div>
