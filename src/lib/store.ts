@@ -156,21 +156,21 @@ export const useStore = create<State>()(
       categories: [...DEFAULT_CATEGORIES],
       vehicleBrands: [...DEFAULT_VEHICLE_BRANDS],
 
-      addProduct: (p) => set({ products: [p, ...get().products] }),
-      updateProduct: (id, p) => set({ products: get().products.map(x => x.id === id ? { ...x, ...p } : x) }),
-      deleteProduct: (id) => set({ products: get().products.filter(x => x.id !== id) }),
+      addProduct: (p) => { set({ products: [p, ...get().products] }); get().logAudit({ action: "create", entity: "product", entityId: p.id, summary: `Tovar qo'shildi: ${p.name}` }); },
+      updateProduct: (id, p) => { const prev = get().products.find(x => x.id === id); set({ products: get().products.map(x => x.id === id ? { ...x, ...p } : x) }); get().logAudit({ action: "update", entity: "product", entityId: id, summary: `Tovar yangilandi: ${prev?.name}` }); },
+      deleteProduct: (id) => { const prev = get().products.find(x => x.id === id); set({ products: get().products.filter(x => x.id !== id) }); get().logAudit({ action: "delete", entity: "product", entityId: id, summary: `Tovar o'chirildi: ${prev?.name}` }); },
 
-      addCustomer: (c) => set({ customers: [c, ...get().customers] }),
-      updateCustomer: (id, c) => set({ customers: get().customers.map(x => x.id === id ? { ...x, ...c } : x) }),
-      deleteCustomer: (id) => set({ customers: get().customers.filter(x => x.id !== id) }),
+      addCustomer: (c) => { set({ customers: [c, ...get().customers] }); get().logAudit({ action: "create", entity: "customer", entityId: c.id, summary: `Mijoz qo'shildi: ${c.name}` }); },
+      updateCustomer: (id, c) => { set({ customers: get().customers.map(x => x.id === id ? { ...x, ...c } : x) }); get().logAudit({ action: "update", entity: "customer", entityId: id, summary: `Mijoz yangilandi` }); },
+      deleteCustomer: (id) => { const prev = get().customers.find(x => x.id === id); set({ customers: get().customers.filter(x => x.id !== id) }); get().logAudit({ action: "delete", entity: "customer", entityId: id, summary: `Mijoz o'chirildi: ${prev?.name}` }); },
 
-      addSupplier: (s) => set({ suppliers: [s, ...get().suppliers] }),
-      updateSupplier: (id, s) => set({ suppliers: get().suppliers.map(x => x.id === id ? { ...x, ...s } : x) }),
-      deleteSupplier: (id) => set({ suppliers: get().suppliers.filter(x => x.id !== id) }),
+      addSupplier: (s) => { set({ suppliers: [s, ...get().suppliers] }); get().logAudit({ action: "create", entity: "supplier", entityId: s.id, summary: `Yetkazib beruvchi: ${s.name}` }); },
+      updateSupplier: (id, s) => { set({ suppliers: get().suppliers.map(x => x.id === id ? { ...x, ...s } : x) }); get().logAudit({ action: "update", entity: "supplier", entityId: id, summary: `Yetkazib beruvchi yangilandi` }); },
+      deleteSupplier: (id) => { const prev = get().suppliers.find(x => x.id === id); set({ suppliers: get().suppliers.filter(x => x.id !== id) }); get().logAudit({ action: "delete", entity: "supplier", entityId: id, summary: `Yetkazib beruvchi o'chirildi: ${prev?.name}` }); },
 
-      addEmployee: (e) => set({ employees: [e, ...get().employees] }),
-      updateEmployee: (id, e) => set({ employees: get().employees.map(x => x.id === id ? { ...x, ...e } : x) }),
-      deleteEmployee: (id) => set({ employees: get().employees.filter(x => x.id !== id) }),
+      addEmployee: (e) => { set({ employees: [e, ...get().employees] }); get().logAudit({ action: "create", entity: "employee", entityId: e.id, summary: `Xodim: ${e.name} (${e.role})` }); },
+      updateEmployee: (id, e) => { set({ employees: get().employees.map(x => x.id === id ? { ...x, ...e } : x) }); get().logAudit({ action: "update", entity: "employee", entityId: id, summary: `Xodim yangilandi` }); },
+      deleteEmployee: (id) => { const prev = get().employees.find(x => x.id === id); set({ employees: get().employees.filter(x => x.id !== id) }); get().logAudit({ action: "delete", entity: "employee", entityId: id, summary: `Xodim o'chirildi: ${prev?.name}` }); },
 
       addSale: (s) => {
         const products = get().products.map(p => {
@@ -183,37 +183,40 @@ export const useStore = create<State>()(
           return { ...c, debt: c.debt + debtDelta, totalPurchases: c.totalPurchases + s.total };
         });
         set({ sales: [s, ...get().sales], products, customers });
+        get().logAudit({ action: "create", entity: "sale", entityId: s.id, summary: `Sotuv: ${s.total.toLocaleString()} so'm (${s.paymentType})` });
       },
       deleteSale: (id) => {
         const s = get().sales.find(x => x.id === id);
         if (!s) return;
-        // restock items
         const products = get().products.map(p => {
           const item = s.items.find(i => i.productId === p.id);
           return item ? { ...p, quantity: p.quantity + item.qty } : p;
         });
-        // reverse customer debt/purchases
         const customers = get().customers.map(c => {
           if (c.id !== s.customerId) return c;
           const debtDelta = s.paymentType === "Qarz" ? s.total : 0;
           return { ...c, debt: Math.max(0, c.debt - debtDelta), totalPurchases: Math.max(0, c.totalPurchases - s.total) };
         });
         set({ sales: get().sales.filter(x => x.id !== id), products, customers });
+        get().logAudit({ action: "delete", entity: "sale", entityId: id, summary: `Sotuv bekor qilindi: ${s.total.toLocaleString()} so'm` });
       },
 
-      addExpense: (e) => set({ expenses: [e, ...get().expenses] }),
-      updateExpense: (id, e) => set({ expenses: get().expenses.map(x => x.id === id ? { ...x, ...e } : x) }),
-      deleteExpense: (id) => set({ expenses: get().expenses.filter(x => x.id !== id) }),
+      addExpense: (e) => { set({ expenses: [e, ...get().expenses] }); get().logAudit({ action: "create", entity: "expense", entityId: e.id, summary: `Xarajat: ${e.category} — ${e.amount.toLocaleString()} so'm` }); },
+      updateExpense: (id, e) => { set({ expenses: get().expenses.map(x => x.id === id ? { ...x, ...e } : x) }); get().logAudit({ action: "update", entity: "expense", entityId: id, summary: `Xarajat yangilandi` }); },
+      deleteExpense: (id) => { const prev = get().expenses.find(x => x.id === id); set({ expenses: get().expenses.filter(x => x.id !== id) }); get().logAudit({ action: "delete", entity: "expense", entityId: id, summary: `Xarajat o'chirildi: ${prev?.category}` }); },
 
       addIncoming: (i) => {
         const products = get().products.map(p => p.id === i.productId ? { ...p, quantity: p.quantity + i.qty } : p);
         set({ incoming: [i, ...get().incoming], products });
+        const prod = products.find(p => p.id === i.productId);
+        get().logAudit({ action: "create", entity: "incoming", entityId: i.id, summary: `Kirim: ${prod?.name || ""} +${i.qty} dona` });
       },
       deleteIncoming: (id) => {
         const inc = get().incoming.find(x => x.id === id);
         if (!inc) return;
         const products = get().products.map(p => p.id === inc.productId ? { ...p, quantity: Math.max(0, p.quantity - inc.qty) } : p);
         set({ incoming: get().incoming.filter(x => x.id !== id), products });
+        get().logAudit({ action: "delete", entity: "incoming", entityId: id, summary: `Kirim bekor qilindi` });
       },
 
       addCategory: (c) => {
