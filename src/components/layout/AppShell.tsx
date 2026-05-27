@@ -1,10 +1,10 @@
 import { Link, useRouterState, useNavigate } from "@tanstack/react-router";
 import {
   LayoutDashboard, Warehouse as WarehouseIcon, Package, Tags, ShoppingCart, PackagePlus,
-  Users, Truck, Wallet, UserCog, Receipt, BarChart3, ScanBarcode, Settings,
+  Users, Truck, Wallet, UserCog, Receipt, BarChart3, ScanBarcode, Settings, FileClock,
   Bell, Search, Sun, Moon, LogOut, ChevronDown, Menu, Car, X,
 } from "lucide-react";
-import { NAV, WAREHOUSES } from "@/lib/constants";
+import { NAV } from "@/lib/constants";
 import { useStore } from "@/lib/store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,12 +20,12 @@ import { Languages } from "lucide-react";
 
 const ICONS = {
   LayoutDashboard, Warehouse: WarehouseIcon, Package, Tags, ShoppingCart, PackagePlus,
-  Users, Truck, Wallet, UserCog, Receipt, BarChart3, ScanBarcode, Settings,
+  Users, Truck, Wallet, UserCog, Receipt, BarChart3, ScanBarcode, Settings, FileClock,
 } as const;
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const navigate = useNavigate();
-  const { user, logout, theme, toggleTheme, warehouse, setWarehouse, vehicleFilter, setVehicleFilter, vehicleBrands } = useStore();
+  const { user, logout, theme, toggleTheme, warehouse, setWarehouse, vehicleFilter, setVehicleFilter, vehicleBrands, branches } = useStore();
   const path = useRouterState({ select: (s) => s.location.pathname });
   const [mobileOpen, setMobileOpen] = useState(false);
   const [now, setNow] = useState(new Date());
