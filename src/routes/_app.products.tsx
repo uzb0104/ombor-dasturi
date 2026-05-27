@@ -290,7 +290,12 @@ function ProductsPage() {
                     <div className="flex items-center gap-2">
                       <div className="h-8 w-8 rounded-lg bg-muted grid place-items-center shrink-0"><Package className="h-4 w-4 text-muted-foreground" /></div>
                       <div className="min-w-0">
-                        <div className="truncate">{p.name}</div>
+                        <div className="truncate">
+                          {p.name}
+                          {p.attributes?.amperage && <span className="ml-2 text-xs text-muted-foreground">· {p.attributes.amperage}Ah {p.attributes.voltage}</span>}
+                          {p.attributes?.tireSize && <span className="ml-2 text-xs text-muted-foreground">· {p.attributes.tireSize} {p.attributes.tireSeason && p.attributes.tireSeason !== "Universal" ? `(${p.attributes.tireSeason})` : ""}</span>}
+                          {p.attributes?.unitBrand && <span className="ml-2 text-xs text-primary">{p.attributes.unitBrand}</span>}
+                        </div>
                         <div className="sm:hidden text-xs text-muted-foreground">{p.vehicle} · {p.category}</div>
                       </div>
                     </div>
