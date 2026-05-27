@@ -118,18 +118,20 @@ export const useStore = create<State>()(
           if (u.password && u.password !== password) return false;
           const perms = u.role === "Admin" ? ALL_PERMISSIONS : u.permissions;
           set({ user: { id: u.id, name: u.name, email: u.email, role: u.role, permissions: perms } });
+          get().logAudit({ action: "login", entity: "session", summary: `${u.name} tizimga kirdi` });
           return true;
         }
         if (email.toLowerCase() === "admin@autoerp.uz") {
           set({ user: { id: "u_admin", name: "Bosh admin", email, role: "Admin", permissions: ALL_PERMISSIONS } });
+          get().logAudit({ action: "login", entity: "session", summary: `Bosh admin tizimga kirdi` });
           return true;
         }
         return false;
       },
-      logout: () => set({ user: null }),
-      addAppUser: (u) => set({ appUsers: [{ ...u, id: `usr_${Math.random().toString(36).slice(2, 9)}` }, ...get().appUsers] }),
-      updateAppUser: (id, u) => set({ appUsers: get().appUsers.map(x => x.id === id ? { ...x, ...u } : x) }),
-      deleteAppUser: (id) => set({ appUsers: get().appUsers.filter(x => x.id !== id) }),
+      logout: () => { get().logAudit({ action: "logout", entity: "session", summary: `${get().user?.name || ""} tizimdan chiqdi` }); set({ user: null }); },
+      addAppUser: (u) => { const id = `usr_${Math.random().toString(36).slice(2, 9)}`; set({ appUsers: [{ ...u, id }, ...get().appUsers] }); get().logAudit({ action: "create", entity: "user", entityId: id, summary: `Yangi foydalanuvchi: ${u.name} (${u.role})` }); },
+      updateAppUser: (id, u) => { const prev = get().appUsers.find(x => x.id === id); set({ appUsers: get().appUsers.map(x => x.id === id ? { ...x, ...u } : x) }); get().logAudit({ action: "update", entity: "user", entityId: id, summary: `Foydalanuvchi yangilandi: ${prev?.name}` }); },
+      deleteAppUser: (id) => { const prev = get().appUsers.find(x => x.id === id); set({ appUsers: get().appUsers.filter(x => x.id !== id) }); get().logAudit({ action: "delete", entity: "user", entityId: id, summary: `Foydalanuvchi o'chirildi: ${prev?.name}` }); },
 
       theme: "light",
       toggleTheme: () => {
