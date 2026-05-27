@@ -93,15 +93,31 @@ function ProductsPage() {
       const dup = products.find(p => p.barcode === bc && p.id !== editing);
       if (dup) { toast.error(`Bu kod allaqachon mavjud: ${dup.name}`); return; }
     }
+    const attributes: any = {};
+    if (form.unitBrand.trim()) attributes.unitBrand = form.unitBrand.trim();
+    if (isBattery(form.category)) {
+      if (!form.amperage.trim()) { toast.error("Akkumulyator uchun amperaj majburiy"); return; }
+      attributes.amperage = form.amperage.trim();
+      attributes.voltage = form.voltage.trim() || "12V";
+    }
+    if (isTire(form.category)) {
+      if (!form.tireSize.trim()) { toast.error("Balon uchun o'lcham majburiy (masalan 175/70 R13)"); return; }
+      attributes.tireSize = form.tireSize.trim();
+      attributes.tireSeason = form.tireSeason;
+    }
+    const payload = {
+      name: form.name, barcode: bc, sku: "",
+      vehicle: form.vehicle, category: form.category,
+      supplierId: form.supplierId || suppliers[0]?.id || "",
+      buyPrice: form.buyPrice, sellPrice: form.sellPrice,
+      quantity: form.quantity, minQty: form.minQty,
+      attributes: Object.keys(attributes).length ? attributes : undefined,
+    };
     if (editing) {
-      updateProduct(editing, { ...form, barcode: bc, sku: "" });
+      updateProduct(editing, payload);
       toast.success("Tovar yangilandi");
     } else {
-      addProduct({
-        id: `prd_${Math.random().toString(36).slice(2, 9)}`,
-        sku: "", ...form, barcode: bc,
-        supplierId: form.supplierId || suppliers[0]?.id || "",
-      });
+      addProduct({ id: `prd_${Math.random().toString(36).slice(2, 9)}`, ...payload });
       toast.success("Tovar qo'shildi");
     }
     setOpen(false); setEditing(null); setForm(emptyForm(categories[0] || "", vehicleBrands[0] || ""));
