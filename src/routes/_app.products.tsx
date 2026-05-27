@@ -62,11 +62,14 @@ function ProductsPage() {
     const p = products.find(x => x.id === id);
     if (!p) return;
     setEditing(id);
+    const a = p.attributes || {};
     setForm({
       name: p.name, barcode: p.barcode || "",
       vehicle: p.vehicle, category: p.category,
       supplierId: p.supplierId, buyPrice: p.buyPrice, sellPrice: p.sellPrice,
       quantity: p.quantity, minQty: p.minQty,
+      unitBrand: a.unitBrand || "", amperage: a.amperage || "",
+      voltage: a.voltage || "12V", tireSize: a.tireSize || "", tireSeason: a.tireSeason || "Universal",
     });
     setOpen(true);
   };
