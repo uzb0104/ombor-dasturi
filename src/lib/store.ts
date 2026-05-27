@@ -245,25 +245,61 @@ export const useStore = create<State>()(
       },
       deleteVehicleBrand: (b) => set({ vehicleBrands: get().vehicleBrands.filter(x => x !== b) }),
 
+      branches: [...DEFAULT_BRANCHES],
+      addBranch: (b) => {
+        const n = b.trim();
+        if (!n || get().branches.includes(n)) return;
+        set({ branches: [...get().branches, n] });
+      },
+      updateBranch: (oldName, newName) => {
+        const n = newName.trim();
+        if (!n) return;
+        set({ branches: get().branches.map(x => x === oldName ? n : x) });
+        if (get().warehouse === oldName) set({ warehouse: n });
+      },
+      deleteBranch: (b) => {
+        if (get().branches.length <= 1) return;
+        set({ branches: get().branches.filter(x => x !== b) });
+        if (get().warehouse === b) set({ warehouse: get().branches[0] });
+      },
+
+      auditLog: [],
+      logAudit: (e) => {
+        const u = get().user;
+        const entry: AuditEntry = {
+          id: `aud_${Math.random().toString(36).slice(2, 9)}`,
+          ts: new Date().toISOString(),
+          userId: u?.id || "system",
+          userName: u?.name || "Tizim",
+          ...e,
+        };
+        const log = [entry, ...get().auditLog].slice(0, 2000);
+        set({ auditLog: log });
+      },
+      clearAudit: () => set({ auditLog: [] }),
+
       resetData: () => {
         const fresh = generateMockData();
-        set({ ...fresh, categories: [...DEFAULT_CATEGORIES], vehicleBrands: [...DEFAULT_VEHICLE_BRANDS] });
+        set({ ...fresh, categories: [...DEFAULT_CATEGORIES], vehicleBrands: [...DEFAULT_VEHICLE_BRANDS], branches: [...DEFAULT_BRANCHES], auditLog: [] });
       },
     }),
     {
       name: "autoerp-pro-v1",
-      version: 3,
+      version: 4,
       partialize: (s) => ({
         user: s.user, appUsers: s.appUsers, theme: s.theme, warehouse: s.warehouse, vehicleFilter: s.vehicleFilter,
         products: s.products, customers: s.customers, suppliers: s.suppliers,
         employees: s.employees, sales: s.sales, expenses: s.expenses, incoming: s.incoming,
         categories: s.categories, vehicleBrands: s.vehicleBrands,
+        branches: s.branches, auditLog: s.auditLog,
       }),
       migrate: (persisted: any) => {
         if (!persisted) return persisted;
         if (!persisted.appUsers) persisted.appUsers = defaultAppUsers;
         if (!persisted.categories) persisted.categories = [...DEFAULT_CATEGORIES];
         if (!persisted.vehicleBrands) persisted.vehicleBrands = [...DEFAULT_VEHICLE_BRANDS];
+        if (!persisted.branches) persisted.branches = [...DEFAULT_BRANCHES];
+        if (!persisted.auditLog) persisted.auditLog = [];
         if (persisted.user && !persisted.user.permissions) {
           persisted.user.permissions = ALL_PERMISSIONS;
         }
