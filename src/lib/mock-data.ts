@@ -1,5 +1,13 @@
 import { VEHICLE_BRANDS, CATEGORIES, type VehicleBrand, type Category } from "./constants";
 
+export type ProductAttributes = {
+  amperage?: string;   // Akkumulyator: masalan "60", "75"
+  voltage?: string;    // Akkumulyator: "12V"
+  tireSize?: string;   // Balon: "175/70 R13"
+  tireSeason?: string; // "Yozgi" | "Qishki" | "Universal"
+  unitBrand?: string;  // mahsulot brendi (Bosch, Varta, Michelin) — avtomobil brendidan farqli
+};
+
 export type Product = {
   id: string;
   name: string;
@@ -14,6 +22,8 @@ export type Product = {
   minQty: number;
   image?: string;
   description?: string;
+  attributes?: ProductAttributes;
+  branchStock?: Record<string, number>;
 };
 
 export type Customer = {
