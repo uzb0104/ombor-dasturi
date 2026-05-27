@@ -20,6 +20,7 @@ type FormState = {
   name: string; barcode: string;
   vehicle: string; category: string;
   supplierId: string; buyPrice: number; sellPrice: number; quantity: number; minQty: number;
+  unitBrand: string; amperage: string; voltage: string; tireSize: string; tireSeason: string;
 };
 
 const emptyForm = (firstCategory: string, firstBrand: string): FormState => ({
@@ -27,7 +28,11 @@ const emptyForm = (firstCategory: string, firstBrand: string): FormState => ({
   vehicle: firstBrand,
   category: firstCategory,
   supplierId: "", buyPrice: 0, sellPrice: 0, quantity: 0, minQty: 5,
+  unitBrand: "", amperage: "", voltage: "12V", tireSize: "", tireSeason: "Universal",
 });
+
+const isBattery = (cat: string) => /akkumulyator/i.test(cat);
+const isTire = (cat: string) => /shina|balon/i.test(cat);
 
 function ProductsPage() {
   const { products, suppliers, categories, vehicleBrands, addProduct, updateProduct, deleteProduct, vehicleFilter } = useStore();
