@@ -2,7 +2,18 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { generateMockData, type Product, type Customer, type Supplier, type Employee, type Sale, type Expense, type IncomingStock } from "./mock-data";
 import type { Warehouse, Role } from "./constants";
-import { DEFAULT_CATEGORIES, DEFAULT_VEHICLE_BRANDS, ALL_PERMISSIONS } from "./constants";
+import { DEFAULT_CATEGORIES, DEFAULT_VEHICLE_BRANDS, DEFAULT_BRANCHES, ALL_PERMISSIONS } from "./constants";
+
+export type AuditEntry = {
+  id: string;
+  ts: string;
+  userId: string;
+  userName: string;
+  action: "create" | "update" | "delete" | "login" | "logout";
+  entity: string;
+  entityId?: string;
+  summary: string;
+};
 
 export type AppUser = {
   id: string;
