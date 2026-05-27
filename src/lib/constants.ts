@@ -7,14 +7,15 @@ export const VEHICLE_BRANDS = DEFAULT_VEHICLE_BRANDS; // backward compat
 export type VehicleBrand = string;
 
 export const DEFAULT_CATEGORIES = [
-  "Dvigatel", "Tormoz tizimi", "Elektr", "Shinalar", "Akkumulyator",
+  "Dvigatel", "Tormoz tizimi", "Elektr", "Shinalar (Balon)", "Akkumulyator",
   "Filtrlar", "Moy", "Kuzov qismlari", "Podveska",
 ] as const;
-export const CATEGORIES = DEFAULT_CATEGORIES; // backward compat
+export const CATEGORIES = DEFAULT_CATEGORIES;
 export type Category = string;
 
-export const WAREHOUSES = ["Asosiy ombor", "Filial 1", "Filial 2"] as const;
-export type Warehouse = (typeof WAREHOUSES)[number];
+export const DEFAULT_BRANCHES = ["Asosiy ombor", "Filial 1", "Filial 2"] as const;
+export const WAREHOUSES = DEFAULT_BRANCHES; // backward compat
+export type Warehouse = string;
 
 export const ROLES = ["Admin", "Sotuvchi", "Omborchi"] as const;
 export type Role = (typeof ROLES)[number];
@@ -32,6 +33,7 @@ export const NAV = [
   { to: "/employees", label: "Xodimlar", icon: "UserCog" },
   { to: "/expenses", label: "Xarajatlar", icon: "Receipt" },
   { to: "/reports", label: "Hisobotlar", icon: "BarChart3" },
+  { to: "/audit", label: "Audit jurnali", icon: "FileClock" },
   { to: "/barcode", label: "Barkod", icon: "ScanBarcode" },
   { to: "/settings", label: "Sozlamalar", icon: "Settings" },
 ] as const;

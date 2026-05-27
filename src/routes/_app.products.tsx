@@ -20,6 +20,7 @@ type FormState = {
   name: string; barcode: string;
   vehicle: string; category: string;
   supplierId: string; buyPrice: number; sellPrice: number; quantity: number; minQty: number;
+  unitBrand: string; amperage: string; voltage: string; tireSize: string; tireSeason: string;
 };
 
 const emptyForm = (firstCategory: string, firstBrand: string): FormState => ({
@@ -27,7 +28,11 @@ const emptyForm = (firstCategory: string, firstBrand: string): FormState => ({
   vehicle: firstBrand,
   category: firstCategory,
   supplierId: "", buyPrice: 0, sellPrice: 0, quantity: 0, minQty: 5,
+  unitBrand: "", amperage: "", voltage: "12V", tireSize: "", tireSeason: "Universal",
 });
+
+const isBattery = (cat: string) => /akkumulyator/i.test(cat);
+const isTire = (cat: string) => /shina|balon/i.test(cat);
 
 function ProductsPage() {
   const { products, suppliers, categories, vehicleBrands, addProduct, updateProduct, deleteProduct, vehicleFilter } = useStore();
@@ -57,11 +62,14 @@ function ProductsPage() {
     const p = products.find(x => x.id === id);
     if (!p) return;
     setEditing(id);
+    const a = p.attributes || {};
     setForm({
       name: p.name, barcode: p.barcode || "",
       vehicle: p.vehicle, category: p.category,
       supplierId: p.supplierId, buyPrice: p.buyPrice, sellPrice: p.sellPrice,
       quantity: p.quantity, minQty: p.minQty,
+      unitBrand: a.unitBrand || "", amperage: a.amperage || "",
+      voltage: a.voltage || "12V", tireSize: a.tireSize || "", tireSeason: a.tireSeason || "Universal",
     });
     setOpen(true);
   };
@@ -85,15 +93,31 @@ function ProductsPage() {
       const dup = products.find(p => p.barcode === bc && p.id !== editing);
       if (dup) { toast.error(`Bu kod allaqachon mavjud: ${dup.name}`); return; }
     }
+    const attributes: any = {};
+    if (form.unitBrand.trim()) attributes.unitBrand = form.unitBrand.trim();
+    if (isBattery(form.category)) {
+      if (!form.amperage.trim()) { toast.error("Akkumulyator uchun amperaj majburiy"); return; }
+      attributes.amperage = form.amperage.trim();
+      attributes.voltage = form.voltage.trim() || "12V";
+    }
+    if (isTire(form.category)) {
+      if (!form.tireSize.trim()) { toast.error("Balon uchun o'lcham majburiy (masalan 175/70 R13)"); return; }
+      attributes.tireSize = form.tireSize.trim();
+      attributes.tireSeason = form.tireSeason;
+    }
+    const payload = {
+      name: form.name, barcode: bc, sku: "",
+      vehicle: form.vehicle, category: form.category,
+      supplierId: form.supplierId || suppliers[0]?.id || "",
+      buyPrice: form.buyPrice, sellPrice: form.sellPrice,
+      quantity: form.quantity, minQty: form.minQty,
+      attributes: Object.keys(attributes).length ? attributes : undefined,
+    };
     if (editing) {
-      updateProduct(editing, { ...form, barcode: bc, sku: "" });
+      updateProduct(editing, payload);
       toast.success("Tovar yangilandi");
     } else {
-      addProduct({
-        id: `prd_${Math.random().toString(36).slice(2, 9)}`,
-        sku: "", ...form, barcode: bc,
-        supplierId: form.supplierId || suppliers[0]?.id || "",
-      });
+      addProduct({ id: `prd_${Math.random().toString(36).slice(2, 9)}`, ...payload });
       toast.success("Tovar qo'shildi");
     }
     setOpen(false); setEditing(null); setForm(emptyForm(categories[0] || "", vehicleBrands[0] || ""));
@@ -171,6 +195,43 @@ function ProductsPage() {
                     <SelectContent>{suppliers.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
                   </Select>
                 </div>
+                <div className="sm:col-span-2"><Label>Mahsulot brendi (ixtiyoriy)</Label>
+                  <Input value={form.unitBrand} onChange={(e) => setForm({ ...form, unitBrand: e.target.value })} placeholder="Masalan: Bosch, Varta, Michelin" />
+                </div>
+                {isBattery(form.category) && (
+                  <>
+                    <div><Label>Amperaj (Ah) *</Label>
+                      <Input value={form.amperage} onChange={(e) => setForm({ ...form, amperage: e.target.value })} placeholder="60, 75, 100" />
+                    </div>
+                    <div><Label>Kuchlanish</Label>
+                      <Select value={form.voltage} onValueChange={(v) => setForm({ ...form, voltage: v })}>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="6V">6V</SelectItem>
+                          <SelectItem value="12V">12V</SelectItem>
+                          <SelectItem value="24V">24V</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </>
+                )}
+                {isTire(form.category) && (
+                  <>
+                    <div><Label>Balon o'lchami *</Label>
+                      <Input value={form.tireSize} onChange={(e) => setForm({ ...form, tireSize: e.target.value })} placeholder="175/70 R13" />
+                    </div>
+                    <div><Label>Mavsum</Label>
+                      <Select value={form.tireSeason} onValueChange={(v) => setForm({ ...form, tireSeason: v })}>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Yozgi">Yozgi</SelectItem>
+                          <SelectItem value="Qishki">Qishki</SelectItem>
+                          <SelectItem value="Universal">Universal</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </>
+                )}
                 <div><Label>Miqdor</Label><Input type="number" value={form.quantity} onChange={(e) => setForm({ ...form, quantity: +e.target.value })} /></div>
                 <div><Label>Min. miqdor</Label><Input type="number" value={form.minQty} onChange={(e) => setForm({ ...form, minQty: +e.target.value })} /></div>
                 <div><Label>Sotib olish narxi</Label><Input type="number" value={form.buyPrice} onChange={(e) => setForm({ ...form, buyPrice: +e.target.value })} /></div>
@@ -229,7 +290,12 @@ function ProductsPage() {
                     <div className="flex items-center gap-2">
                       <div className="h-8 w-8 rounded-lg bg-muted grid place-items-center shrink-0"><Package className="h-4 w-4 text-muted-foreground" /></div>
                       <div className="min-w-0">
-                        <div className="truncate">{p.name}</div>
+                        <div className="truncate">
+                          {p.name}
+                          {p.attributes?.amperage && <span className="ml-2 text-xs text-muted-foreground">· {p.attributes.amperage}Ah {p.attributes.voltage}</span>}
+                          {p.attributes?.tireSize && <span className="ml-2 text-xs text-muted-foreground">· {p.attributes.tireSize} {p.attributes.tireSeason && p.attributes.tireSeason !== "Universal" ? `(${p.attributes.tireSeason})` : ""}</span>}
+                          {p.attributes?.unitBrand && <span className="ml-2 text-xs text-primary">{p.attributes.unitBrand}</span>}
+                        </div>
                         <div className="sm:hidden text-xs text-muted-foreground">{p.vehicle} · {p.category}</div>
                       </div>
                     </div>
