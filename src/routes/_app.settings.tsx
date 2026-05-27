@@ -14,7 +14,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useStore, type AppUser } from "@/lib/store";
 import { ROLES, PERMISSION_MODULES, ALL_PERMISSIONS } from "@/lib/constants";
 import { toast } from "sonner";
-import { Plus, Edit, Trash2, Shield, User as UserIcon, Lock, Sun, AlertTriangle, Car } from "lucide-react";
+import { Plus, Edit, Trash2, Shield, User as UserIcon, Lock, Sun, AlertTriangle, Car, Building2 } from "lucide-react";
 import { useState } from "react";
 
 export const Route = createFileRoute("/_app/settings")({ component: SettingsPage });
