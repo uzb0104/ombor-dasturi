@@ -10,9 +10,12 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Plus, ShoppingCart, TrendingUp, Printer, Download, CreditCard, UserPlus } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
+import { api } from "@/lib/api";
+import { exportToExcel, exportToPDF } from "@/lib/export";
+import { ReceiptPrinter } from "@/components/sales/ReceiptPrinter";
 
 export const Route = createFileRoute("/_app/sales")({ component: SalesPage });
 
@@ -25,8 +28,7 @@ type Form = {
   price: number;
   discount: number;
   paymentType: "Naqd" | "Karta" | "Qarz";
-  customerId: string; // existing customer id, or "" for new
-  // new customer fields (used when credit + no customer selected)
+  customerId: string;
   custName: string;
   custPhone: string;
   custAddress: string;
@@ -45,6 +47,43 @@ function SalesPage() {
   const [mode, setMode] = useState<Mode>("cash");
   const [form, setForm] = useState<Form>(emptyForm());
 
+  // Pagination va Server-side Sales
+  const [page, setPage] = useState(1);
+  const [limit] = useState(10);
+  const [paginatedSales, setPaginatedSales] = useState<any[]>([]);
+  const [totalCount, setTotalCount] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+  const [isLoadingSales, setIsLoadingSales] = useState(false);
+
+  // Chop etilayotgan chek ma'lumotlari
+  const [printSaleData, setPrintSaleData] = useState<any | null>(null);
+
+  const fetchSalesData = async () => {
+    try {
+      setIsLoadingSales(true);
+      const res = await api.sales.getAll(page, limit);
+      if (res && 'data' in res) {
+        setPaginatedSales(res.data);
+        setTotalCount(res.total);
+        setTotalPages(res.totalPages);
+      } else {
+        setPaginatedSales(res || []);
+        setTotalCount(res.length || 0);
+        setTotalPages(1);
+      }
+    } catch (err: any) {
+      console.error("Sotuvlarni yuklashda xatolik:", err);
+      toast.error("Sotuvlarni yuklashda xatolik yuz berdi");
+    } finally {
+      setIsLoadingSales(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchSalesData();
+  }, [page]);
+
+  // Jami sotuv va foydani hisoblash (Zustand sales orqali umumiy statistika)
   const filtered = useMemo(() => {
     const now = new Date(); now.setHours(0,0,0,0);
     const map: Record<string, number> = { today: 0, week: 7, month: 30 };
@@ -72,70 +111,150 @@ function SalesPage() {
     setOpen(true);
   };
 
-  const submit = () => {
+  const submit = async () => {
     if (!form.productId || !product) { toast.error("Tovarni tanlang"); return; }
     if (product.quantity < form.qty) { toast.error("Yetarli zaxira yo'q"); return; }
 
     let customerId: string | null = form.customerId || null;
+    let customerNameStr = "";
+
     if (mode === "credit") {
       if (!customerId) {
         if (!form.custName.trim() || !form.custPhone.trim()) {
           toast.error("Qarz uchun mijoz ism va telefon majburiy"); return;
         }
         const newId = `cust_${Math.random().toString(36).slice(2, 9)}`;
-        addCustomer({
+        await addCustomer({
           id: newId, name: form.custName.trim(), phone: form.custPhone.trim(),
           address: form.custAddress.trim(), vehicle: (form.vehicle as any) || (vehicleBrands[0] || ""),
           totalPurchases: 0, debt: 0,
         });
         customerId = newId;
+        customerNameStr = form.custName.trim();
+      } else {
+        customerNameStr = customers.find(c => c.id === customerId)?.name || "";
       }
+    } else if (customerId) {
+      customerNameStr = customers.find(c => c.id === customerId)?.name || "";
     }
 
     const price = form.price || product.sellPrice;
-    addSale({
-      id: `sale_${Math.random().toString(36).slice(2,9)}`,
-      date: new Date().toISOString(),
-      customerId,
-      sellerId: employees.find(e => e.role === "Sotuvchi")?.id || employees[0]!.id,
-      items: [{ productId: product.id, qty: form.qty, price, buyPrice: product.buyPrice }],
-      discount: form.discount,
-      paymentType: form.paymentType,
-      total: netTotal,
-      profit: (price - product.buyPrice) * form.qty - form.discount,
-    });
-    toast.success(mode === "credit" ? "Qarz sotuvi qo'shildi" : "Sotuv qo'shildi");
-    setOpen(false);
-    setForm(emptyForm());
+    const saleId = `sale_${Math.random().toString(36).slice(2,9)}`;
+    const seller = employees.find(e => e.role === "Sotuvchi") || employees[0];
+
+    try {
+      await addSale({
+        id: saleId,
+        date: new Date().toISOString(),
+        customerId,
+        sellerId: seller?.id || "unknown",
+        items: [{ productId: product.id, qty: form.qty, price, buyPrice: product.buyPrice }],
+        discount: form.discount,
+        paymentType: form.paymentType,
+        total: netTotal,
+        profit: (price - product.buyPrice) * form.qty - form.discount,
+      });
+
+      // Chek chop etish oynasini ochish uchun ma'lumotlarni sozlash
+      setPrintSaleData({
+        saleId,
+        date: new Date().toISOString(),
+        sellerName: seller?.name || "Noma'lum",
+        customerName: customerNameStr || undefined,
+        items: [{ productName: product.name, qty: form.qty, price }],
+        discount: form.discount,
+        total: netTotal,
+        paymentType: form.paymentType === "CASH" ? "Naqd" : form.paymentType === "CARD" ? "Karta" : form.paymentType === "DEBT" ? "Qarz" : form.paymentType
+      });
+
+      toast.success(mode === "credit" ? "Qarz sotuvi qo'shildi" : "Sotuv qo'shildi");
+      setOpen(false);
+      setForm(emptyForm());
+      
+      // Chekni avtomatik chop etish dialogni chaqirish
+      setTimeout(() => {
+        window.print();
+      }, 500);
+
+      // Jadvalni qayta yuklash
+      fetchSalesData();
+    } catch (err: any) {
+      toast.error(err.message || "Sotuvni amalga oshirishda xatolik");
+    }
   };
 
-  const exportCSV = () => {
-    const rows = [["Sana","Mijoz","Tovar","Miqdor","Narx","Jami","Foyda","Sotuvchi","To'lov"]];
-    filtered.forEach(s => {
+  // Excel eksport
+  const handleExportExcel = () => {
+    const dataToExport = paginatedSales.map(s => {
       const c = s.customerId ? customers.find(x => x.id === s.customerId) : null;
-      const e = employees.find(x => x.id === s.sellerId);
-      s.items.forEach(i => {
-        const p = products.find(x => x.id === i.productId);
-        rows.push([
-          new Date(s.date).toLocaleDateString("uz-UZ"),
-          c?.name || "—", p?.name || "", String(i.qty),
-          String(i.price), String(s.total), String(s.profit), e?.name || "", s.paymentType,
-        ]);
-      });
+      const p = products.find(x => x.id === s.items[0]?.productId);
+      const i = s.items[0] || { qty: 0, price: 0 };
+      return {
+        "ID": s.id.slice(0, 8).toUpperCase(),
+        "Sana": new Date(s.date).toLocaleDateString("uz-UZ"),
+        "Mijoz": c?.name || "Mijozsiz",
+        "Tovar": p?.name || "Noma'lum",
+        "Miqdor": i.qty,
+        "Narxi (UZS)": i.price,
+        "Chegirma (UZS)": s.discount,
+        "Jami (UZS)": s.total,
+        "Foyda (UZS)": s.profit,
+        "To'lov turi": s.paymentType
+      };
     });
-    const csv = rows.map(r => r.map(c => `"${c}"`).join(",")).join("\n");
-    const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a"); a.href = url; a.download = "sotuvlar.csv"; a.click();
-    toast.success("CSV yuklandi");
+    exportToExcel(dataToExport, "sotuvlar_tarixi");
+    toast.success("Excel fayli yaratildi va yuklandi");
+  };
+
+  // PDF eksport
+  const handleExportPDF = () => {
+    const headers = ["ID", "Sana", "Mijoz", "Tovar", "Miqdor", "Jami (UZS)", "To'lov"];
+    const rows = paginatedSales.map(s => {
+      const c = s.customerId ? customers.find(x => x.id === s.customerId) : null;
+      const p = products.find(x => x.id === s.items[0]?.productId);
+      const i = s.items[0] || { qty: 0 };
+      return [
+        s.id.slice(0, 8).toUpperCase(),
+        new Date(s.date).toLocaleDateString("uz-UZ"),
+        c?.name || "Mijozsiz",
+        p?.name || "Noma'lum",
+        i.qty.toString(),
+        s.total.toLocaleString() + " UZS",
+        s.paymentType
+      ];
+    });
+    exportToPDF(headers, rows, "Sotuvlar Tarixi Hisoboti", "sotuvlar_tarixi");
+    toast.success("PDF hisoboti yuklandi");
+  };
+
+  // Chekni qo'lda chop etish
+  const printReceipt = (s: any) => {
+    const c = s.customerId ? customers.find(x => x.id === s.customerId) : null;
+    const p = products.find(x => x.id === s.items[0]?.productId);
+    const i = s.items[0]!;
+    
+    setPrintSaleData({
+      saleId: s.id,
+      date: s.date,
+      sellerName: s.sellerName || "Noma'lum",
+      customerName: c?.name || undefined,
+      items: [{ productName: p?.name || "Mahsulot", qty: i.qty, price: i.price }],
+      discount: s.discount,
+      total: s.total,
+      paymentType: s.paymentType
+    });
+
+    setTimeout(() => {
+      window.print();
+    }, 200);
   };
 
   return (
     <div className="space-y-5">
-      <PageHeader title="Sotuvlar" subtitle={`${filtered.length} ta tranzaksiya`} actions={
+      <PageHeader title="Sotuvlar" subtitle={`${totalCount || filtered.length} ta tranzaksiya`} actions={
         <>
-          <Button variant="outline" onClick={exportCSV}><Download className="h-4 w-4 mr-1" />CSV</Button>
-          <Button variant="outline" onClick={() => window.print()}><Printer className="h-4 w-4 mr-1" />Chop etish</Button>
+          <Button variant="outline" onClick={handleExportExcel}><Download className="h-4 w-4 mr-1" />Excel</Button>
+          <Button variant="outline" onClick={handleExportPDF}><Printer className="h-4 w-4 mr-1" />PDF</Button>
           <Button variant="outline" onClick={() => openDialog("credit")}>
             <CreditCard className="h-4 w-4 mr-1" />Qarzga sotish
           </Button>
@@ -186,7 +305,7 @@ function SalesPage() {
                 <Label>To'lov turi</Label>
                 <Select value={form.paymentType} onValueChange={(v) => setForm({...form, paymentType: v as any})}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>{["Naqd","Karta"].map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}</SelectContent>
+                  <SelectContent>{["Naqd","Karta"].map(p => <SelectItem key={p} value={p === "Naqd" ? "CASH" : "CARD"}>{p}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
             )}
@@ -243,7 +362,7 @@ function SalesPage() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <StatCard label="Jami sotuv" value={formatSom(total)} icon={ShoppingCart} accent="primary" />
         <StatCard label="Sof foyda" value={formatSom(profit)} icon={TrendingUp} accent="success" />
-        <StatCard label="Tranzaksiyalar" value={String(filtered.length)} icon={ShoppingCart} accent="info" />
+        <StatCard label="Tranzaksiyalar" value={String(totalCount || filtered.length)} icon={ShoppingCart} accent="info" />
       </div>
 
       <Card className="p-4 rounded-2xl">
@@ -266,29 +385,83 @@ function SalesPage() {
               <TableHead className="text-right">Miqdor</TableHead><TableHead className="text-right">Narx</TableHead>
               <TableHead className="text-right">Jami</TableHead><TableHead className="text-right">Foyda</TableHead>
               <TableHead>To'lov</TableHead>
+              <TableHead className="text-right">Chek</TableHead>
             </TableRow></TableHeader>
             <TableBody>
-              {filtered.map(s => {
-                const c = s.customerId ? customers.find(x => x.id === s.customerId) : null;
-                const p = products.find(x => x.id === s.items[0]?.productId);
-                const i = s.items[0]!;
-                return (
-                  <TableRow key={s.id} className="hover:bg-muted/40">
-                    <TableCell className="text-sm">{new Date(s.date).toLocaleDateString("uz-UZ")}</TableCell>
-                    <TableCell className="font-medium">{c?.name || <span className="text-muted-foreground">—</span>}</TableCell>
-                    <TableCell>{p?.name}</TableCell>
-                    <TableCell className="text-right tabular-nums">{i.qty}</TableCell>
-                    <TableCell className="text-right tabular-nums text-sm">{formatSom(i.price)}</TableCell>
-                    <TableCell className="text-right tabular-nums font-semibold">{formatSom(s.total)}</TableCell>
-                    <TableCell className="text-right tabular-nums text-success">+{formatSom(s.profit)}</TableCell>
-                    <TableCell><Badge variant={s.paymentType === "Qarz" ? "destructive" : "secondary"}>{s.paymentType}</Badge></TableCell>
-                  </TableRow>
-                );
-              })}
+              {isLoadingSales ? (
+                <TableRow>
+                  <TableCell colSpan={9} className="text-center py-6 text-muted-foreground">Sotuvlar yuklanmoqda...</TableCell>
+                </TableRow>
+              ) : paginatedSales.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={9} className="text-center py-6 text-muted-foreground">Sotuvlar topilmadi.</TableCell>
+                </TableRow>
+              ) : (
+                paginatedSales.map(s => {
+                  const c = s.customerId ? customers.find(x => x.id === s.customerId) : null;
+                  const p = products.find(x => x.id === s.items[0]?.productId);
+                  const i = s.items[0] || { qty: 0, price: 0 };
+                  return (
+                    <TableRow key={s.id} className="hover:bg-muted/40">
+                      <TableCell className="text-sm">{new Date(s.date).toLocaleDateString("uz-UZ")}</TableCell>
+                      <TableCell className="font-medium">{c?.name || <span className="text-muted-foreground">—</span>}</TableCell>
+                      <TableCell>{p?.name || "Noma'lum"}</TableCell>
+                      <TableCell className="text-right tabular-nums">{i.qty}</TableCell>
+                      <TableCell className="text-right tabular-nums text-sm">{formatSom(i.price)}</TableCell>
+                      <TableCell className="text-right tabular-nums font-semibold">{formatSom(s.total)}</TableCell>
+                      <TableCell className="text-right tabular-nums text-success">+{formatSom(s.profit)}</TableCell>
+                      <TableCell><Badge variant={s.paymentType === "Qarz" || s.paymentType === "DEBT" ? "destructive" : "secondary"}>{s.paymentType}</Badge></TableCell>
+                      <TableCell className="text-right">
+                        <Button variant="ghost" size="icon" onClick={() => printReceipt(s)}>
+                          <Printer className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
+              )}
             </TableBody>
           </Table>
         </div>
+
+        {/* Sahifalash (Pagination) tugmalari */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between mt-4 border-t pt-4">
+            <div className="text-xs text-muted-foreground">
+              Jami {totalCount} tadan {(page - 1) * limit + 1}-{Math.min(page * limit, totalCount)} ko'rsatilmoqda
+            </div>
+            <div className="flex gap-1">
+              <Button variant="outline" size="sm" onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}>
+                Oldingi
+              </Button>
+              {Array.from({ length: totalPages }, (_, idx) => idx + 1).map(p => (
+                <Button key={p} variant={p === page ? "default" : "outline"} size="sm" onClick={() => setPage(p)} className="h-8 w-8 p-0">
+                  {p}
+                </Button>
+              ))}
+              <Button variant="outline" size="sm" onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages}>
+                Keyingi
+              </Button>
+            </div>
+          </div>
+        )}
       </Card>
+
+      {/* Chop etish uchun yashirin Chek komponenti (Faqat print chog'ida ko'rinadi) */}
+      {printSaleData && (
+        <div className="hidden print:block">
+          <ReceiptPrinter
+            saleId={printSaleData.saleId}
+            date={printSaleData.date}
+            sellerName={printSaleData.sellerName}
+            customerName={printSaleData.customerName}
+            items={printSaleData.items}
+            discount={printSaleData.discount}
+            total={printSaleData.total}
+            paymentType={printSaleData.paymentType}
+          />
+        </div>
+      )}
     </div>
   );
 }

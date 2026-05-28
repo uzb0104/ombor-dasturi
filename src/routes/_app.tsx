@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
 import { AppShell } from "@/components/layout/AppShell";
 import { useStore } from "@/lib/store";
@@ -19,6 +20,14 @@ export const Route = createFileRoute("/_app")({
 
 function AppLayout() {
   const user = useStore((s) => s.user);
+  const fetchAllData = useStore((s) => s.fetchAllData);
+
+  useEffect(() => {
+    if (user) {
+      fetchAllData();
+    }
+  }, [user, fetchAllData]);
+
   if (!user) return null;
   return <AppShell><Outlet /></AppShell>;
 }

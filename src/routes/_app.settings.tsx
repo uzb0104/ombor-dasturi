@@ -129,7 +129,7 @@ function UsersManagement({
 
   const submit = () => {
     if (!form.name.trim() || !form.email.trim()) { toast.error("Ism va email majburiy"); return; }
-    if (!editing && !form.password.trim()) { toast.error("Parol kiriting"); return; }
+    if (!editing && !(form.password || "").trim()) { toast.error("Parol kiriting"); return; }
     if (!editing && appUsers.some(u => u.email.toLowerCase() === form.email.toLowerCase())) {
       toast.error("Bu email allaqachon mavjud"); return;
     }

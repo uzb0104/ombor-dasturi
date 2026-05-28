@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { generateMockData, type Product, type Customer, type Supplier, type Employee, type Sale, type Expense, type IncomingStock } from "./mock-data";
+import { api } from "./api";
+import type { Product, Customer, Supplier, Employee, Sale, Expense, IncomingStock } from "./mock-data";
 import type { Warehouse, Role } from "./constants";
 import { DEFAULT_CATEGORIES, DEFAULT_VEHICLE_BRANDS, ALL_PERMISSIONS } from "./constants";
 
@@ -8,7 +9,7 @@ export type AppUser = {
   id: string;
   name: string;
   email: string;
-  password: string;
+  password?: string;
   role: Role;
   permissions: string[];
   active: boolean;
@@ -19,11 +20,12 @@ type SessionUser = { id: string; name: string; email: string; role: Role; permis
 type State = {
   user: SessionUser | null;
   appUsers: AppUser[];
-  login: (email: string, password: string, remember?: boolean) => boolean;
+  isLoading: boolean;
+  error: string | null;
+
+  login: (email: string, password: string) => Promise<boolean>;
   logout: () => void;
-  addAppUser: (u: Omit<AppUser, "id">) => void;
-  updateAppUser: (id: string, u: Partial<AppUser>) => void;
-  deleteAppUser: (id: string) => void;
+  initializeUser: () => Promise<void>;
 
   theme: "light" | "dark";
   toggleTheme: () => void;
@@ -44,31 +46,40 @@ type State = {
   categories: string[];
   vehicleBrands: string[];
 
-  addProduct: (p: Product) => void;
-  updateProduct: (id: string, p: Partial<Product>) => void;
-  deleteProduct: (id: string) => void;
+  fetchProducts: () => Promise<void>;
+  addProduct: (p: any) => Promise<void>;
+  updateProduct: (id: string, p: any) => Promise<void>;
+  deleteProduct: (id: string) => Promise<void>;
 
-  addCustomer: (c: Customer) => void;
-  updateCustomer: (id: string, c: Partial<Customer>) => void;
-  deleteCustomer: (id: string) => void;
+  fetchCustomers: () => Promise<void>;
+  addCustomer: (c: any) => Promise<void>;
+  updateCustomer: (id: string, c: any) => Promise<void>;
+  deleteCustomer: (id: string) => Promise<void>;
+  payCustomerDebt: (id: string, amount: number, note?: string) => Promise<void>;
 
-  addSupplier: (s: Supplier) => void;
-  updateSupplier: (id: string, s: Partial<Supplier>) => void;
-  deleteSupplier: (id: string) => void;
+  fetchSuppliers: () => Promise<void>;
+  addSupplier: (s: any) => Promise<void>;
+  updateSupplier: (id: string, s: any) => Promise<void>;
+  deleteSupplier: (id: string) => Promise<void>;
+  paySupplierDebt: (id: string, amount: number, note?: string) => Promise<void>;
 
-  addEmployee: (e: Employee) => void;
-  updateEmployee: (id: string, e: Partial<Employee>) => void;
-  deleteEmployee: (id: string) => void;
+  fetchEmployees: () => Promise<void>;
+  addEmployee: (e: any) => Promise<void>;
+  updateEmployee: (id: string, e: any) => Promise<void>;
+  deleteEmployee: (id: string) => Promise<void>;
+  paySalary: (id: string, amount: number, type: 'oylik' | 'avans', note?: string) => Promise<void>;
 
-  addSale: (s: Sale) => void;
-  deleteSale: (id: string) => void;
+  fetchSales: () => Promise<void>;
+  addSale: (s: any) => Promise<void>;
+  deleteSale: (id: string) => Promise<void>;
 
-  addExpense: (e: Expense) => void;
-  updateExpense: (id: string, e: Partial<Expense>) => void;
-  deleteExpense: (id: string) => void;
+  fetchExpenses: () => Promise<void>;
+  addExpense: (e: any) => Promise<void>;
+  updateExpense: (id: string, e: any) => Promise<void>;
+  deleteExpense: (id: string) => Promise<void>;
 
   addIncoming: (i: IncomingStock) => void;
-  deleteIncoming: (id: string) => void;
+  deleteIncoming: (id: string) => Promise<void>;
 
   addCategory: (c: string) => void;
   updateCategory: (oldName: string, newName: string) => void;
@@ -78,10 +89,13 @@ type State = {
   updateVehicleBrand: (oldName: string, newName: string) => void;
   deleteVehicleBrand: (b: string) => void;
 
-  resetData: () => void;
-};
+  addAppUser: (u: Omit<AppUser, "id">) => void;
+  updateAppUser: (id: string, u: Partial<AppUser>) => void;
+  deleteAppUser: (id: string) => void;
 
-const seed = generateMockData();
+  resetData: () => void;
+  fetchAllData: () => Promise<void>;
+};
 
 const defaultAppUsers: AppUser[] = [
   { id: "u_admin", name: "Bosh admin", email: "admin@autoerp.uz", password: "admin123", role: "Admin", permissions: ALL_PERMISSIONS, active: true },
@@ -92,24 +106,8 @@ export const useStore = create<State>()(
     (set, get) => ({
       user: null,
       appUsers: defaultAppUsers,
-      login: (email, password) => {
-        const u = get().appUsers.find(x => x.email.toLowerCase() === email.toLowerCase() && x.active);
-        if (u) {
-          if (u.password && u.password !== password) return false;
-          const perms = u.role === "Admin" ? ALL_PERMISSIONS : u.permissions;
-          set({ user: { id: u.id, name: u.name, email: u.email, role: u.role, permissions: perms } });
-          return true;
-        }
-        if (email.toLowerCase() === "admin@autoerp.uz") {
-          set({ user: { id: "u_admin", name: "Bosh admin", email, role: "Admin", permissions: ALL_PERMISSIONS } });
-          return true;
-        }
-        return false;
-      },
-      logout: () => set({ user: null }),
-      addAppUser: (u) => set({ appUsers: [{ ...u, id: `usr_${Math.random().toString(36).slice(2, 9)}` }, ...get().appUsers] }),
-      updateAppUser: (id, u) => set({ appUsers: get().appUsers.map(x => x.id === id ? { ...x, ...u } : x) }),
-      deleteAppUser: (id) => set({ appUsers: get().appUsers.filter(x => x.id !== id) }),
+      isLoading: false,
+      error: null,
 
       theme: "light",
       toggleTheme: () => {
@@ -124,76 +122,326 @@ export const useStore = create<State>()(
       vehicleFilter: "all",
       setVehicleFilter: (v) => set({ vehicleFilter: v }),
 
-      products: seed.products,
-      customers: seed.customers,
-      suppliers: seed.suppliers,
-      employees: seed.employees,
-      sales: seed.sales,
-      expenses: seed.expenses,
-      incoming: seed.incoming,
+      products: [],
+      customers: [],
+      suppliers: [],
+      employees: [],
+      sales: [],
+      expenses: [],
+      incoming: [],
       categories: [...DEFAULT_CATEGORIES],
       vehicleBrands: [...DEFAULT_VEHICLE_BRANDS],
 
-      addProduct: (p) => set({ products: [p, ...get().products] }),
-      updateProduct: (id, p) => set({ products: get().products.map(x => x.id === id ? { ...x, ...p } : x) }),
-      deleteProduct: (id) => set({ products: get().products.filter(x => x.id !== id) }),
-
-      addCustomer: (c) => set({ customers: [c, ...get().customers] }),
-      updateCustomer: (id, c) => set({ customers: get().customers.map(x => x.id === id ? { ...x, ...c } : x) }),
-      deleteCustomer: (id) => set({ customers: get().customers.filter(x => x.id !== id) }),
-
-      addSupplier: (s) => set({ suppliers: [s, ...get().suppliers] }),
-      updateSupplier: (id, s) => set({ suppliers: get().suppliers.map(x => x.id === id ? { ...x, ...s } : x) }),
-      deleteSupplier: (id) => set({ suppliers: get().suppliers.filter(x => x.id !== id) }),
-
-      addEmployee: (e) => set({ employees: [e, ...get().employees] }),
-      updateEmployee: (id, e) => set({ employees: get().employees.map(x => x.id === id ? { ...x, ...e } : x) }),
-      deleteEmployee: (id) => set({ employees: get().employees.filter(x => x.id !== id) }),
-
-      addSale: (s) => {
-        const products = get().products.map(p => {
-          const item = s.items.find(i => i.productId === p.id);
-          return item ? { ...p, quantity: Math.max(0, p.quantity - item.qty) } : p;
-        });
-        const customers = get().customers.map(c => {
-          if (c.id !== s.customerId) return c;
-          const debtDelta = s.paymentType === "Qarz" ? s.total : 0;
-          return { ...c, debt: c.debt + debtDelta, totalPurchases: c.totalPurchases + s.total };
-        });
-        set({ sales: [s, ...get().sales], products, customers });
+      // Auth logikasi
+      login: async (email, password) => {
+        try {
+          set({ isLoading: true, error: null });
+          const res = await api.auth.login({ email, password });
+          set({ user: res.user, isLoading: false });
+          return true;
+        } catch (err: any) {
+          set({ error: err.message, isLoading: false });
+          return false;
+        }
       },
-      deleteSale: (id) => {
-        const s = get().sales.find(x => x.id === id);
-        if (!s) return;
-        // restock items
-        const products = get().products.map(p => {
-          const item = s.items.find(i => i.productId === p.id);
-          return item ? { ...p, quantity: p.quantity + item.qty } : p;
-        });
-        // reverse customer debt/purchases
-        const customers = get().customers.map(c => {
-          if (c.id !== s.customerId) return c;
-          const debtDelta = s.paymentType === "Qarz" ? s.total : 0;
-          return { ...c, debt: Math.max(0, c.debt - debtDelta), totalPurchases: Math.max(0, c.totalPurchases - s.total) };
-        });
-        set({ sales: get().sales.filter(x => x.id !== id), products, customers });
+      logout: () => {
+        api.auth.logout();
+        set({ user: null, products: [], customers: [], suppliers: [], sales: [], expenses: [], employees: [], incoming: [] });
+      },
+      initializeUser: async () => {
+        try {
+          const res = await api.auth.getMe();
+          set({ user: res.user });
+        } catch (err) {
+          set({ user: null });
+        }
       },
 
-      addExpense: (e) => set({ expenses: [e, ...get().expenses] }),
-      updateExpense: (id, e) => set({ expenses: get().expenses.map(x => x.id === id ? { ...x, ...e } : x) }),
-      deleteExpense: (id) => set({ expenses: get().expenses.filter(x => x.id !== id) }),
+      // Mahsulotlar (Products)
+      fetchProducts: async () => {
+        try {
+          set({ isLoading: true });
+          const products = await api.products.getAll();
+          
+          // Mahsulotlardan unikal kategoriya va brendlarni ajratib olamiz
+          const dbCategories = Array.from(new Set(products.map((p: any) => p.category).filter(Boolean))) as string[];
+          const dbBrands = Array.from(new Set(products.map((p: any) => p.vehicle).filter(Boolean))) as string[];
 
+          const categories = Array.from(new Set([...get().categories, ...dbCategories]));
+          const vehicleBrands = Array.from(new Set([...get().vehicleBrands, ...dbBrands]));
+
+          set({ products, categories, vehicleBrands, isLoading: false });
+        } catch (err: any) {
+          set({ error: err.message, isLoading: false });
+        }
+      },
+      addProduct: async (p) => {
+        try {
+          set({ isLoading: true });
+          await api.products.create(p);
+          await get().fetchProducts();
+        } catch (err: any) {
+          set({ error: err.message, isLoading: false });
+          throw err;
+        }
+      },
+      updateProduct: async (id, p) => {
+        try {
+          set({ isLoading: true });
+          await api.products.update(id, p);
+          await get().fetchProducts();
+        } catch (err: any) {
+          set({ error: err.message, isLoading: false });
+          throw err;
+        }
+      },
+      deleteProduct: async (id) => {
+        try {
+          set({ isLoading: true });
+          await api.products.delete(id);
+          await get().fetchProducts();
+        } catch (err: any) {
+          set({ error: err.message, isLoading: false });
+          throw err;
+        }
+      },
+
+      // Mijozlar (Customers)
+      fetchCustomers: async () => {
+        try {
+          set({ isLoading: true });
+          const customers = await api.customers.getAll();
+          set({ customers, isLoading: false });
+        } catch (err: any) {
+          set({ error: err.message, isLoading: false });
+        }
+      },
+      addCustomer: async (c) => {
+        try {
+          set({ isLoading: true });
+          await api.customers.create(c);
+          await get().fetchCustomers();
+        } catch (err: any) {
+          set({ error: err.message, isLoading: false });
+          throw err;
+        }
+      },
+      updateCustomer: async (id, c) => {
+        try {
+          set({ isLoading: true });
+          await api.customers.update(id, c);
+          await get().fetchCustomers();
+        } catch (err: any) {
+          set({ error: err.message, isLoading: false });
+          throw err;
+        }
+      },
+      deleteCustomer: async (id) => {
+        try {
+          set({ isLoading: true });
+          await api.customers.delete(id);
+          await get().fetchCustomers();
+        } catch (err: any) {
+          set({ error: err.message, isLoading: false });
+          throw err;
+        }
+      },
+      payCustomerDebt: async (id, amount, note) => {
+        try {
+          set({ isLoading: true });
+          await api.customers.payDebt(id, amount, note);
+          await get().fetchCustomers();
+        } catch (err: any) {
+          set({ error: err.message, isLoading: false });
+          throw err;
+        }
+      },
+
+      // Yetkazib beruvchilar (Suppliers)
+      fetchSuppliers: async () => {
+        try {
+          set({ isLoading: true });
+          const suppliers = await api.suppliers.getAll();
+          set({ suppliers, isLoading: false });
+        } catch (err: any) {
+          set({ error: err.message, isLoading: false });
+        }
+      },
+      addSupplier: async (s) => {
+        try {
+          set({ isLoading: true });
+          await api.suppliers.create(s);
+          await get().fetchSuppliers();
+        } catch (err: any) {
+          set({ error: err.message, isLoading: false });
+          throw err;
+        }
+      },
+      updateSupplier: async (id, s) => {
+        try {
+          set({ isLoading: true });
+          await api.suppliers.update(id, s);
+          await get().fetchSuppliers();
+        } catch (err: any) {
+          set({ error: err.message, isLoading: false });
+          throw err;
+        }
+      },
+      deleteSupplier: async (id) => {
+        try {
+          set({ isLoading: true });
+          await api.suppliers.delete(id);
+          await get().fetchSuppliers();
+        } catch (err: any) {
+          set({ error: err.message, isLoading: false });
+          throw err;
+        }
+      },
+      paySupplierDebt: async (id, amount, note) => {
+        try {
+          set({ isLoading: true });
+          await api.suppliers.paySupplier(id, amount, note);
+          await get().fetchSuppliers();
+        } catch (err: any) {
+          set({ error: err.message, isLoading: false });
+          throw err;
+        }
+      },
+
+      // Xodimlar (Employees)
+      fetchEmployees: async () => {
+        try {
+          set({ isLoading: true });
+          const employees = await api.employees.getAll();
+          set({ employees, isLoading: false });
+        } catch (err: any) {
+          set({ error: err.message, isLoading: false });
+        }
+      },
+      addEmployee: async (e) => {
+        try {
+          set({ isLoading: true });
+          await api.employees.create(e);
+          await get().fetchEmployees();
+        } catch (err: any) {
+          set({ error: err.message, isLoading: false });
+          throw err;
+        }
+      },
+      updateEmployee: async (id, e) => {
+        try {
+          set({ isLoading: true });
+          await api.employees.update(id, e);
+          await get().fetchEmployees();
+        } catch (err: any) {
+          set({ error: err.message, isLoading: false });
+          throw err;
+        }
+      },
+      deleteEmployee: async (id) => {
+        try {
+          set({ isLoading: true });
+          await api.employees.delete(id);
+          await get().fetchEmployees();
+        } catch (err: any) {
+          set({ error: err.message, isLoading: false });
+          throw err;
+        }
+      },
+      paySalary: async (id, amount, type, note) => {
+        try {
+          set({ isLoading: true });
+          await api.employees.paySalaryOrAdvance(id, amount, type, note);
+          await get().fetchEmployees();
+        } catch (err: any) {
+          set({ error: err.message, isLoading: false });
+          throw err;
+        }
+      },
+
+      // Sotuvlar (Sales)
+      fetchSales: async () => {
+        try {
+          set({ isLoading: true });
+          const sales = await api.sales.getAll();
+          set({ sales, isLoading: false });
+        } catch (err: any) {
+          set({ error: err.message, isLoading: false });
+        }
+      },
+      addSale: async (s) => {
+        try {
+          set({ isLoading: true });
+          await api.sales.create(s);
+          await get().fetchSales();
+          await get().fetchProducts();
+        } catch (err: any) {
+          set({ error: err.message, isLoading: false });
+          throw err;
+        }
+      },
+      deleteSale: async (id) => {
+        try {
+          set({ isLoading: true });
+          await api.sales.delete(id);
+          await get().fetchSales();
+          await get().fetchProducts();
+        } catch (err: any) {
+          set({ error: err.message, isLoading: false });
+          throw err;
+        }
+      },
+
+      // Xarajatlar (Expenses)
+      fetchExpenses: async () => {
+        try {
+          set({ isLoading: true });
+          const expenses = await api.expenses.getAll();
+          set({ expenses, isLoading: false });
+        } catch (err: any) {
+          set({ error: err.message, isLoading: false });
+        }
+      },
+      addExpense: async (e) => {
+        try {
+          set({ isLoading: true });
+          await api.expenses.create(e);
+          await get().fetchExpenses();
+        } catch (err: any) {
+          set({ error: err.message, isLoading: false });
+          throw err;
+        }
+      },
+      updateExpense: async (id, e) => {
+        try {
+          set({ isLoading: true });
+          await api.expenses.update(id, e);
+          await get().fetchExpenses();
+        } catch (err: any) {
+          set({ error: err.message, isLoading: false });
+          throw err;
+        }
+      },
+      deleteExpense: async (id) => {
+        try {
+          set({ isLoading: true });
+          await api.expenses.delete(id);
+          await get().fetchExpenses();
+        } catch (err: any) {
+          set({ error: err.message, isLoading: false });
+          throw err;
+        }
+      },
+
+      // Kirimlar (Incoming stock) - local state & persisted in storage
       addIncoming: (i) => {
-        const products = get().products.map(p => p.id === i.productId ? { ...p, quantity: p.quantity + i.qty } : p);
-        set({ incoming: [i, ...get().incoming], products });
+        set({ incoming: [i, ...get().incoming] });
       },
-      deleteIncoming: (id) => {
-        const inc = get().incoming.find(x => x.id === id);
-        if (!inc) return;
-        const products = get().products.map(p => p.id === inc.productId ? { ...p, quantity: Math.max(0, p.quantity - inc.qty) } : p);
-        set({ incoming: get().incoming.filter(x => x.id !== id), products });
+      deleteIncoming: async (id) => {
+        set({ incoming: get().incoming.filter(x => x.id !== id) });
       },
 
+      // Kategoriyalar (Categories)
       addCategory: (c) => {
         const name = c.trim();
         if (!name || get().categories.includes(name)) return;
@@ -204,11 +452,11 @@ export const useStore = create<State>()(
         if (!n) return;
         set({
           categories: get().categories.map(c => c === oldName ? n : c),
-          products: get().products.map(p => p.category === oldName ? { ...p, category: n } : p),
         });
       },
       deleteCategory: (c) => set({ categories: get().categories.filter(x => x !== c) }),
 
+      // Avtomobil brendlari (Vehicle brands)
       addVehicleBrand: (b) => {
         const n = b.trim();
         if (!n || get().vehicleBrands.includes(n)) return;
@@ -219,36 +467,50 @@ export const useStore = create<State>()(
         if (!n) return;
         set({
           vehicleBrands: get().vehicleBrands.map(b => b === oldName ? n : b),
-          products: get().products.map(p => p.vehicle === oldName ? { ...p, vehicle: n } : p),
-          customers: get().customers.map(c => c.vehicle === oldName ? { ...c, vehicle: n } : c),
         });
       },
       deleteVehicleBrand: (b) => set({ vehicleBrands: get().vehicleBrands.filter(x => x !== b) }),
 
+      // AppUsers
+      addAppUser: (u) => set({ appUsers: [{ ...u, id: `usr_${Math.random().toString(36).slice(2, 9)}` }, ...get().appUsers] }),
+      updateAppUser: (id, u) => set({ appUsers: get().appUsers.map(x => x.id === id ? { ...x, ...u } : x) }),
+      deleteAppUser: (id) => set({ appUsers: get().appUsers.filter(x => x.id !== id) }),
+
       resetData: () => {
-        const fresh = generateMockData();
-        set({ ...fresh, categories: [...DEFAULT_CATEGORIES], vehicleBrands: [...DEFAULT_VEHICLE_BRANDS] });
+        set({ incoming: [], categories: [...DEFAULT_CATEGORIES], vehicleBrands: [...DEFAULT_VEHICLE_BRANDS] });
       },
+
+      // Barcha ma'lumotlarni bir vaqtda yuklash
+      fetchAllData: async () => {
+        try {
+          set({ isLoading: true });
+          await Promise.all([
+            get().fetchProducts(),
+            get().fetchCustomers(),
+            get().fetchSuppliers(),
+            get().fetchEmployees(),
+            get().fetchSales(),
+            get().fetchExpenses()
+          ]);
+          set({ isLoading: false });
+        } catch (err: any) {
+          set({ error: err.message, isLoading: false });
+        }
+      }
     }),
     {
       name: "autoerp-pro-v1",
-      version: 3,
+      version: 4,
       partialize: (s) => ({
-        user: s.user, appUsers: s.appUsers, theme: s.theme, warehouse: s.warehouse, vehicleFilter: s.vehicleFilter,
-        products: s.products, customers: s.customers, suppliers: s.suppliers,
-        employees: s.employees, sales: s.sales, expenses: s.expenses, incoming: s.incoming,
-        categories: s.categories, vehicleBrands: s.vehicleBrands,
-      }),
-      migrate: (persisted: any) => {
-        if (!persisted) return persisted;
-        if (!persisted.appUsers) persisted.appUsers = defaultAppUsers;
-        if (!persisted.categories) persisted.categories = [...DEFAULT_CATEGORIES];
-        if (!persisted.vehicleBrands) persisted.vehicleBrands = [...DEFAULT_VEHICLE_BRANDS];
-        if (persisted.user && !persisted.user.permissions) {
-          persisted.user.permissions = ALL_PERMISSIONS;
-        }
-        return persisted;
-      },
+        user: s.user,
+        appUsers: s.appUsers,
+        theme: s.theme,
+        warehouse: s.warehouse,
+        vehicleFilter: s.vehicleFilter,
+        categories: s.categories,
+        vehicleBrands: s.vehicleBrands,
+        incoming: s.incoming,
+      })
     }
   )
 );

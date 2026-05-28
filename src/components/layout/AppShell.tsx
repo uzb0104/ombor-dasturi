@@ -53,7 +53,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <div className="px-2 pb-2 text-[10px] font-semibold uppercase tracking-wider opacity-50">Menyu</div>
         {NAV.filter((item) => {
           if (!user) return true;
-          if (user.role === "Admin") return true;
+          if (user.role?.toLowerCase() === "admin") return true;
           if (item.to === "/settings") return true; // profile/security tabs visible to all
           const perms = user.permissions || [];
           return perms.includes(item.to);
