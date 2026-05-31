@@ -14,6 +14,7 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import { CommandDialog, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { useEffect, useState } from "react";
 import { useLang, LANG_LABELS, type Lang } from "@/lib/i18n";
 import { Languages } from "lucide-react";
@@ -25,10 +26,26 @@ const ICONS = {
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const navigate = useNavigate();
-  const { user, logout, theme, toggleTheme, warehouse, setWarehouse, vehicleFilter, setVehicleFilter, vehicleBrands, branches } = useStore();
+  const { user, logout, theme, toggleTheme, warehouse, setWarehouse, vehicleFilter, setVehicleFilter, vehicleBrands, branches, products, customers } = useStore();
   const path = useRouterState({ select: (s) => s.location.pathname });
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
   const [now, setNow] = useState(new Date());
+
+  const lowStock = products.filter(p => p.quantity > 0 && p.quantity <= p.minQty);
+  const outStock = products.filter(p => p.quantity === 0);
+  const totalNotifications = lowStock.length + outStock.length;
+
+  useEffect(() => {
+    const down = (e: KeyboardEvent) => {
+      if (e.key === "k" && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault();
+        setSearchOpen((open) => !open);
+      }
+    };
+    document.addEventListener("keydown", down);
+    return () => document.removeEventListener("keydown", down);
+  }, []);
 
   useEffect(() => {
     const t = setInterval(() => setNow(new Date()), 60000);
@@ -53,13 +70,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       </div>
       <nav className="flex-1 overflow-y-auto px-3 py-4 scrollbar-thin">
         <div className="px-2 pb-2 text-[10px] font-semibold uppercase tracking-wider opacity-50">Menyu</div>
-        {NAV.filter((item) => {
-          if (!user) return true;
-          if (user.role === "Admin") return true;
-          if (item.to === "/settings") return true; // profile/security tabs visible to all
-          const perms = user.permissions || [];
-          return perms.includes(item.to);
-        }).map((item) => {
+        {NAV.map((item) => {
           const Icon = ICONS[item.icon as keyof typeof ICONS];
           const active = path === item.to || (item.to !== "/dashboard" && path.startsWith(item.to));
           return (
@@ -109,9 +120,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <header className="flex items-center gap-3 border-b bg-card/80 backdrop-blur px-4 py-3">
           <button className="md:hidden" onClick={() => setMobileOpen(true)}><Menu className="h-5 w-5" /></button>
 
-          <div className="relative hidden md:block w-72">
+          <div className="relative hidden md:block w-72" onClick={() => setSearchOpen(true)}>
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input placeholder="Qidirish..." className="pl-9 bg-muted/40 border-transparent focus-visible:bg-background" />
+            <Input readOnly placeholder="Qidirish... (Ctrl+K)" className="pl-9 bg-muted/40 border-transparent cursor-pointer hover:bg-muted/60 focus-visible:bg-background" />
           </div>
 
           <div className="ml-auto flex items-center gap-2">
@@ -132,10 +143,44 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               {theme === "light" ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
             </Button>
 
-            <Button variant="ghost" size="icon" className="relative">
-              <Bell className="h-4 w-4" />
-              <Badge className="absolute -top-1 -right-1 h-4 min-w-4 px-1 text-[10px] bg-destructive text-destructive-foreground">3</Badge>
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="relative">
+                  <Bell className="h-4 w-4" />
+                  {totalNotifications > 0 && (
+                    <Badge className="absolute -top-1 -right-1 h-4 min-w-4 px-1 text-[10px] bg-destructive text-destructive-foreground">
+                      {totalNotifications}
+                    </Badge>
+                  )}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-80">
+                <DropdownMenuLabel>Bildirishnomalar</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                {totalNotifications === 0 ? (
+                  <div className="p-4 text-center text-sm text-muted-foreground">Yangi bildirishnomalar yo'q</div>
+                ) : (
+                  <div className="max-h-[300px] overflow-y-auto">
+                    {outStock.slice(0, 5).map(p => (
+                      <DropdownMenuItem key={`out-${p.id}`} onClick={() => navigate({ to: "/products" })} className="cursor-pointer">
+                        <div className="flex flex-col gap-1 w-full">
+                          <span className="font-medium text-destructive">Tovar tugadi!</span>
+                          <span className="text-xs text-muted-foreground">{p.name} ({p.vehicle})</span>
+                        </div>
+                      </DropdownMenuItem>
+                    ))}
+                    {lowStock.slice(0, 5).map(p => (
+                      <DropdownMenuItem key={`low-${p.id}`} onClick={() => navigate({ to: "/products" })} className="cursor-pointer">
+                        <div className="flex flex-col gap-1 w-full">
+                          <span className="font-medium text-warning-foreground">Kam qoldi: {p.quantity} ta</span>
+                          <span className="text-xs text-muted-foreground">{p.name} ({p.vehicle})</span>
+                        </div>
+                      </DropdownMenuItem>
+                    ))}
+                  </div>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -168,6 +213,39 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <div className="mx-auto max-w-[1600px] p-4 md:p-6 animate-fade-in">{children}</div>
         </main>
       </div>
+      <CommandDialog open={searchOpen} onOpenChange={setSearchOpen}>
+        <CommandInput placeholder="Sahifa, tovar yoki mijoz qidirish..." />
+        <CommandList>
+          <CommandEmpty>Hech narsa topilmadi.</CommandEmpty>
+          <CommandGroup heading="Sahifalar">
+            {NAV.map((item) => {
+              const Icon = ICONS[item.icon as keyof typeof ICONS];
+              return (
+                <CommandItem key={item.to} onSelect={() => { navigate({ to: item.to }); setSearchOpen(false); }} className="cursor-pointer">
+                  <Icon className="mr-2 h-4 w-4" />
+                  {item.label}
+                </CommandItem>
+              );
+            })}
+          </CommandGroup>
+          <CommandGroup heading="Tovarlar (Top 10)">
+            {products.slice(0, 10).map(p => (
+              <CommandItem key={p.id} onSelect={() => { navigate({ to: "/products" }); setSearchOpen(false); }} className="cursor-pointer">
+                <Package className="mr-2 h-4 w-4" />
+                {p.name} ({p.vehicle}) - {p.quantity} dona
+              </CommandItem>
+            ))}
+          </CommandGroup>
+          <CommandGroup heading="Mijozlar (Top 5)">
+            {customers.slice(0, 5).map(c => (
+              <CommandItem key={c.id} onSelect={() => { navigate({ to: "/customers" }); setSearchOpen(false); }} className="cursor-pointer">
+                <Users className="mr-2 h-4 w-4" />
+                {c.name} - {c.phone}
+              </CommandItem>
+            ))}
+          </CommandGroup>
+        </CommandList>
+      </CommandDialog>
     </div>
   );
 }

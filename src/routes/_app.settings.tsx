@@ -26,9 +26,34 @@ const emptyUser = (): UserForm => ({
 });
 
 function SettingsPage() {
-  const { user, theme, toggleTheme, resetData, appUsers, addAppUser, updateAppUser, deleteAppUser, vehicleBrands, products, addVehicleBrand, updateVehicleBrand, deleteVehicleBrand, branches, addBranch, updateBranch, deleteBranch } = useStore();
+  const { user, theme, toggleTheme, resetData, appUsers, addAppUser, updateAppUser, deleteAppUser, vehicleBrands, products, addVehicleBrand, updateVehicleBrand, deleteVehicleBrand, branches, addBranch, updateBranch, deleteBranch, updateProfile, changePassword } = useStore();
   const isAdmin = user?.role === "Admin";
   const { confirm, confirmNode } = useConfirm();
+
+  const [profileName, setProfileName] = useState(user?.name || "");
+  const [passwords, setPasswords] = useState({ current: "", new: "", confirm: "" });
+
+  const handleProfileSave = () => {
+    if (!profileName.trim()) { toast.error("Ism bo'sh bo'lishi mumkin emas"); return; }
+    updateProfile({ name: profileName.trim() });
+    toast.success("Profil yangilandi");
+  };
+
+  const handlePasswordChange = async () => {
+    if (!passwords.current || !passwords.new || !passwords.confirm) {
+      toast.error("Barcha maydonlarni to'ldiring"); return;
+    }
+    if (passwords.new !== passwords.confirm) {
+      toast.error("Yangi parollar mos kelmadi"); return;
+    }
+    const ok = await changePassword(passwords.current, passwords.new);
+    if (ok) {
+      toast.success("Parol yangilandi");
+      setPasswords({ current: "", new: "", confirm: "" });
+    } else {
+      toast.error("Joriy parol noto'g'ri");
+    }
+  };
 
   const resetAll = async () => {
     const ok = await confirm({ title: "Demo ma'lumotlarni tiklash", description: "Barcha ma'lumotlar dastlabki holatga qaytariladi. Bu amalni qaytarib bo'lmaydi.", destructive: true, confirmText: "Tiklash" });
@@ -55,12 +80,12 @@ function SettingsPage() {
           <Card className="p-6 rounded-2xl space-y-4 max-w-2xl">
             <h3 className="font-semibold">Mening profilim</h3>
             <div className="grid grid-cols-2 gap-3">
-              <div><Label>Ism</Label><Input defaultValue={user?.name} /></div>
-              <div><Label>Email</Label><Input defaultValue={user?.email} disabled /></div>
-              <div><Label>Lavozim</Label><Input defaultValue={user?.role} disabled /></div>
-              <div><Label>Foydalanuvchi ID</Label><Input defaultValue={user?.id} disabled className="font-mono text-xs" /></div>
+              <div><Label>Ism</Label><Input value={profileName} onChange={(e) => setProfileName(e.target.value)} /></div>
+              <div><Label>Email</Label><Input value={user?.email} disabled /></div>
+              <div><Label>Lavozim</Label><Input value={user?.role} disabled /></div>
+              <div><Label>Foydalanuvchi ID</Label><Input value={user?.id} disabled className="font-mono text-xs" /></div>
             </div>
-            <Button onClick={() => toast.success("Saqlandi")}>Saqlash</Button>
+            <Button onClick={handleProfileSave}>Saqlash</Button>
           </Card>
         </TabsContent>
 
@@ -86,11 +111,11 @@ function SettingsPage() {
           <Card className="p-6 rounded-2xl space-y-4 max-w-2xl">
             <h3 className="font-semibold">Parolni o'zgartirish</h3>
             <div className="grid grid-cols-1 gap-3">
-              <div><Label>Joriy parol</Label><Input type="password" /></div>
-              <div><Label>Yangi parol</Label><Input type="password" /></div>
-              <div><Label>Yangi parolni tasdiqlash</Label><Input type="password" /></div>
+              <div><Label>Joriy parol</Label><Input type="password" value={passwords.current} onChange={(e) => setPasswords({ ...passwords, current: e.target.value })} /></div>
+              <div><Label>Yangi parol</Label><Input type="password" value={passwords.new} onChange={(e) => setPasswords({ ...passwords, new: e.target.value })} /></div>
+              <div><Label>Yangi parolni tasdiqlash</Label><Input type="password" value={passwords.confirm} onChange={(e) => setPasswords({ ...passwords, confirm: e.target.value })} /></div>
             </div>
-            <Button onClick={() => toast.success("Parol yangilandi")}>O'zgartirish</Button>
+            <Button onClick={handlePasswordChange}>O'zgartirish</Button>
           </Card>
         </TabsContent>
 

@@ -175,3 +175,183 @@ export function BulkBar({ count, onDelete, onClear, label = "tanlandi" }: {
 export function SelectCell({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) {
   return <Checkbox checked={checked} onCheckedChange={(v) => onChange(!!v)} aria-label="Tanlash" />;
 }
+
+// ─────────────── Sorting Hook & Button ───────────────
+export type SortConfig<T> = {
+  key: keyof T | string;
+  direction: "ascending" | "descending";
+} | null;
+
+export function useSortableData<T>(items: T[], config: SortConfig<T> = null) {
+  const [sortConfig, setSortConfig] = useState<SortConfig<T>>(config);
+
+  const sortedItems = useMemo(() => {
+    let sortableItems = [...items];
+    if (sortConfig !== null) {
+      sortableItems.sort((a, b) => {
+        let aVal: any = a[sortConfig.key as keyof T];
+        let bVal: any = b[sortConfig.key as keyof T];
+
+        if (typeof sortConfig.key === "string" && sortConfig.key.includes(".")) {
+          const parts = sortConfig.key.split(".");
+          aVal = parts.reduce((acc, part) => acc?.[part], a as any);
+          bVal = parts.reduce((acc, part) => acc?.[part], b as any);
+        }
+
+        if (aVal === undefined || aVal === null) aVal = "";
+        if (bVal === undefined || bVal === null) bVal = "";
+
+        if (typeof aVal === "number" && typeof bVal === "number") {
+          return sortConfig.direction === "ascending" ? aVal - bVal : bVal - aVal;
+        }
+
+        const aString = String(aVal).toLowerCase();
+        const bString = String(bVal).toLowerCase();
+
+        return sortConfig.direction === "ascending"
+          ? aString.localeCompare(bString)
+          : bString.localeCompare(aString);
+      });
+    }
+    return sortableItems;
+  }, [items, sortConfig]);
+
+  const requestSort = (key: keyof T | string) => {
+    let direction: "ascending" | "descending" = "ascending";
+    if (
+      sortConfig &&
+      sortConfig.key === key &&
+      sortConfig.direction === "ascending"
+    ) {
+      direction = "descending";
+    } else if (
+      sortConfig &&
+      sortConfig.key === key &&
+      sortConfig.direction === "descending"
+    ) {
+      setSortConfig(null);
+      return;
+    }
+    setSortConfig({ key, direction });
+  };
+
+  return { items: sortedItems, sortConfig, requestSort };
+}
+
+import { ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
+
+export function SortButton({
+  label,
+  sortKey,
+  sortConfig,
+  onSort,
+}: {
+  label: string;
+  sortKey: string;
+  sortConfig: any;
+  onSort: (key: string) => void;
+}) {
+  const isSorted = sortConfig?.key === sortKey;
+  const isAsc = sortConfig?.direction === "ascending";
+
+  return (
+    <button
+      onClick={() => onSort(sortKey)}
+      className="inline-flex items-center gap-1 hover:text-foreground transition-colors font-semibold group border-0 bg-transparent p-0 cursor-pointer"
+    >
+      <span>{label}</span>
+      {isSorted ? (
+        isAsc ? (
+          <ArrowUp className="h-3 w-3 text-primary shrink-0" />
+        ) : (
+          <ArrowDown className="h-3 w-3 text-primary shrink-0" />
+        )
+      ) : (
+        <ArrowUpDown className="h-3 w-3 opacity-30 group-hover:opacity-100 transition-opacity shrink-0" />
+      )}
+    </button>
+  );
+}
+
+// ─────────────── Universal Export Helpers ───────────────
+export function exportToCSV(data: any[], headers: { label: string; key: string }[], filename: string) {
+  const headerLabels = headers.map(h => h.label);
+  const rows = [headerLabels];
+
+  data.forEach((item) => {
+    rows.push(headers.map((h) => {
+      let val = item[h.key];
+      if (h.key.includes(".")) {
+        const parts = h.key.split(".");
+        val = parts.reduce((acc, part) => acc?.[part], item);
+      }
+      return String(val ?? "");
+    }));
+  });
+
+  const csv = rows.map((r) => r.map((c) => `"${c.replace(/"/g, '""')}"`).join(",")).join("\n");
+  const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+}
+
+export function exportToExcel(
+  data: any[],
+  headers: { label: string; key: string }[],
+  title: string,
+  filename: string
+) {
+  const html = `
+    <html xmlns:o="urn:schemas-microsoft-xml-soap:office:office" xmlns:x="urn:schemas-microsoft-xml-soap:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+    <head>
+      <meta charset="utf-8" />
+      <style>
+        table { border-collapse: collapse; font-family: sans-serif; font-size: 11pt; }
+        th { background-color: #2563eb; color: white; font-weight: bold; border: 1px solid #cbd5e1; padding: 8px; }
+        td { border: 1px solid #cbd5e1; padding: 8px; }
+        h2 { color: #1e293b; margin-bottom: 2px; }
+      </style>
+    </head>
+    <body>
+      <h2>${title}</h2>
+      <p>Sana: ${new Date().toLocaleString("uz-UZ")}</p>
+      <table>
+        <thead>
+          <tr>
+            ${headers.map((h) => `<th>${h.label}</th>`).join("")}
+          </tr>
+        </thead>
+        <tbody>
+          ${data
+            .map(
+              (item) => `
+            <tr>
+              ${headers.map((h) => {
+                let val = item[h.key];
+                if (h.key.includes(".")) {
+                  const parts = h.key.split(".");
+                  val = parts.reduce((acc, part) => acc?.[part], item);
+                }
+                return `<td>${val ?? ""}</td>`;
+              }).join("")}
+            </tr>
+          `
+            )
+            .join("")}
+        </tbody>
+      </table>
+    </body>
+    </html>
+  `;
+
+  const blob = new Blob(["\uFEFF" + html], { type: "application/vnd.ms-excel;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+}
+

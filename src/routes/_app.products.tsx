@@ -3,11 +3,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { PageHeader, StatusBadge, useConfirm, usePagination, PaginationBar, useSelection, BulkBar, SelectCell } from "@/components/ui-kit";
+import { PageHeader, StatusBadge, useConfirm, usePagination, PaginationBar, useSelection, BulkBar, SelectCell, useSortableData, SortButton, exportToCSV, exportToExcel } from "@/components/ui-kit";
 import { useStore } from "@/lib/store";
 import { formatSom } from "@/lib/constants";
 import { useMemo, useState } from "react";
-import { Plus, Search, Edit, Trash2, Package, ScanBarcode } from "lucide-react";
+import { Plus, Search, Edit, Trash2, Package, ScanBarcode, Download } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
@@ -54,7 +54,11 @@ function ProductsPage() {
     return true;
   }), [products, search, cat, veh, vehicleFilter]);
 
-  const pg = usePagination(filtered, 12);
+  // Sorting
+  const { items: sortedProducts, sortConfig, requestSort } = useSortableData(filtered);
+
+  // Pagination
+  const pg = usePagination(sortedProducts, 12);
   const pageIds = pg.paged.map(p => p.id);
   const allChecked = pageIds.length > 0 && pageIds.every(id => sel.has(id));
 
@@ -75,7 +79,6 @@ function ProductsPage() {
   };
 
   const generateBarcode = () => {
-    // Generates a short alphanumeric box-code (e.g. B7RTC, 48RCT3303)
     const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
     let code = "";
     do {
@@ -146,104 +149,134 @@ function ProductsPage() {
     });
   };
 
+  const handleExportCSV = () => {
+    const headers = [
+      { label: "Nomi", key: "name" },
+      { label: "Karobka kodi", key: "barcode" },
+      { label: "Brend (Model)", key: "vehicle" },
+      { label: "Kategoriya", key: "category" },
+      { label: "Zaxira miqdori", key: "quantity" },
+      { label: "Sotib olish narxi", key: "buyPrice" },
+      { label: "Sotish narxi", key: "sellPrice" },
+    ];
+    exportToCSV(filtered, headers, `tovarlar_${new Date().toISOString().slice(0, 10)}.csv`);
+  };
+
+  const handleExportExcel = () => {
+    const headers = [
+      { label: "Nomi", key: "name" },
+      { label: "Karobka kodi", key: "barcode" },
+      { label: "Brend (Model)", key: "vehicle" },
+      { label: "Kategoriya", key: "category" },
+      { label: "Zaxira miqdori", key: "quantity" },
+      { label: "Sotib olish narxi (so'm)", key: "buyPrice" },
+      { label: "Sotish narxi (so'm)", key: "sellPrice" },
+    ];
+    exportToExcel(filtered, headers, "Ombordagi Tovarlar Ro'yxati", `tovarlar_${new Date().toISOString().slice(0, 10)}.xls`);
+  };
+
   return (
-    <div className="space-y-5">
+    <div className="space-y-5 animate-fade-in">
       {confirmNode}
       <PageHeader
         title="Tovarlar"
         subtitle={`Jami ${products.length} ta tovar`}
         actions={
-          <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) { setEditing(null); setForm(emptyForm(categories[0] || "", vehicleBrands[0] || "")); } }}>
-            <DialogTrigger asChild>
-              <Button><Plus className="h-4 w-4 mr-1" />Yangi tovar</Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-              <DialogHeader><DialogTitle>{editing ? "Tovarni tahrirlash" : "Yangi tovar"}</DialogTitle></DialogHeader>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="sm:col-span-2"><Label>Nomi *</Label><Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Masalan: Tormoz kolodkasi" /></div>
-                <div className="sm:col-span-2">
-                  <Label>Kod (karobka raqami / SKU) — ixtiyoriy</Label>
-                  <div className="flex gap-2">
-                    <Input
-                      value={form.barcode}
-                      onChange={(e) => setForm({ ...form, barcode: e.target.value.toUpperCase() })}
-                      placeholder="Masalan: B7RTC, 32009, 48RCT3303"
-                      className="font-mono uppercase tracking-wider"
-                      autoFocus={!editing}
-                    />
-                    <Button type="button" variant="outline" onClick={generateBarcode}>
-                      <ScanBarcode className="h-4 w-4 mr-1" />Yaratish
-                    </Button>
+          <>
+            <Button variant="outline" size="sm" onClick={handleExportCSV}><Download className="h-4 w-4 mr-1" />CSV</Button>
+            <Button variant="outline" size="sm" onClick={handleExportExcel}><Download className="h-4 w-4 mr-1" />Excel</Button>
+            <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) { setEditing(null); setForm(emptyForm(categories[0] || "", vehicleBrands[0] || "")); } }}>
+              <DialogTrigger asChild>
+                <Button size="sm"><Plus className="h-4 w-4 mr-1" />Yangi tovar</Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto bg-card border rounded-2xl shadow-elevated">
+                <DialogHeader><DialogTitle>{editing ? "Tovarni tahrirlash" : "Yangi tovar"}</DialogTitle></DialogHeader>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 py-2">
+                  <div className="sm:col-span-2"><Label>Nomi *</Label><Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Masalan: Tormoz kolodkasi" /></div>
+                  <div className="sm:col-span-2">
+                    <Label>Kod (karobka raqami / SKU) — ixtiyoriy</Label>
+                    <div className="flex gap-2 mt-1">
+                      <Input
+                        value={form.barcode}
+                        onChange={(e) => setForm({ ...form, barcode: e.target.value.toUpperCase() })}
+                        placeholder="Masalan: B7RTC, 32009, 48RCT3303"
+                        className="font-mono uppercase tracking-wider text-sm"
+                        autoFocus={!editing}
+                      />
+                      <Button type="button" variant="outline" onClick={generateBarcode}>
+                        <ScanBarcode className="h-4 w-4 mr-1" />Yaratish
+                      </Button>
+                    </div>
+                    <p className="text-[11px] text-muted-foreground mt-1">Karobka ustidagi kod yoki SKU. Lotin harflari katta yoziladi, raqam va belgilar ham mumkin.</p>
                   </div>
-                  <p className="text-xs text-muted-foreground mt-1">Karobka ustidagi kod yoki SKU. Lotin harflari katta yoziladi, raqam va belgilar ham mumkin. Bo'sh qoldirilsa, tovar kodsiz saqlanadi.</p>
+                  <div><Label>Brend</Label>
+                    <Select value={form.vehicle} onValueChange={(v) => setForm({ ...form, vehicle: v })}>
+                      <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                      <SelectContent>{vehicleBrands.map(b => <SelectItem key={b} value={b}>{b}</SelectItem>)}</SelectContent>
+                    </Select>
+                  </div>
+                  <div><Label>Kategoriya</Label>
+                    <Select value={form.category} onValueChange={(v) => setForm({ ...form, category: v })}>
+                      <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                      <SelectContent>{categories.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
+                    </Select>
+                  </div>
+                  <div className="sm:col-span-2"><Label>Yetkazib beruvchi</Label>
+                    <Select value={form.supplierId || suppliers[0]?.id} onValueChange={(v) => setForm({ ...form, supplierId: v })}>
+                      <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                      <SelectContent>{suppliers.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
+                    </Select>
+                  </div>
+                  <div className="sm:col-span-2"><Label>Mahsulot brendi (ixtiyoriy)</Label>
+                    <Input value={form.unitBrand} onChange={(e) => setForm({ ...form, unitBrand: e.target.value })} placeholder="Masalan: Bosch, Varta, Michelin" className="mt-1" />
+                  </div>
+                  {isBattery(form.category) && (
+                    <>
+                      <div><Label>Amperaj (Ah) *</Label>
+                        <Input value={form.amperage} onChange={(e) => setForm({ ...form, amperage: e.target.value })} placeholder="60, 75, 100" className="mt-1" />
+                      </div>
+                      <div><Label>Kuchlanish</Label>
+                        <Select value={form.voltage} onValueChange={(v) => setForm({ ...form, voltage: v })}>
+                          <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="6V">6V</SelectItem>
+                            <SelectItem value="12V">12V</SelectItem>
+                            <SelectItem value="24V">24V</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </>
+                  )}
+                  {isTire(form.category) && (
+                    <>
+                      <div><Label>Balon o'lchami *</Label>
+                        <Input value={form.tireSize} onChange={(e) => setForm({ ...form, tireSize: e.target.value })} placeholder="175/70 R13" className="mt-1" />
+                      </div>
+                      <div><Label>Mavsum</Label>
+                        <Select value={form.tireSeason} onValueChange={(v) => setForm({ ...form, tireSeason: v })}>
+                          <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Yozgi">Yozgi</SelectItem>
+                            <SelectItem value="Qishki">Qishki</SelectItem>
+                            <SelectItem value="Universal">Universal</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </>
+                  )}
+                  <div><Label>Miqdor</Label><Input type="number" value={form.quantity} onChange={(e) => setForm({ ...form, quantity: +e.target.value })} className="mt-1" /></div>
+                  <div><Label>Min. miqdor</Label><Input type="number" value={form.minQty} onChange={(e) => setForm({ ...form, minQty: +e.target.value })} className="mt-1" /></div>
+                  <div><Label>Sotib olish narxi</Label><Input type="number" value={form.buyPrice} onChange={(e) => setForm({ ...form, buyPrice: +e.target.value })} className="mt-1" /></div>
+                  <div><Label>Sotuv narxi</Label><Input type="number" value={form.sellPrice} onChange={(e) => setForm({ ...form, sellPrice: +e.target.value })} className="mt-1" /></div>
                 </div>
-                <div><Label>Brend</Label>
-                  <Select value={form.vehicle} onValueChange={(v) => setForm({ ...form, vehicle: v })}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>{vehicleBrands.map(b => <SelectItem key={b} value={b}>{b}</SelectItem>)}</SelectContent>
-                  </Select>
-                </div>
-                <div><Label>Kategoriya</Label>
-                  <Select value={form.category} onValueChange={(v) => setForm({ ...form, category: v })}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>{categories.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
-                  </Select>
-                </div>
-                <div className="sm:col-span-2"><Label>Yetkazib beruvchi</Label>
-                  <Select value={form.supplierId || suppliers[0]?.id} onValueChange={(v) => setForm({ ...form, supplierId: v })}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>{suppliers.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
-                  </Select>
-                </div>
-                <div className="sm:col-span-2"><Label>Mahsulot brendi (ixtiyoriy)</Label>
-                  <Input value={form.unitBrand} onChange={(e) => setForm({ ...form, unitBrand: e.target.value })} placeholder="Masalan: Bosch, Varta, Michelin" />
-                </div>
-                {isBattery(form.category) && (
-                  <>
-                    <div><Label>Amperaj (Ah) *</Label>
-                      <Input value={form.amperage} onChange={(e) => setForm({ ...form, amperage: e.target.value })} placeholder="60, 75, 100" />
-                    </div>
-                    <div><Label>Kuchlanish</Label>
-                      <Select value={form.voltage} onValueChange={(v) => setForm({ ...form, voltage: v })}>
-                        <SelectTrigger><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="6V">6V</SelectItem>
-                          <SelectItem value="12V">12V</SelectItem>
-                          <SelectItem value="24V">24V</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </>
-                )}
-                {isTire(form.category) && (
-                  <>
-                    <div><Label>Balon o'lchami *</Label>
-                      <Input value={form.tireSize} onChange={(e) => setForm({ ...form, tireSize: e.target.value })} placeholder="175/70 R13" />
-                    </div>
-                    <div><Label>Mavsum</Label>
-                      <Select value={form.tireSeason} onValueChange={(v) => setForm({ ...form, tireSeason: v })}>
-                        <SelectTrigger><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="Yozgi">Yozgi</SelectItem>
-                          <SelectItem value="Qishki">Qishki</SelectItem>
-                          <SelectItem value="Universal">Universal</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </>
-                )}
-                <div><Label>Miqdor</Label><Input type="number" value={form.quantity} onChange={(e) => setForm({ ...form, quantity: +e.target.value })} /></div>
-                <div><Label>Min. miqdor</Label><Input type="number" value={form.minQty} onChange={(e) => setForm({ ...form, minQty: +e.target.value })} /></div>
-                <div><Label>Sotib olish narxi</Label><Input type="number" value={form.buyPrice} onChange={(e) => setForm({ ...form, buyPrice: +e.target.value })} /></div>
-                <div><Label>Sotuv narxi</Label><Input type="number" value={form.sellPrice} onChange={(e) => setForm({ ...form, sellPrice: +e.target.value })} /></div>
-              </div>
-              <DialogFooter><Button onClick={submit}>Saqlash</Button></DialogFooter>
-            </DialogContent>
-          </Dialog>
+                <DialogFooter><Button onClick={submit}>Saqlash</Button></DialogFooter>
+              </DialogContent>
+            </Dialog>
+          </>
         }
       />
 
-      <Card className="p-3 md:p-4 rounded-2xl">
+      <Card className="p-4 rounded-2xl card-elevated border-border/60">
         <div className="flex flex-col sm:flex-row sm:flex-wrap gap-2 sm:gap-3 mb-4">
           <div className="relative flex-1 min-w-[180px]">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -261,22 +294,36 @@ function ProductsPage() {
 
         <BulkBar count={sel.count} onDelete={removeBulk} onClear={sel.clear} label="tovar tanlandi" />
 
-        <div className="overflow-x-auto -mx-3 md:mx-0">
+        <div className="overflow-x-auto rounded-xl border border-border/60">
           <Table>
-            <TableHeader>
+            <TableHeader className="bg-muted/30">
               <TableRow>
                 <TableHead className="w-10">
                   <Checkbox checked={allChecked} onCheckedChange={(v) => sel.toggleAll(pageIds, !!v)} aria-label="Hammasi" />
                 </TableHead>
-                <TableHead>Nomi</TableHead>
-                <TableHead className="hidden md:table-cell">Kod</TableHead>
-                <TableHead className="hidden sm:table-cell">Brend</TableHead>
-                <TableHead className="hidden lg:table-cell">Kategoriya</TableHead>
-                <TableHead className="text-right">Miqdor</TableHead>
-                <TableHead className="hidden md:table-cell text-right">Sotib olish</TableHead>
-                <TableHead className="text-right">Sotuv</TableHead>
-                <TableHead className="hidden sm:table-cell">Holat</TableHead>
-                <TableHead className="text-right">Amallar</TableHead>
+                <TableHead>
+                  <SortButton label="Nomi" sortKey="name" sortConfig={sortConfig} onSort={requestSort} />
+                </TableHead>
+                <TableHead className="hidden md:table-cell">
+                  <SortButton label="Kod" sortKey="barcode" sortConfig={sortConfig} onSort={requestSort} />
+                </TableHead>
+                <TableHead className="hidden sm:table-cell">
+                  <SortButton label="Brend" sortKey="vehicle" sortConfig={sortConfig} onSort={requestSort} />
+                </TableHead>
+                <TableHead className="hidden lg:table-cell">
+                  <SortButton label="Kategoriya" sortKey="category" sortConfig={sortConfig} onSort={requestSort} />
+                </TableHead>
+                <TableHead className="text-right">
+                  <SortButton label="Miqdor" sortKey="quantity" sortConfig={sortConfig} onSort={requestSort} />
+                </TableHead>
+                <TableHead className="hidden md:table-cell text-right">
+                  <SortButton label="Sotib olish" sortKey="buyPrice" sortConfig={sortConfig} onSort={requestSort} />
+                </TableHead>
+                <TableHead className="text-right">
+                  <SortButton label="Sotuv" sortKey="sellPrice" sortConfig={sortConfig} onSort={requestSort} />
+                </TableHead>
+                <TableHead className="hidden sm:table-cell text-center">Holat</TableHead>
+                <TableHead className="text-right pr-4">Amallar</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -284,34 +331,34 @@ function ProductsPage() {
                 <TableRow><TableCell colSpan={10} className="text-center py-10 text-muted-foreground">Tovarlar topilmadi</TableCell></TableRow>
               )}
               {pg.paged.map(p => (
-                <TableRow key={p.id} className="hover:bg-muted/40" data-state={sel.has(p.id) ? "selected" : undefined}>
+                <TableRow key={p.id} className="hover:bg-muted/40 transition-colors" data-state={sel.has(p.id) ? "selected" : undefined}>
                   <TableCell><SelectCell checked={sel.has(p.id)} onChange={() => sel.toggle(p.id)} /></TableCell>
-                  <TableCell className="font-medium">
+                  <TableCell className="font-semibold">
                     <div className="flex items-center gap-2">
                       <div className="h-8 w-8 rounded-lg bg-muted grid place-items-center shrink-0"><Package className="h-4 w-4 text-muted-foreground" /></div>
                       <div className="min-w-0">
-                        <div className="truncate">
+                        <div className="truncate text-foreground text-sm">
                           {p.name}
-                          {p.attributes?.amperage && <span className="ml-2 text-xs text-muted-foreground">· {p.attributes.amperage}Ah {p.attributes.voltage}</span>}
-                          {p.attributes?.tireSize && <span className="ml-2 text-xs text-muted-foreground">· {p.attributes.tireSize} {p.attributes.tireSeason && p.attributes.tireSeason !== "Universal" ? `(${p.attributes.tireSeason})` : ""}</span>}
-                          {p.attributes?.unitBrand && <span className="ml-2 text-xs text-primary">{p.attributes.unitBrand}</span>}
+                          {p.attributes?.amperage && <span className="ml-2 text-xs font-normal text-muted-foreground">· {p.attributes.amperage}Ah {p.attributes.voltage}</span>}
+                          {p.attributes?.tireSize && <span className="ml-2 text-xs font-normal text-muted-foreground">· {p.attributes.tireSize} {p.attributes.tireSeason && p.attributes.tireSeason !== "Universal" ? `(${p.attributes.tireSeason})` : ""}</span>}
+                          {p.attributes?.unitBrand && <span className="ml-2 text-xs font-semibold text-primary">{p.attributes.unitBrand}</span>}
                         </div>
-                        <div className="sm:hidden text-xs text-muted-foreground">{p.vehicle} · {p.category}</div>
+                        <div className="sm:hidden text-xs text-muted-foreground font-normal mt-0.5">{p.vehicle} · {p.category}</div>
                       </div>
                     </div>
                   </TableCell>
                   <TableCell className="hidden md:table-cell text-xs font-mono uppercase text-muted-foreground">
-                    {p.barcode ? p.barcode : <span className="italic normal-case">kodsiz</span>}
+                    {p.barcode ? p.barcode : <span className="italic normal-case font-sans">kodsiz</span>}
                   </TableCell>
-                  <TableCell className="hidden sm:table-cell">{p.vehicle}</TableCell>
+                  <TableCell className="hidden sm:table-cell font-medium">{p.vehicle}</TableCell>
                   <TableCell className="hidden lg:table-cell text-sm">{p.category}</TableCell>
-                  <TableCell className="text-right tabular-nums">{p.quantity}</TableCell>
-                  <TableCell className="hidden md:table-cell text-right tabular-nums text-sm">{formatSom(p.buyPrice)}</TableCell>
-                  <TableCell className="text-right tabular-nums text-sm font-semibold">{formatSom(p.sellPrice)}</TableCell>
-                  <TableCell className="hidden sm:table-cell"><StatusBadge qty={p.quantity} min={p.minQty} /></TableCell>
-                  <TableCell className="text-right whitespace-nowrap">
-                    <Button variant="ghost" size="icon" onClick={() => startEdit(p.id)}><Edit className="h-4 w-4" /></Button>
-                    <Button variant="ghost" size="icon" onClick={() => removeOne(p.id, p.name)}>
+                  <TableCell className="text-right tabular-nums font-semibold">{p.quantity}</TableCell>
+                  <TableCell className="hidden md:table-cell text-right tabular-nums text-sm text-muted-foreground">{formatSom(p.buyPrice)}</TableCell>
+                  <TableCell className="text-right tabular-nums text-sm font-bold text-foreground">{formatSom(p.sellPrice)}</TableCell>
+                  <TableCell className="hidden sm:table-cell text-center"><StatusBadge qty={p.quantity} min={p.minQty} /></TableCell>
+                  <TableCell className="text-right whitespace-nowrap pr-4">
+                    <Button variant="ghost" size="icon" onClick={() => startEdit(p.id)} className="h-8 w-8"><Edit className="h-4 w-4 text-muted-foreground hover:text-foreground" /></Button>
+                    <Button variant="ghost" size="icon" onClick={() => removeOne(p.id, p.name)} className="h-8 w-8 hover:bg-destructive/10">
                       <Trash2 className="h-4 w-4 text-destructive" />
                     </Button>
                   </TableCell>

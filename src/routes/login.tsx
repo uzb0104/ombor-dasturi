@@ -19,17 +19,19 @@ function LoginPage() {
   const [remember, setRemember] = useState(true);
   const [loading, setLoading] = useState(false);
 
-  const onSubmit = (e: React.FormEvent) => {
+  const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setTimeout(() => {
-      const ok = login(email, password, remember);
+    try {
+      const ok = await login(email, password, remember);
       if (ok) {
         toast.success("Tizimga muvaffaqiyatli kirildi");
         navigate({ to: "/dashboard" });
       } else toast.error("Email yoki parol noto'g'ri");
-      setLoading(false);
-    }, 500);
+    } catch {
+      toast.error("Server bilan bog'lanishda xatolik");
+    }
+    setLoading(false);
   };
 
   return (
