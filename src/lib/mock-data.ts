@@ -65,6 +65,7 @@ export type Sale = {
   paymentType: "Naqd" | "Karta" | "Qarz";
   total: number;
   profit: number;
+  paid?: number; // qarz sotuvda hozir naqd to'langan qism
 };
 
 export type Expense = {

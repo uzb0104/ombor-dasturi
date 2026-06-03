@@ -350,7 +350,7 @@ export const useStore = create<State>()(
         });
         const customers = get().customers.map(c => {
           if (c.id !== s.customerId) return c;
-          const debtDelta = s.paymentType === "Qarz" ? s.total : 0;
+          const debtDelta = s.paymentType === "Qarz" ? Math.max(0, s.total - (s.paid || 0)) : 0;
           return { ...c, debt: c.debt + debtDelta, totalPurchases: c.totalPurchases + s.total };
         });
         set({ sales: [s, ...get().sales], products, customers });
@@ -366,7 +366,7 @@ export const useStore = create<State>()(
         });
         const customers = get().customers.map(c => {
           if (c.id !== s.customerId) return c;
-          const debtDelta = s.paymentType === "Qarz" ? s.total : 0;
+          const debtDelta = s.paymentType === "Qarz" ? Math.max(0, s.total - (s.paid || 0)) : 0;
           return { ...c, debt: Math.max(0, c.debt - debtDelta), totalPurchases: Math.max(0, c.totalPurchases - s.total) };
         });
         set({ sales: get().sales.filter(x => x.id !== id), products, customers });
