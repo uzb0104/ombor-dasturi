@@ -12,6 +12,7 @@ import { Plus, Edit, Trash2, Cog, Disc, Zap, CircleDot, BatteryCharging, Filter,
 import { useState } from "react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
+import { useT } from "@/lib/i18n";
 
 const ICONS: Record<string, any> = {
   "Dvigatel": Cog, "Tormoz tizimi": Disc, "Elektr": Zap, "Shinalar": CircleDot,
@@ -21,6 +22,7 @@ const ICONS: Record<string, any> = {
 export const Route = createFileRoute("/_app/categories")({ component: CategoriesPage });
 
 function CategoriesPage() {
+  const t = useT();
   const { products, categories, addCategory, updateCategory, deleteCategory } = useStore();
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<string | null>(null);
@@ -29,15 +31,15 @@ function CategoriesPage() {
 
   const submit = () => {
     const n = name.trim();
-    if (!n) { toast.error("Nom majburiy"); return; }
+    if (!n) { toast.error(t("categories.nameRequired")); return; }
     if (editing) {
-      if (n !== editing && categories.includes(n)) { toast.error("Bu nom allaqachon mavjud"); return; }
+      if (n !== editing && categories.includes(n)) { toast.error(t("toast.alreadyExists")); return; }
       updateCategory(editing, n);
-      toast.success("Yangilandi");
+      toast.success(t("toast.updated"));
     } else {
-      if (categories.includes(n)) { toast.error("Bu kategoriya allaqachon mavjud"); return; }
+      if (categories.includes(n)) { toast.error(t("toast.alreadyExists")); return; }
       addCategory(n);
-      toast.success("Qo'shildi");
+      toast.success(t("categories.added"));
     }
     setOpen(false); setEditing(null); setName("");
   };
@@ -45,26 +47,26 @@ function CategoriesPage() {
   const remove = async (c: string) => {
     const count = products.filter(p => p.category === c).length;
     const desc = count > 0
-      ? `Bu kategoriyada ${count} ta tovar bor. Baribir o'chirilsinmi?`
-      : `"${c}" o'chirilsinmi?`;
-    const ok = await confirm({ title: "Kategoriyani o'chirish", description: desc, destructive: true, confirmText: "O'chirish" });
+      ? t("categories.deleteWithProducts", { n: count })
+      : t("categories.deleteSimple", { name: c });
+    const ok = await confirm({ title: t("common.delete"), description: desc, destructive: true, confirmText: t("common.delete") });
     if (!ok) return;
     deleteCategory(c);
-    toast.success("O'chirildi");
+    toast.success(t("toast.deleted"));
   };
 
   return (
     <div className="space-y-5">
       {confirmNode}
-      <PageHeader title="Kategoriyalar" subtitle="Avtomobil ehtiyot qismlari turlari" actions={
+      <PageHeader title={t("categories.title")} subtitle={t("categories.subtitle")} actions={
         <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) { setEditing(null); setName(""); } }}>
-          <DialogTrigger asChild><Button><Plus className="h-4 w-4 mr-1" />Yangi</Button></DialogTrigger>
+          <DialogTrigger asChild><Button><Plus className="h-4 w-4 mr-1" />{t("common.new")}</Button></DialogTrigger>
           <DialogContent>
-            <DialogHeader><DialogTitle>{editing ? "Kategoriyani tahrirlash" : "Yangi kategoriya"}</DialogTitle></DialogHeader>
+            <DialogHeader><DialogTitle>{editing ? t("categories.edit") : t("categories.new")}</DialogTitle></DialogHeader>
             <div className="space-y-3">
-              <div><Label>Nomi</Label><Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Masalan: Aksessuarlar" autoFocus /></div>
+              <div><Label>{t("common.name")}</Label><Input value={name} onChange={(e) => setName(e.target.value)} placeholder={t("categories.examplePh")} autoFocus /></div>
             </div>
-            <DialogFooter><Button onClick={submit}>Saqlash</Button></DialogFooter>
+            <DialogFooter><Button onClick={submit}>{t("common.save")}</Button></DialogFooter>
           </DialogContent>
         </Dialog>
       } />
@@ -79,7 +81,7 @@ function CategoriesPage() {
                 <Icon className="h-5 w-5" />
               </div>
               <div className="font-semibold">{c}</div>
-              <div className="text-xs text-muted-foreground mt-0.5">{count} ta tovar</div>
+              <div className="text-xs text-muted-foreground mt-0.5">{t("categories.productCount", { n: count })}</div>
               <div className="flex flex-wrap gap-1 mt-3">
                 {VEHICLE_BRANDS.slice(0, 4).map(b => <Badge key={b} variant="secondary" className="text-[10px]">{b}</Badge>)}
               </div>
@@ -96,9 +98,9 @@ function CategoriesPage() {
         <div className="overflow-x-auto">
           <Table>
             <TableHeader><TableRow>
-              <TableHead>Nomi</TableHead>
-              <TableHead className="text-right">Tovarlar soni</TableHead>
-              <TableHead className="text-right">Amallar</TableHead>
+              <TableHead>{t("common.name")}</TableHead>
+              <TableHead className="text-right">{t("common.productCount")}</TableHead>
+              <TableHead className="text-right">{t("common.actions")}</TableHead>
             </TableRow></TableHeader>
             <TableBody>
               {categories.map(c => (

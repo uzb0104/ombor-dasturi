@@ -16,6 +16,14 @@ dist-ssr
 .nitro
 *.local
 
+# Environment (maxfiy kalitlar)
+.env
+.env.*
+!.env.example
+backend/.env
+backend/.env.*
+!backend/.env.example
+
 # Wrangler / Cloudflare
 .wrangler/
 .dev.vars

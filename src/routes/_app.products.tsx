@@ -7,7 +7,11 @@ import { PageHeader, StatusBadge, useConfirm, usePagination, PaginationBar, useS
 import { useStore } from "@/lib/store";
 import { formatSom } from "@/lib/constants";
 import { useMemo, useState } from "react";
-import { Plus, Search, Edit, Trash2, Package, ScanBarcode, Download } from "lucide-react";
+import { Plus, Search, Edit, Trash2, Package, ScanBarcode, Download, History } from "lucide-react";
+import { useT } from "@/lib/i18n";
+import { ProductImportDialog } from "@/components/ProductImportDialog";
+import { PriceHistoryDialog } from "@/components/PriceHistoryDialog";
+import type { Product } from "@/lib/mock-data";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
@@ -35,8 +39,10 @@ const isBattery = (cat: string) => /akkumulyator/i.test(cat);
 const isTire = (cat: string) => /shina|balon/i.test(cat);
 
 function ProductsPage() {
+  const t = useT();
   const { products, suppliers, categories, vehicleBrands, addProduct, updateProduct, deleteProduct, vehicleFilter } = useStore();
   const [search, setSearch] = useState("");
+  const [historyProduct, setHistoryProduct] = useState<Product | null>(null);
   const [cat, setCat] = useState<string>("all");
   const [veh, setVeh] = useState<string>("all");
   const [open, setOpen] = useState(false);
@@ -86,156 +92,161 @@ function ProductsPage() {
       code = Array.from({ length: len }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
     } while (products.some(p => p.barcode === code));
     setForm(f => ({ ...f, barcode: code }));
-    toast.success("Kod yaratildi");
+    toast.success(t("products.codeGenerated"));
   };
 
   const submit = () => {
-    if (!form.name.trim()) { toast.error("Tovar nomi majburiy"); return; }
+    if (!form.name.trim()) { toast.error(t("products.nameRequired")); return; }
+    if (categories.length === 0) { toast.error(t("products.categoriesNotLoaded")); return; }
+    if (vehicleBrands.length === 0) { toast.error(t("products.brandsNotLoaded")); return; }
+    const category = categories.includes(form.category) ? form.category : categories[0];
+    const vehicle = vehicleBrands.includes(form.vehicle) ? form.vehicle : vehicleBrands[0];
     const bc = form.barcode.trim().toUpperCase();
     if (bc) {
       const dup = products.find(p => p.barcode === bc && p.id !== editing);
-      if (dup) { toast.error(`Bu kod allaqachon mavjud: ${dup.name}`); return; }
+      if (dup) { toast.error(t("products.codeExists", { name: dup.name })); return; }
     }
     const attributes: any = {};
     if (form.unitBrand.trim()) attributes.unitBrand = form.unitBrand.trim();
-    if (isBattery(form.category)) {
-      if (!form.amperage.trim()) { toast.error("Akkumulyator uchun amperaj majburiy"); return; }
+    if (isBattery(category)) {
+      if (!form.amperage.trim()) { toast.error(t("products.batteryRequired")); return; }
       attributes.amperage = form.amperage.trim();
       attributes.voltage = form.voltage.trim() || "12V";
     }
-    if (isTire(form.category)) {
-      if (!form.tireSize.trim()) { toast.error("Balon uchun o'lcham majburiy (masalan 175/70 R13)"); return; }
+    if (isTire(category)) {
+      if (!form.tireSize.trim()) { toast.error(t("products.tireSizeRequired")); return; }
       attributes.tireSize = form.tireSize.trim();
       attributes.tireSeason = form.tireSeason;
     }
     const payload = {
       name: form.name, barcode: bc, sku: "",
-      vehicle: form.vehicle, category: form.category,
-      supplierId: form.supplierId || suppliers[0]?.id || "",
+      vehicle, category,
+      supplierId: form.supplierId || suppliers[0]?.id || null,
       buyPrice: form.buyPrice, sellPrice: form.sellPrice,
       quantity: form.quantity, minQty: form.minQty,
       attributes: Object.keys(attributes).length ? attributes : undefined,
     };
     if (editing) {
       updateProduct(editing, payload);
-      toast.success("Tovar yangilandi");
+      toast.success(t("products.updated"));
     } else {
       addProduct({ id: `prd_${Math.random().toString(36).slice(2, 9)}`, ...payload });
-      toast.success("Tovar qo'shildi");
+      toast.success(t("products.created"));
     }
     setOpen(false); setEditing(null); setForm(emptyForm(categories[0] || "", vehicleBrands[0] || ""));
   };
 
   const removeOne = async (id: string, name: string) => {
-    const ok = await confirm({ title: "Tovarni o'chirish", description: `"${name}" o'chirilsinmi?`, destructive: true, confirmText: "O'chirish" });
+    const ok = await confirm({ title: t("products.deleteTitle"), description: t("products.deleteDesc", { name }), destructive: true, confirmText: t("common.delete") });
     if (!ok) return;
     const snap = products.find(p => p.id === id);
     deleteProduct(id);
-    toast.success(`O'chirildi: ${name}`, {
-      action: snap ? { label: "Qaytarish", onClick: () => addProduct(snap) } : undefined,
+    toast.success(`${t("toast.deleted")}: ${name}`, {
+      action: snap ? { label: t("common.undo"), onClick: () => addProduct(snap) } : undefined,
     });
   };
 
   const removeBulk = async () => {
-    const ok = await confirm({ title: "Tanlanganlarni o'chirish", description: `${sel.count} ta tovar o'chiriladi. Davom etilsinmi?`, destructive: true, confirmText: "O'chirish" });
+    const ok = await confirm({ title: t("common.bulkDelete"), description: t("products.bulkDeleteDesc", { n: sel.count }), destructive: true, confirmText: t("common.delete") });
     if (!ok) return;
     const snaps = products.filter(p => sel.has(p.id));
     const names = snaps.map(p => p.name);
     snaps.forEach(p => deleteProduct(p.id));
     sel.clear();
-    toast.success(`${snaps.length} ta tovar o'chirildi`, {
+    toast.success(t("toast.deletedMany", { n: snaps.length }), {
       description: names.slice(0, 5).join(", ") + (names.length > 5 ? `, +${names.length - 5}` : ""),
-      action: { label: "Qaytarish", onClick: () => snaps.forEach(p => addProduct(p)) },
+      action: { label: t("common.undo"), onClick: () => snaps.forEach(p => addProduct(p)) },
     });
   };
 
+  const exportHeaders = () => [
+    { label: t("common.name"), key: "name" },
+    { label: t("products.boxCode"), key: "barcode" },
+    { label: t("products.brandModel"), key: "vehicle" },
+    { label: t("products.category"), key: "category" },
+    { label: t("products.stockQty"), key: "quantity" },
+    { label: t("products.buyPrice"), key: "buyPrice" },
+    { label: t("products.sellPriceLabel"), key: "sellPrice" },
+  ];
+
   const handleExportCSV = () => {
-    const headers = [
-      { label: "Nomi", key: "name" },
-      { label: "Karobka kodi", key: "barcode" },
-      { label: "Brend (Model)", key: "vehicle" },
-      { label: "Kategoriya", key: "category" },
-      { label: "Zaxira miqdori", key: "quantity" },
-      { label: "Sotib olish narxi", key: "buyPrice" },
-      { label: "Sotish narxi", key: "sellPrice" },
-    ];
-    exportToCSV(filtered, headers, `tovarlar_${new Date().toISOString().slice(0, 10)}.csv`);
+    exportToCSV(filtered, exportHeaders(), `tovarlar_${new Date().toISOString().slice(0, 10)}.csv`);
   };
 
   const handleExportExcel = () => {
-    const headers = [
-      { label: "Nomi", key: "name" },
-      { label: "Karobka kodi", key: "barcode" },
-      { label: "Brend (Model)", key: "vehicle" },
-      { label: "Kategoriya", key: "category" },
-      { label: "Zaxira miqdori", key: "quantity" },
-      { label: "Sotib olish narxi (so'm)", key: "buyPrice" },
-      { label: "Sotish narxi (so'm)", key: "sellPrice" },
-    ];
-    exportToExcel(filtered, headers, "Ombordagi Tovarlar Ro'yxati", `tovarlar_${new Date().toISOString().slice(0, 10)}.xls`);
+    const headers = exportHeaders().map((h, i) =>
+      i === 5 ? { ...h, label: t("products.buyPriceSom") } : i === 6 ? { ...h, label: t("products.sellPriceSom") } : h
+    );
+    exportToExcel(filtered, headers, t("products.exportListTitle"), `tovarlar_${new Date().toISOString().slice(0, 10)}.xls`);
   };
 
   return (
     <div className="space-y-5 animate-fade-in">
       {confirmNode}
+      <PriceHistoryDialog
+        product={historyProduct}
+        open={!!historyProduct}
+        onOpenChange={(v) => !v && setHistoryProduct(null)}
+      />
       <PageHeader
-        title="Tovarlar"
-        subtitle={`Jami ${products.length} ta tovar`}
+        title={t("products.title")}
+        subtitle={`${products.length} ${t("products.count")}`}
         actions={
           <>
+            <ProductImportDialog />
             <Button variant="outline" size="sm" onClick={handleExportCSV}><Download className="h-4 w-4 mr-1" />CSV</Button>
             <Button variant="outline" size="sm" onClick={handleExportExcel}><Download className="h-4 w-4 mr-1" />Excel</Button>
             <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) { setEditing(null); setForm(emptyForm(categories[0] || "", vehicleBrands[0] || "")); } }}>
               <DialogTrigger asChild>
-                <Button size="sm"><Plus className="h-4 w-4 mr-1" />Yangi tovar</Button>
+                <Button size="sm"><Plus className="h-4 w-4 mr-1" />{t("products.new")}</Button>
               </DialogTrigger>
               <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto bg-card border rounded-2xl shadow-elevated">
-                <DialogHeader><DialogTitle>{editing ? "Tovarni tahrirlash" : "Yangi tovar"}</DialogTitle></DialogHeader>
+                <DialogHeader><DialogTitle>{editing ? t("products.edit") : t("products.new")}</DialogTitle></DialogHeader>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 py-2">
-                  <div className="sm:col-span-2"><Label>Nomi *</Label><Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Masalan: Tormoz kolodkasi" /></div>
+                  <div className="sm:col-span-2"><Label>{t("common.nameStar")}</Label><Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder={t("products.form.namePh")} /></div>
                   <div className="sm:col-span-2">
-                    <Label>Kod (karobka raqami / SKU) — ixtiyoriy</Label>
+                    <Label>{t("products.form.codeLabel")}</Label>
                     <div className="flex gap-2 mt-1">
                       <Input
                         value={form.barcode}
                         onChange={(e) => setForm({ ...form, barcode: e.target.value.toUpperCase() })}
-                        placeholder="Masalan: B7RTC, 32009, 48RCT3303"
+                        placeholder={t("products.form.codePh")}
                         className="font-mono uppercase tracking-wider text-sm"
                         autoFocus={!editing}
                       />
                       <Button type="button" variant="outline" onClick={generateBarcode}>
-                        <ScanBarcode className="h-4 w-4 mr-1" />Yaratish
+                        <ScanBarcode className="h-4 w-4 mr-1" />{t("common.generate")}
                       </Button>
                     </div>
-                    <p className="text-[11px] text-muted-foreground mt-1">Karobka ustidagi kod yoki SKU. Lotin harflari katta yoziladi, raqam va belgilar ham mumkin.</p>
+                    <p className="text-[11px] text-muted-foreground mt-1">{t("products.form.codeHint")}</p>
                   </div>
-                  <div><Label>Brend</Label>
+                  <div><Label>{t("products.brand")}</Label>
                     <Select value={form.vehicle} onValueChange={(v) => setForm({ ...form, vehicle: v })}>
                       <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
                       <SelectContent>{vehicleBrands.map(b => <SelectItem key={b} value={b}>{b}</SelectItem>)}</SelectContent>
                     </Select>
                   </div>
-                  <div><Label>Kategoriya</Label>
+                  <div><Label>{t("products.category")}</Label>
                     <Select value={form.category} onValueChange={(v) => setForm({ ...form, category: v })}>
                       <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
                       <SelectContent>{categories.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
                     </Select>
                   </div>
-                  <div className="sm:col-span-2"><Label>Yetkazib beruvchi</Label>
+                  <div className="sm:col-span-2"><Label>{t("common.supplier")}</Label>
                     <Select value={form.supplierId || suppliers[0]?.id} onValueChange={(v) => setForm({ ...form, supplierId: v })}>
                       <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
                       <SelectContent>{suppliers.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
                     </Select>
                   </div>
-                  <div className="sm:col-span-2"><Label>Mahsulot brendi (ixtiyoriy)</Label>
-                    <Input value={form.unitBrand} onChange={(e) => setForm({ ...form, unitBrand: e.target.value })} placeholder="Masalan: Bosch, Varta, Michelin" className="mt-1" />
+                  <div className="sm:col-span-2"><Label>{t("products.form.unitBrand")}</Label>
+                    <Input value={form.unitBrand} onChange={(e) => setForm({ ...form, unitBrand: e.target.value })} placeholder={t("products.form.unitBrandPh")} className="mt-1" />
                   </div>
                   {isBattery(form.category) && (
                     <>
-                      <div><Label>Amperaj (Ah) *</Label>
+                      <div><Label>{t("products.form.amperage")}</Label>
                         <Input value={form.amperage} onChange={(e) => setForm({ ...form, amperage: e.target.value })} placeholder="60, 75, 100" className="mt-1" />
                       </div>
-                      <div><Label>Kuchlanish</Label>
+                      <div><Label>{t("products.form.voltage")}</Label>
                         <Select value={form.voltage} onValueChange={(v) => setForm({ ...form, voltage: v })}>
                           <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
                           <SelectContent>
@@ -249,27 +260,27 @@ function ProductsPage() {
                   )}
                   {isTire(form.category) && (
                     <>
-                      <div><Label>Balon o'lchami *</Label>
+                      <div><Label>{t("products.form.tireSize")}</Label>
                         <Input value={form.tireSize} onChange={(e) => setForm({ ...form, tireSize: e.target.value })} placeholder="175/70 R13" className="mt-1" />
                       </div>
-                      <div><Label>Mavsum</Label>
+                      <div><Label>{t("products.form.season")}</Label>
                         <Select value={form.tireSeason} onValueChange={(v) => setForm({ ...form, tireSeason: v })}>
                           <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="Yozgi">Yozgi</SelectItem>
-                            <SelectItem value="Qishki">Qishki</SelectItem>
-                            <SelectItem value="Universal">Universal</SelectItem>
+                            <SelectItem value="Yozgi">{t("products.tire.summer")}</SelectItem>
+                            <SelectItem value="Qishki">{t("products.tire.winter")}</SelectItem>
+                            <SelectItem value="Universal">{t("products.tire.universal")}</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
                     </>
                   )}
-                  <div><Label>Miqdor</Label><Input type="number" value={form.quantity} onChange={(e) => setForm({ ...form, quantity: +e.target.value })} className="mt-1" /></div>
-                  <div><Label>Min. miqdor</Label><Input type="number" value={form.minQty} onChange={(e) => setForm({ ...form, minQty: +e.target.value })} className="mt-1" /></div>
-                  <div><Label>Sotib olish narxi</Label><Input type="number" value={form.buyPrice} onChange={(e) => setForm({ ...form, buyPrice: +e.target.value })} className="mt-1" /></div>
-                  <div><Label>Sotuv narxi</Label><Input type="number" value={form.sellPrice} onChange={(e) => setForm({ ...form, sellPrice: +e.target.value })} className="mt-1" /></div>
+                  <div><Label>{t("products.qty")}</Label><Input type="number" value={form.quantity} onChange={(e) => setForm({ ...form, quantity: +e.target.value })} className="mt-1" /></div>
+                  <div><Label>{t("common.minQty")}</Label><Input type="number" value={form.minQty} onChange={(e) => setForm({ ...form, minQty: +e.target.value })} className="mt-1" /></div>
+                  <div><Label>{t("products.buyPrice")}</Label><Input type="number" value={form.buyPrice} onChange={(e) => setForm({ ...form, buyPrice: +e.target.value })} className="mt-1" /></div>
+                  <div><Label>{t("products.sellPrice")}</Label><Input type="number" value={form.sellPrice} onChange={(e) => setForm({ ...form, sellPrice: +e.target.value })} className="mt-1" /></div>
                 </div>
-                <DialogFooter><Button onClick={submit}>Saqlash</Button></DialogFooter>
+                <DialogFooter><Button onClick={submit}>{t("common.save")}</Button></DialogFooter>
               </DialogContent>
             </Dialog>
           </>
@@ -280,55 +291,55 @@ function ProductsPage() {
         <div className="flex flex-col sm:flex-row sm:flex-wrap gap-2 sm:gap-3 mb-4">
           <div className="relative flex-1 min-w-[180px]">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input placeholder="Nom yoki kod..." className="pl-9" value={search} onChange={(e) => setSearch(e.target.value)} />
+            <Input placeholder={t("products.search")} className="pl-9" value={search} onChange={(e) => setSearch(e.target.value)} />
           </div>
           <Select value={veh} onValueChange={setVeh}>
-            <SelectTrigger className="sm:w-[180px]"><SelectValue placeholder="Brend" /></SelectTrigger>
-            <SelectContent><SelectItem value="all">Barcha brendlar</SelectItem>{vehicleBrands.map(b => <SelectItem key={b} value={b}>{b}</SelectItem>)}</SelectContent>
+            <SelectTrigger className="sm:w-[180px]"><SelectValue placeholder={t("products.brand")} /></SelectTrigger>
+            <SelectContent><SelectItem value="all">{t("products.allBrands")}</SelectItem>{vehicleBrands.map(b => <SelectItem key={b} value={b}>{b}</SelectItem>)}</SelectContent>
           </Select>
           <Select value={cat} onValueChange={setCat}>
-            <SelectTrigger className="sm:w-[180px]"><SelectValue placeholder="Kategoriya" /></SelectTrigger>
-            <SelectContent><SelectItem value="all">Barcha kategoriyalar</SelectItem>{categories.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
+            <SelectTrigger className="sm:w-[180px]"><SelectValue placeholder={t("products.category")} /></SelectTrigger>
+            <SelectContent><SelectItem value="all">{t("products.allCategories")}</SelectItem>{categories.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
           </Select>
         </div>
 
-        <BulkBar count={sel.count} onDelete={removeBulk} onClear={sel.clear} label="tovar tanlandi" />
+        <BulkBar count={sel.count} onDelete={removeBulk} onClear={sel.clear} label={t("products.bulk")} />
 
         <div className="overflow-x-auto rounded-xl border border-border/60">
           <Table>
             <TableHeader className="bg-muted/30">
               <TableRow>
                 <TableHead className="w-10">
-                  <Checkbox checked={allChecked} onCheckedChange={(v) => sel.toggleAll(pageIds, !!v)} aria-label="Hammasi" />
+                  <Checkbox checked={allChecked} onCheckedChange={(v) => sel.toggleAll(pageIds, !!v)} aria-label={t("common.selectAll")} />
                 </TableHead>
                 <TableHead>
-                  <SortButton label="Nomi" sortKey="name" sortConfig={sortConfig} onSort={requestSort} />
+                  <SortButton label={t("common.name")} sortKey="name" sortConfig={sortConfig} onSort={requestSort} />
                 </TableHead>
                 <TableHead className="hidden md:table-cell">
-                  <SortButton label="Kod" sortKey="barcode" sortConfig={sortConfig} onSort={requestSort} />
+                  <SortButton label={t("common.code")} sortKey="barcode" sortConfig={sortConfig} onSort={requestSort} />
                 </TableHead>
                 <TableHead className="hidden sm:table-cell">
-                  <SortButton label="Brend" sortKey="vehicle" sortConfig={sortConfig} onSort={requestSort} />
+                  <SortButton label={t("common.brand")} sortKey="vehicle" sortConfig={sortConfig} onSort={requestSort} />
                 </TableHead>
                 <TableHead className="hidden lg:table-cell">
-                  <SortButton label="Kategoriya" sortKey="category" sortConfig={sortConfig} onSort={requestSort} />
+                  <SortButton label={t("products.category")} sortKey="category" sortConfig={sortConfig} onSort={requestSort} />
                 </TableHead>
                 <TableHead className="text-right">
-                  <SortButton label="Miqdor" sortKey="quantity" sortConfig={sortConfig} onSort={requestSort} />
+                  <SortButton label={t("products.qty")} sortKey="quantity" sortConfig={sortConfig} onSort={requestSort} />
                 </TableHead>
                 <TableHead className="hidden md:table-cell text-right">
-                  <SortButton label="Sotib olish" sortKey="buyPrice" sortConfig={sortConfig} onSort={requestSort} />
+                  <SortButton label={t("products.buyPrice")} sortKey="buyPrice" sortConfig={sortConfig} onSort={requestSort} />
                 </TableHead>
                 <TableHead className="text-right">
-                  <SortButton label="Sotuv" sortKey="sellPrice" sortConfig={sortConfig} onSort={requestSort} />
+                  <SortButton label={t("products.sellPrice")} sortKey="sellPrice" sortConfig={sortConfig} onSort={requestSort} />
                 </TableHead>
-                <TableHead className="hidden sm:table-cell text-center">Holat</TableHead>
-                <TableHead className="text-right pr-4">Amallar</TableHead>
+                <TableHead className="hidden sm:table-cell text-center">{t("common.status")}</TableHead>
+                <TableHead className="text-right pr-4">{t("common.actions")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {pg.paged.length === 0 && (
-                <TableRow><TableCell colSpan={10} className="text-center py-10 text-muted-foreground">Tovarlar topilmadi</TableCell></TableRow>
+                <TableRow><TableCell colSpan={10} className="text-center py-10 text-muted-foreground">{t("products.notFound")}</TableCell></TableRow>
               )}
               {pg.paged.map(p => (
                 <TableRow key={p.id} className="hover:bg-muted/40 transition-colors" data-state={sel.has(p.id) ? "selected" : undefined}>
@@ -348,7 +359,7 @@ function ProductsPage() {
                     </div>
                   </TableCell>
                   <TableCell className="hidden md:table-cell text-xs font-mono uppercase text-muted-foreground">
-                    {p.barcode ? p.barcode : <span className="italic normal-case font-sans">kodsiz</span>}
+                    {p.barcode ? p.barcode : <span className="italic normal-case font-sans">{t("products.noCode")}</span>}
                   </TableCell>
                   <TableCell className="hidden sm:table-cell font-medium">{p.vehicle}</TableCell>
                   <TableCell className="hidden lg:table-cell text-sm">{p.category}</TableCell>
@@ -357,6 +368,9 @@ function ProductsPage() {
                   <TableCell className="text-right tabular-nums text-sm font-bold text-foreground">{formatSom(p.sellPrice)}</TableCell>
                   <TableCell className="hidden sm:table-cell text-center"><StatusBadge qty={p.quantity} min={p.minQty} /></TableCell>
                   <TableCell className="text-right whitespace-nowrap pr-4">
+                    <Button variant="ghost" size="icon" title={t("products.priceHistory")} onClick={() => setHistoryProduct(p)} className="h-8 w-8">
+                      <History className="h-4 w-4 text-muted-foreground hover:text-primary" />
+                    </Button>
                     <Button variant="ghost" size="icon" onClick={() => startEdit(p.id)} className="h-8 w-8"><Edit className="h-4 w-4 text-muted-foreground hover:text-foreground" /></Button>
                     <Button variant="ghost" size="icon" onClick={() => removeOne(p.id, p.name)} className="h-8 w-8 hover:bg-destructive/10">
                       <Trash2 className="h-4 w-4 text-destructive" />

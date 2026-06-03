@@ -85,7 +85,21 @@ function createCrudApi<T>(resource: string) {
 }
 
 // ─── RESURS API-LARI ───
-export const productsApi = createCrudApi<any>("products");
+export const productsApi = {
+  ...createCrudApi<any>("products"),
+  importBulk: (items: unknown[]) =>
+    request<{ created: number; failed: number; errors: { name?: string; error: string }[] }>(
+      "/api/products/import",
+      { method: "POST", body: JSON.stringify({ items }) }
+    ),
+  priceHistory: (productId: string) =>
+    request<any[]>(`/api/products/${productId}/price-history`),
+};
+
+export const priceHistoryApi = {
+  getAll: (productId?: string) =>
+    request<any[]>(`/api/price-history${productId ? `?productId=${productId}` : ""}`),
+};
 export const customersApi = createCrudApi<any>("customers");
 export const suppliersApi = createCrudApi<any>("suppliers");
 export const employeesApi = createCrudApi<any>("employees");

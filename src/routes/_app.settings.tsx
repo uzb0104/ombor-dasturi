@@ -16,6 +16,8 @@ import { ROLES, PERMISSION_MODULES, ALL_PERMISSIONS } from "@/lib/constants";
 import { toast } from "sonner";
 import { Plus, Edit, Trash2, Shield, User as UserIcon, Lock, Sun, AlertTriangle, Car, Building2 } from "lucide-react";
 import { useState } from "react";
+import { useT } from "@/lib/i18n";
+import { roleLabel } from "@/lib/i18n/helpers";
 
 export const Route = createFileRoute("/_app/settings")({ component: SettingsPage });
 
@@ -26,6 +28,7 @@ const emptyUser = (): UserForm => ({
 });
 
 function SettingsPage() {
+  const t = useT();
   const { user, theme, toggleTheme, resetData, appUsers, addAppUser, updateAppUser, deleteAppUser, vehicleBrands, products, addVehicleBrand, updateVehicleBrand, deleteVehicleBrand, branches, addBranch, updateBranch, deleteBranch, updateProfile, changePassword } = useStore();
   const isAdmin = user?.role === "Admin";
   const { confirm, confirmNode } = useConfirm();
@@ -34,58 +37,58 @@ function SettingsPage() {
   const [passwords, setPasswords] = useState({ current: "", new: "", confirm: "" });
 
   const handleProfileSave = () => {
-    if (!profileName.trim()) { toast.error("Ism bo'sh bo'lishi mumkin emas"); return; }
+    if (!profileName.trim()) { toast.error(t("settings.nameEmpty")); return; }
     updateProfile({ name: profileName.trim() });
-    toast.success("Profil yangilandi");
+    toast.success(t("settings.profileUpdated"));
   };
 
   const handlePasswordChange = async () => {
     if (!passwords.current || !passwords.new || !passwords.confirm) {
-      toast.error("Barcha maydonlarni to'ldiring"); return;
+      toast.error(t("toast.fillAll")); return;
     }
     if (passwords.new !== passwords.confirm) {
-      toast.error("Yangi parollar mos kelmadi"); return;
+      toast.error(t("toast.passwordMismatch")); return;
     }
     const ok = await changePassword(passwords.current, passwords.new);
     if (ok) {
-      toast.success("Parol yangilandi");
+      toast.success(t("settings.passwordUpdated"));
       setPasswords({ current: "", new: "", confirm: "" });
     } else {
-      toast.error("Joriy parol noto'g'ri");
+      toast.error(t("toast.wrongPassword"));
     }
   };
 
   const resetAll = async () => {
-    const ok = await confirm({ title: "Demo ma'lumotlarni tiklash", description: "Barcha ma'lumotlar dastlabki holatga qaytariladi. Bu amalni qaytarib bo'lmaydi.", destructive: true, confirmText: "Tiklash" });
-    if (ok) { resetData(); toast.success("Ma'lumotlar tiklandi"); }
+    const ok = await confirm({ title: t("settings.demoResetTitle"), description: t("settings.demoResetDesc"), destructive: true, confirmText: t("settings.resetBtn") });
+    if (ok) { resetData(); toast.success(t("settings.resetDone")); }
   };
 
   return (
     <div className="space-y-5">
       {confirmNode}
-      <PageHeader title="Sozlamalar" subtitle="Profil, foydalanuvchilar va tizim sozlamalari" />
+      <PageHeader title={t("settings.title")} subtitle={t("settings.subtitle")} />
 
       <Tabs defaultValue="profile">
         <TabsList className="flex flex-wrap h-auto">
-          <TabsTrigger value="profile"><UserIcon className="h-4 w-4 mr-1.5" />Profil</TabsTrigger>
-          {isAdmin && <TabsTrigger value="users"><Shield className="h-4 w-4 mr-1.5" />Foydalanuvchilar</TabsTrigger>}
-          {isAdmin && <TabsTrigger value="brands"><Car className="h-4 w-4 mr-1.5" />Avtomobil brendlari</TabsTrigger>}
-          {isAdmin && <TabsTrigger value="branches"><Building2 className="h-4 w-4 mr-1.5" />Filiallar</TabsTrigger>}
-          <TabsTrigger value="security"><Lock className="h-4 w-4 mr-1.5" />Xavfsizlik</TabsTrigger>
-          <TabsTrigger value="appearance"><Sun className="h-4 w-4 mr-1.5" />Ko'rinish</TabsTrigger>
-          {isAdmin && <TabsTrigger value="danger" className="text-destructive"><AlertTriangle className="h-4 w-4 mr-1.5" />Xavfli zona</TabsTrigger>}
+          <TabsTrigger value="profile"><UserIcon className="h-4 w-4 mr-1.5" />{t("settings.tab.profile")}</TabsTrigger>
+          {isAdmin && <TabsTrigger value="users"><Shield className="h-4 w-4 mr-1.5" />{t("settings.tab.users")}</TabsTrigger>}
+          {isAdmin && <TabsTrigger value="brands"><Car className="h-4 w-4 mr-1.5" />{t("settings.tab.brands")}</TabsTrigger>}
+          {isAdmin && <TabsTrigger value="branches"><Building2 className="h-4 w-4 mr-1.5" />{t("settings.tab.branches")}</TabsTrigger>}
+          <TabsTrigger value="security"><Lock className="h-4 w-4 mr-1.5" />{t("settings.tab.security")}</TabsTrigger>
+          <TabsTrigger value="appearance"><Sun className="h-4 w-4 mr-1.5" />{t("settings.tab.appearance")}</TabsTrigger>
+          {isAdmin && <TabsTrigger value="danger" className="text-destructive"><AlertTriangle className="h-4 w-4 mr-1.5" />{t("settings.tab.danger")}</TabsTrigger>}
         </TabsList>
 
         <TabsContent value="profile" className="mt-5">
           <Card className="p-6 rounded-2xl space-y-4 max-w-2xl">
-            <h3 className="font-semibold">Mening profilim</h3>
+            <h3 className="font-semibold">{t("settings.myProfile")}</h3>
             <div className="grid grid-cols-2 gap-3">
-              <div><Label>Ism</Label><Input value={profileName} onChange={(e) => setProfileName(e.target.value)} /></div>
-              <div><Label>Email</Label><Input value={user?.email} disabled /></div>
-              <div><Label>Lavozim</Label><Input value={user?.role} disabled /></div>
-              <div><Label>Foydalanuvchi ID</Label><Input value={user?.id} disabled className="font-mono text-xs" /></div>
+              <div><Label>{t("common.name")}</Label><Input value={profileName} onChange={(e) => setProfileName(e.target.value)} /></div>
+              <div><Label>{t("common.email")}</Label><Input value={user?.email} disabled /></div>
+              <div><Label>{t("common.role")}</Label><Input value={user?.role ? roleLabel(t, user.role) : ""} disabled /></div>
+              <div><Label>{t("settings.userId")}</Label><Input value={user?.id} disabled className="font-mono text-xs" /></div>
             </div>
-            <Button onClick={handleProfileSave}>Saqlash</Button>
+            <Button onClick={handleProfileSave}>{t("common.save")}</Button>
           </Card>
         </TabsContent>
 
@@ -109,23 +112,23 @@ function SettingsPage() {
 
         <TabsContent value="security" className="mt-5">
           <Card className="p-6 rounded-2xl space-y-4 max-w-2xl">
-            <h3 className="font-semibold">Parolni o'zgartirish</h3>
+            <h3 className="font-semibold">{t("settings.changePassword")}</h3>
             <div className="grid grid-cols-1 gap-3">
-              <div><Label>Joriy parol</Label><Input type="password" value={passwords.current} onChange={(e) => setPasswords({ ...passwords, current: e.target.value })} /></div>
-              <div><Label>Yangi parol</Label><Input type="password" value={passwords.new} onChange={(e) => setPasswords({ ...passwords, new: e.target.value })} /></div>
-              <div><Label>Yangi parolni tasdiqlash</Label><Input type="password" value={passwords.confirm} onChange={(e) => setPasswords({ ...passwords, confirm: e.target.value })} /></div>
+              <div><Label>{t("settings.currentPassword")}</Label><Input type="password" value={passwords.current} onChange={(e) => setPasswords({ ...passwords, current: e.target.value })} /></div>
+              <div><Label>{t("settings.newPassword")}</Label><Input type="password" value={passwords.new} onChange={(e) => setPasswords({ ...passwords, new: e.target.value })} /></div>
+              <div><Label>{t("settings.confirmPassword")}</Label><Input type="password" value={passwords.confirm} onChange={(e) => setPasswords({ ...passwords, confirm: e.target.value })} /></div>
             </div>
-            <Button onClick={handlePasswordChange}>O'zgartirish</Button>
+            <Button onClick={handlePasswordChange}>{t("common.change")}</Button>
           </Card>
         </TabsContent>
 
         <TabsContent value="appearance" className="mt-5">
           <Card className="p-6 rounded-2xl space-y-4 max-w-2xl">
-            <h3 className="font-semibold">Ko'rinish</h3>
+            <h3 className="font-semibold">{t("settings.tab.appearance")}</h3>
             <div className="flex items-center justify-between">
               <div>
-                <div className="font-medium text-sm">Qorong'i rejim</div>
-                <div className="text-xs text-muted-foreground">Dark mode yoqish/o'chirish</div>
+                <div className="font-medium text-sm">{t("settings.darkMode")}</div>
+                <div className="text-xs text-muted-foreground">{t("settings.darkModeHint")}</div>
               </div>
               <Switch checked={theme === "dark"} onCheckedChange={toggleTheme} />
             </div>
@@ -135,10 +138,10 @@ function SettingsPage() {
         {isAdmin && (
           <TabsContent value="danger" className="mt-5">
             <Card className="p-6 rounded-2xl space-y-3 border-destructive/30 max-w-2xl">
-              <h3 className="font-semibold text-destructive">Xavfli zona</h3>
-              <p className="text-sm text-muted-foreground">Barcha demo ma'lumotlarni dastlabki holatga qaytarish. Bu amalni qaytarib bo'lmaydi.</p>
+              <h3 className="font-semibold text-destructive">{t("settings.tab.danger")}</h3>
+              <p className="text-sm text-muted-foreground">{t("settings.dangerDesc")}</p>
               <Button variant="destructive" onClick={resetAll}>
-                Demo ma'lumotlarni tiklash
+                {t("settings.demoReset")}
               </Button>
             </Card>
           </TabsContent>
@@ -156,14 +159,15 @@ function UsersManagement({
   update: (id: string, u: Partial<AppUser>) => void;
   remove: (id: string) => void;
 }) {
+  const t = useT();
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<string | null>(null);
   const [form, setForm] = useState<UserForm>(emptyUser());
   const { confirm, confirmNode } = useConfirm();
 
   const removeUser = async (u: AppUser) => {
-    const ok = await confirm({ title: "Foydalanuvchini o'chirish", description: `${u.name} o'chirilsinmi?`, destructive: true, confirmText: "O'chirish" });
-    if (ok) { remove(u.id); toast.success("O'chirildi"); }
+    const ok = await confirm({ title: t("settings.deleteUser"), description: t("common.deleteQuestion", { name: u.name }), destructive: true, confirmText: t("common.delete") });
+    if (ok) { remove(u.id); toast.success(t("toast.deleted")); }
   };
 
   const startEdit = (u: AppUser) => {
@@ -173,17 +177,17 @@ function UsersManagement({
   };
 
   const submit = () => {
-    if (!form.name.trim() || !form.email.trim()) { toast.error("Ism va email majburiy"); return; }
-    if (!editing && !form.password.trim()) { toast.error("Parol kiriting"); return; }
+    if (!form.name.trim() || !form.email.trim()) { toast.error(t("settings.emailNameRequired")); return; }
+    if (!editing && !form.password.trim()) { toast.error(t("toast.passwordRequired")); return; }
     if (!editing && appUsers.some(u => u.email.toLowerCase() === form.email.toLowerCase())) {
-      toast.error("Bu email allaqachon mavjud"); return;
+      toast.error(t("toast.emailExists")); return;
     }
     const data: UserForm = {
       ...form,
       permissions: form.role === "Admin" ? ALL_PERMISSIONS : form.permissions,
     };
-    if (editing) { update(editing, data); toast.success("Yangilandi"); }
-    else { add(data); toast.success("Foydalanuvchi qo'shildi"); }
+    if (editing) { update(editing, data); toast.success(t("toast.updated")); }
+    else { add(data); toast.success(t("settings.userAdded")); }
     setOpen(false); setEditing(null); setForm(emptyUser());
   };
 
@@ -201,41 +205,41 @@ function UsersManagement({
       {confirmNode}
       <div className="flex items-center justify-between p-4 border-b">
         <div>
-          <h3 className="font-semibold">Foydalanuvchilar va ruxsatlar</h3>
-          <p className="text-xs text-muted-foreground mt-0.5">Admin yangi foydalanuvchi yaratadi va ularga bo'limlarga kirish ruxsatini beradi</p>
+          <h3 className="font-semibold">{t("settings.usersTitle")}</h3>
+          <p className="text-xs text-muted-foreground mt-0.5">{t("settings.usersDesc")}</p>
         </div>
         <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) { setEditing(null); setForm(emptyUser()); } }}>
-          <DialogTrigger asChild><Button><Plus className="h-4 w-4 mr-1" />Yangi foydalanuvchi</Button></DialogTrigger>
+          <DialogTrigger asChild><Button><Plus className="h-4 w-4 mr-1" />{t("settings.newUser")}</Button></DialogTrigger>
           <DialogContent className="max-w-2xl">
-            <DialogHeader><DialogTitle>{editing ? "Foydalanuvchini tahrirlash" : "Yangi foydalanuvchi"}</DialogTitle></DialogHeader>
+            <DialogHeader><DialogTitle>{editing ? t("settings.editUser") : t("settings.newUser")}</DialogTitle></DialogHeader>
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-3">
-                <div><Label>F.I.SH *</Label><Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></div>
-                <div><Label>Email *</Label><Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} disabled={!!editing} /></div>
-                <div><Label>Parol {editing && "(o'zgartirish uchun yozing)"}</Label><Input type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} /></div>
-                <div><Label>Lavozim</Label>
+                <div><Label>{t("crm.name")} *</Label><Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></div>
+                <div><Label>{t("common.email")} *</Label><Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} disabled={!!editing} /></div>
+                <div><Label>{t("common.password")} {editing && t("settings.passwordHint")}</Label><Input type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} /></div>
+                <div><Label>{t("common.role")}</Label>
                   <Select value={form.role} onValueChange={(v) => setForm({ ...form, role: v as any })}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>{ROLES.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}</SelectContent>
+                    <SelectContent>{ROLES.map(r => <SelectItem key={r} value={r}>{roleLabel(t, r)}</SelectItem>)}</SelectContent>
                   </Select>
                 </div>
               </div>
 
               <div className="flex items-center justify-between rounded-lg border p-3">
                 <div>
-                  <div className="font-medium text-sm">Faol</div>
-                  <div className="text-xs text-muted-foreground">Nofaol foydalanuvchilar tizimga kira olmaydi</div>
+                  <div className="font-medium text-sm">{t("settings.active")}</div>
+                  <div className="text-xs text-muted-foreground">{t("settings.activeHint")}</div>
                 </div>
                 <Switch checked={form.active} onCheckedChange={(v) => setForm({ ...form, active: v })} />
               </div>
 
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <Label>Bo'limlarga ruxsat</Label>
+                  <Label>{t("settings.modulePerms")}</Label>
                   {form.role === "Admin"
-                    ? <Badge variant="secondary">Admin barcha ruxsatlarga ega</Badge>
+                    ? <Badge variant="secondary">{t("settings.adminAllPerms")}</Badge>
                     : <button type="button" className="text-xs text-primary hover:underline" onClick={() => setForm(f => ({ ...f, permissions: f.permissions.length === ALL_PERMISSIONS.length ? [] : ALL_PERMISSIONS }))}>
-                        {form.permissions.length === ALL_PERMISSIONS.length ? "Barchasini olib tashlash" : "Hammasini tanlash"}
+                        {form.permissions.length === ALL_PERMISSIONS.length ? t("settings.clearAllPerms") : t("settings.selectAllPerms")}
                       </button>
                   }
                 </div>
@@ -243,13 +247,13 @@ function UsersManagement({
                   {PERMISSION_MODULES.map(m => (
                     <label key={m.path} className="flex items-center gap-2 rounded-lg border p-2 text-sm cursor-pointer hover:bg-muted/40">
                       <Checkbox checked={form.permissions.includes(m.path)} onCheckedChange={() => togglePerm(m.path)} />
-                      <span className="truncate">{m.label}</span>
+                      <span className="truncate">{t(m.labelKey)}</span>
                     </label>
                   ))}
                 </div>
               </div>
             </div>
-            <DialogFooter><Button onClick={submit}>Saqlash</Button></DialogFooter>
+            <DialogFooter><Button onClick={submit}>{t("common.save")}</Button></DialogFooter>
           </DialogContent>
         </Dialog>
       </div>
@@ -257,22 +261,22 @@ function UsersManagement({
       <div className="overflow-x-auto">
         <Table>
           <TableHeader><TableRow>
-            <TableHead>Foydalanuvchi</TableHead><TableHead>Email</TableHead><TableHead>Lavozim</TableHead>
-            <TableHead>Ruxsatlar</TableHead><TableHead>Holat</TableHead>
-            <TableHead className="text-right">Amallar</TableHead>
+            <TableHead>{t("common.user")}</TableHead><TableHead>{t("common.email")}</TableHead><TableHead>{t("common.role")}</TableHead>
+            <TableHead>{t("settings.permissions")}</TableHead><TableHead>{t("common.status")}</TableHead>
+            <TableHead className="text-right">{t("common.actions")}</TableHead>
           </TableRow></TableHeader>
           <TableBody>
             {appUsers.map(u => (
               <TableRow key={u.id}>
                 <TableCell className="font-medium">{u.name}</TableCell>
                 <TableCell className="text-sm font-mono">{u.email}</TableCell>
-                <TableCell><Badge variant={u.role === "Admin" ? "default" : "secondary"}>{u.role}</Badge></TableCell>
+                <TableCell><Badge variant={u.role === "Admin" ? "default" : "secondary"}>{roleLabel(t, u.role)}</Badge></TableCell>
                 <TableCell className="text-xs text-muted-foreground">
-                  {u.role === "Admin" ? "Hammasi" : `${u.permissions.length} / ${ALL_PERMISSIONS.length} bo'lim`}
+                  {u.role === "Admin" ? t("settings.permsAll") : t("settings.permsCount", { n: u.permissions.length, total: ALL_PERMISSIONS.length })}
                 </TableCell>
                 <TableCell>
                   <Badge variant={u.active ? "secondary" : "outline"} className={u.active ? "text-success" : "text-muted-foreground"}>
-                    {u.active ? "Faol" : "Nofaol"}
+                    {u.active ? t("employees.active") : t("employees.inactive")}
                   </Badge>
                 </TableCell>
                 <TableCell className="text-right">
@@ -299,6 +303,7 @@ function BrandsManagement({
   update: (oldName: string, newName: string) => void;
   remove: (b: string) => void;
 }) {
+  const t = useT();
   const [newBrand, setNewBrand] = useState("");
   const [editing, setEditing] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
@@ -306,37 +311,37 @@ function BrandsManagement({
 
   const addBrand = () => {
     const n = newBrand.trim();
-    if (!n) { toast.error("Brend nomini kiriting"); return; }
-    if (brands.includes(n)) { toast.error("Bu brend allaqachon mavjud"); return; }
-    add(n); setNewBrand(""); toast.success("Brend qo'shildi");
+    if (!n) { toast.error(t("settings.brandNameRequired")); return; }
+    if (brands.includes(n)) { toast.error(t("settings.brandExists")); return; }
+    add(n); setNewBrand(""); toast.success(t("settings.brandAdded"));
   };
 
   const saveEdit = (oldName: string) => {
     const n = editValue.trim();
     if (!n) return;
-    if (n !== oldName && brands.includes(n)) { toast.error("Bunday brend bor"); return; }
-    update(oldName, n); setEditing(null); toast.success("Yangilandi");
+    if (n !== oldName && brands.includes(n)) { toast.error(t("settings.brandExists")); return; }
+    update(oldName, n); setEditing(null); toast.success(t("toast.updated"));
   };
 
   const removeBrand = async (b: string) => {
     const count = products.filter(p => p.vehicle === b).length;
     const desc = count > 0
-      ? `"${b}" brendiga ${count} ta tovar bog'langan. Baribir o'chirilsinmi?`
-      : `"${b}" brendi o'chirilsinmi?`;
-    const ok = await confirm({ title: "Brendni o'chirish", description: desc, destructive: true, confirmText: "O'chirish" });
+      ? t("settings.brandDeleteLinked", { name: b, n: count })
+      : t("settings.brandDelete", { name: b });
+    const ok = await confirm({ title: t("settings.deleteBrand"), description: desc, destructive: true, confirmText: t("common.delete") });
     if (!ok) return;
-    remove(b); toast.success("O'chirildi");
+    remove(b); toast.success(t("toast.deleted"));
   };
 
   return (
     <Card className="rounded-2xl">
       {confirmNode}
       <div className="p-4 border-b">
-        <h3 className="font-semibold">Avtomobil brendlari</h3>
-        <p className="text-xs text-muted-foreground mt-0.5">Yangi avtomobil brendlarini qo'shing yoki mavjudlarini tahrirlang</p>
+        <h3 className="font-semibold">{t("settings.brands")}</h3>
+        <p className="text-xs text-muted-foreground mt-0.5">{t("settings.brandsDesc")}</p>
         <div className="flex flex-col sm:flex-row gap-2 mt-3 max-w-lg">
-          <Input value={newBrand} onChange={(e) => setNewBrand(e.target.value)} placeholder="Masalan: BYD" onKeyDown={(e) => e.key === "Enter" && addBrand()} />
-          <Button onClick={addBrand}><Plus className="h-4 w-4 mr-1" />Qo'shish</Button>
+          <Input value={newBrand} onChange={(e) => setNewBrand(e.target.value)} placeholder={t("settings.brandPh")} onKeyDown={(e) => e.key === "Enter" && addBrand()} />
+          <Button onClick={addBrand}><Plus className="h-4 w-4 mr-1" />{t("common.add")}</Button>
         </div>
       </div>
       <div className="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
@@ -355,7 +360,7 @@ function BrandsManagement({
                 <>
                   <div className="flex-1 min-w-0">
                     <div className="font-medium text-sm truncate">{b}</div>
-                    <div className="text-xs text-muted-foreground">{count} ta tovar</div>
+                    <div className="text-xs text-muted-foreground">{t("categories.productCount", { n: count })}</div>
                   </div>
                   <Button variant="ghost" size="icon" onClick={() => { setEditing(b); setEditValue(b); }}><Edit className="h-4 w-4" /></Button>
                   <Button variant="ghost" size="icon" onClick={() => removeBrand(b)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
@@ -377,41 +382,42 @@ function BranchesManagement({
   update: (oldName: string, newName: string) => void;
   remove: (b: string) => void;
 }) {
+  const t = useT();
   const [newBranch, setNewBranch] = useState("");
   const [editing, setEditing] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
   const { confirm, confirmNode } = useConfirm();
 
-  const addBranch = () => {
+  const addBranchFn = () => {
     const n = newBranch.trim();
-    if (!n) { toast.error("Filial nomini kiriting"); return; }
-    if (branches.includes(n)) { toast.error("Bunday filial bor"); return; }
-    add(n); setNewBranch(""); toast.success("Filial qo'shildi");
+    if (!n) { toast.error(t("settings.branchNameRequired")); return; }
+    if (branches.includes(n)) { toast.error(t("settings.branchExists")); return; }
+    add(n); setNewBranch(""); toast.success(t("settings.branchAdded"));
   };
 
   const saveEdit = (oldName: string) => {
     const n = editValue.trim();
     if (!n) return;
-    if (n !== oldName && branches.includes(n)) { toast.error("Bunday filial bor"); return; }
-    update(oldName, n); setEditing(null); toast.success("Yangilandi");
+    if (n !== oldName && branches.includes(n)) { toast.error(t("settings.branchExists")); return; }
+    update(oldName, n); setEditing(null); toast.success(t("toast.updated"));
   };
 
   const removeBranch = async (b: string) => {
-    if (branches.length <= 1) { toast.error("Kamida 1 ta filial bo'lishi kerak"); return; }
-    const ok = await confirm({ title: "Filialni o'chirish", description: `"${b}" filiali o'chirilsinmi?`, destructive: true, confirmText: "O'chirish" });
+    if (branches.length <= 1) { toast.error(t("settings.branchMin")); return; }
+    const ok = await confirm({ title: t("settings.deleteBranch"), description: t("settings.branchDelete", { name: b }), destructive: true, confirmText: t("common.delete") });
     if (!ok) return;
-    remove(b); toast.success("O'chirildi");
+    remove(b); toast.success(t("toast.deleted"));
   };
 
   return (
     <Card className="rounded-2xl">
       {confirmNode}
       <div className="p-4 border-b">
-        <h3 className="font-semibold">Filiallar (omborlar)</h3>
-        <p className="text-xs text-muted-foreground mt-0.5">Tizimda istalgancha filial yarating — masalan 5–6 ta. Har bir filial yuqori paneldan tanlanadi.</p>
+        <h3 className="font-semibold">{t("settings.branchesTitle")}</h3>
+        <p className="text-xs text-muted-foreground mt-0.5">{t("settings.branchesDesc")}</p>
         <div className="flex flex-col sm:flex-row gap-2 mt-3 max-w-lg">
-          <Input value={newBranch} onChange={(e) => setNewBranch(e.target.value)} placeholder="Masalan: Chilonzor filiali" onKeyDown={(e) => e.key === "Enter" && addBranch()} />
-          <Button onClick={addBranch}><Plus className="h-4 w-4 mr-1" />Qo'shish</Button>
+          <Input value={newBranch} onChange={(e) => setNewBranch(e.target.value)} placeholder={t("settings.branchPh")} onKeyDown={(e) => e.key === "Enter" && addBranchFn()} />
+          <Button onClick={addBranchFn}><Plus className="h-4 w-4 mr-1" />{t("common.add")}</Button>
         </div>
       </div>
       <div className="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">

@@ -13,16 +13,18 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogT
 import { Plus, Receipt, TrendingUp, TrendingDown, Edit, Trash2 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
+import { useT } from "@/lib/i18n";
+import { EXPENSE_CAT_VALUES, expenseCategoryLabel } from "@/lib/i18n/expense-cats";
+import { paymentLabel } from "@/lib/i18n/helpers";
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
-
-const CATS = ["Ish haqi","Soliq","Transport","Elektr","Ombor ijarasi","Ta'mirlash","Internet","Boshqa"];
 
 export const Route = createFileRoute("/_app/expenses")({ component: ExpensesPage });
 
 type Form = { category: string; amount: number; note: string };
-const empty = (): Form => ({ category: CATS[0]!, amount: 0, note: "" });
+const empty = (): Form => ({ category: EXPENSE_CAT_VALUES[0]!, amount: 0, note: "" });
 
 function ExpensesPage() {
+  const t = useT();
   const { expenses, addExpense, updateExpense, deleteExpense, sales } = useStore();
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<string | null>(null);
@@ -55,65 +57,65 @@ function ExpensesPage() {
   };
 
   const submit = () => {
-    if (!form.amount) { toast.error("Summa kiriting"); return; }
-    if (editing) { updateExpense(editing, form); toast.success("Yangilandi"); }
-    else { addExpense({ id: `exp_${Math.random().toString(36).slice(2,9)}`, date: new Date().toISOString(), ...form }); toast.success("Xarajat qo'shildi"); }
+    if (!form.amount) { toast.error(t("toast.amountRequired")); return; }
+    if (editing) { updateExpense(editing, form); toast.success(t("toast.updated")); }
+    else { addExpense({ id: `exp_${Math.random().toString(36).slice(2,9)}`, date: new Date().toISOString(), ...form }); toast.success(t("expenses.added")); }
     setOpen(false); setEditing(null); setForm(empty());
   };
 
   const removeOne = async (id: string) => {
-    const ok = await confirm({ title: "Xarajatni o'chirish", description: "Bu xarajat yozuvi o'chirilsinmi?", destructive: true, confirmText: "O'chirish" });
+    const ok = await confirm({ title: t("expenses.deleteTitle"), description: t("expenses.deleteDesc"), destructive: true, confirmText: t("common.delete") });
     if (!ok) return;
     const snap = expenses.find(e => e.id === id);
     deleteExpense(id);
-    toast.success("O'chirildi", { action: snap ? { label: "Qaytarish", onClick: () => addExpense(snap) } : undefined });
+    toast.success(t("toast.deleted"), { action: snap ? { label: t("common.undo"), onClick: () => addExpense(snap) } : undefined });
   };
   const removeBulk = async () => {
-    const ok = await confirm({ title: "Tanlanganlarni o'chirish", description: `${sel.count} ta xarajat o'chiriladi.`, destructive: true, confirmText: "O'chirish" });
+    const ok = await confirm({ title: t("common.bulkDelete"), description: t("expenses.bulkDeleteDesc", { n: sel.count }), destructive: true, confirmText: t("common.delete") });
     if (!ok) return;
     const snaps = expenses.filter(e => sel.has(e.id));
     snaps.forEach(e => deleteExpense(e.id));
     sel.clear();
-    toast.success(`${snaps.length} ta xarajat o'chirildi`, {
-      description: snaps.slice(0, 5).map(e => `${e.category}: ${formatSom(e.amount)}`).join(" · "),
-      action: { label: "Qaytarish", onClick: () => snaps.forEach(e => addExpense(e)) },
+    toast.success(t("toast.deletedMany", { n: snaps.length }), {
+      description: snaps.slice(0, 5).map(e => `${expenseCategoryLabel(t, e.category)}: ${formatSom(e.amount)}`).join(" · "),
+      action: { label: t("common.undo"), onClick: () => snaps.forEach(e => addExpense(e)) },
     });
   };
 
   return (
     <div className="space-y-5">
       {confirmNode}
-      <PageHeader title="Xarajatlar" subtitle={`${expenses.length} ta yozuv`} actions={
+      <PageHeader title={t("expenses.title")} subtitle={t("expenses.subtitle", { n: expenses.length })} actions={
         <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) { setEditing(null); setForm(empty()); } }}>
-          <DialogTrigger asChild><Button><Plus className="h-4 w-4 mr-1" />Yangi xarajat</Button></DialogTrigger>
+          <DialogTrigger asChild><Button><Plus className="h-4 w-4 mr-1" />{t("expenses.new")}</Button></DialogTrigger>
           <DialogContent>
-            <DialogHeader><DialogTitle>{editing ? "Xarajatni tahrirlash" : "Yangi xarajat"}</DialogTitle></DialogHeader>
+            <DialogHeader><DialogTitle>{editing ? t("expenses.edit") : t("expenses.new")}</DialogTitle></DialogHeader>
             <div className="space-y-3">
-              <div><Label>Turi</Label>
+              <div><Label>{t("expenses.type")}</Label>
                 <Select value={form.category} onValueChange={(v) => setForm({...form, category: v})}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>{CATS.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
+                  <SelectContent>{EXPENSE_CAT_VALUES.map(c => <SelectItem key={c} value={c}>{expenseCategoryLabel(t, c)}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
-              <div><Label>Summa</Label><Input type="number" value={form.amount} onChange={(e) => setForm({...form, amount: +e.target.value})} /></div>
-              <div><Label>Izoh</Label><Input value={form.note} onChange={(e) => setForm({...form, note: e.target.value})} /></div>
+              <div><Label>{t("common.amount")}</Label><Input type="number" value={form.amount} onChange={(e) => setForm({...form, amount: +e.target.value})} /></div>
+              <div><Label>{t("expenses.note")}</Label><Input value={form.note} onChange={(e) => setForm({...form, note: e.target.value})} /></div>
             </div>
-            <DialogFooter><Button onClick={submit}>Saqlash</Button></DialogFooter>
+            <DialogFooter><Button onClick={submit}>{t("common.save")}</Button></DialogFooter>
           </DialogContent>
         </Dialog>
       } />
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4">
-        <StatCard label="Jami xarajatlar" value={formatSom(total)} icon={Receipt} accent="warning" onClick={() => setDetail("expenses")} />
-        <StatCard label="Yalpi foyda" value={formatSom(profit)} icon={TrendingUp} accent="success" onClick={() => setDetail("profit")} />
-        <StatCard label="Sof foyda" value={formatSom(profit - total)} icon={TrendingDown} accent={profit - total > 0 ? "success" : "destructive"} onClick={() => setDetail("net")} />
+        <StatCard label={t("expenses.total")} value={formatSom(total)} icon={Receipt} accent="warning" onClick={() => setDetail("expenses")} />
+        <StatCard label={t("expenses.grossProfit")} value={formatSom(profit)} icon={TrendingUp} accent="success" onClick={() => setDetail("profit")} />
+        <StatCard label={t("expenses.netProfit")} value={formatSom(profit - total)} icon={TrendingDown} accent={profit - total > 0 ? "success" : "destructive"} onClick={() => setDetail("net")} />
       </div>
 
       <ExpenseDetailDialog open={detail} onClose={() => setDetail(null)} expenses={sortedExpenses} sales={sales} />
 
 
       <Card className="rounded-2xl">
-        <CardHeader><CardTitle className="text-base">Toifalar bo'yicha</CardTitle></CardHeader>
+        <CardHeader><CardTitle className="text-base">{t("expenses.byCategory")}</CardTitle></CardHeader>
         <CardContent>
           <ResponsiveContainer width="100%" height={240}>
             <BarChart data={byCategory}>
@@ -128,22 +130,22 @@ function ExpensesPage() {
       </Card>
 
       <Card className="rounded-2xl p-3 md:p-4">
-        <BulkBar count={sel.count} onDelete={removeBulk} onClear={sel.clear} label="xarajat tanlandi" />
+        <BulkBar count={sel.count} onDelete={removeBulk} onClear={sel.clear} label={t("expenses.bulk")} />
         <div className="overflow-x-auto">
           <Table>
             <TableHeader><TableRow>
               <TableHead className="w-10"><Checkbox checked={allChecked} onCheckedChange={(v) => sel.toggleAll(pageIds, !!v)} /></TableHead>
-              <TableHead>Sana</TableHead><TableHead>Turi</TableHead>
-              <TableHead className="hidden sm:table-cell">Izoh</TableHead>
-              <TableHead className="text-right">Summa</TableHead>
-              <TableHead className="text-right">Amallar</TableHead>
+              <TableHead>{t("common.date")}</TableHead><TableHead>{t("expenses.type")}</TableHead>
+              <TableHead className="hidden sm:table-cell">{t("expenses.note")}</TableHead>
+              <TableHead className="text-right">{t("common.amount")}</TableHead>
+              <TableHead className="text-right">{t("common.actions")}</TableHead>
             </TableRow></TableHeader>
             <TableBody>
               {pg.paged.map(e => (
                 <TableRow key={e.id} className="hover:bg-muted/40" data-state={sel.has(e.id) ? "selected" : undefined}>
                   <TableCell><SelectCell checked={sel.has(e.id)} onChange={() => sel.toggle(e.id)} /></TableCell>
                   <TableCell className="text-sm">{new Date(e.date).toLocaleDateString("uz-UZ")}</TableCell>
-                  <TableCell><span className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-xs">{e.category}</span></TableCell>
+                  <TableCell><span className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-xs">{expenseCategoryLabel(t, e.category)}</span></TableCell>
                   <TableCell className="hidden sm:table-cell text-sm text-muted-foreground">{e.note}</TableCell>
                   <TableCell className="text-right tabular-nums font-semibold">{formatSom(e.amount)}</TableCell>
                   <TableCell className="text-right whitespace-nowrap">
@@ -172,11 +174,12 @@ function ExpenseDetailDialog({
   expenses: ReturnType<typeof useStore.getState>["expenses"];
   sales: ReturnType<typeof useStore.getState>["sales"];
 }) {
+  const t = useT();
   if (!open) return null;
   const title =
-    open === "expenses" ? "Jami xarajatlar — barcha tranzaksiyalar"
-    : open === "profit" ? "Yalpi foyda — sotuvlar bo'yicha"
-    : "Sof foyda — sotuvlar va xarajatlar";
+    open === "expenses" ? t("expenses.detail.expenses", { n: expenses.length })
+    : open === "profit" ? t("expenses.detail.profit")
+    : t("expenses.detail.net");
 
   const expRows = [...expenses].sort((a,b) => +new Date(b.date) - +new Date(a.date));
   const saleRows = [...sales].sort((a,b) => +new Date(b.date) - +new Date(a.date));
@@ -188,35 +191,35 @@ function ExpenseDetailDialog({
         <div className="space-y-4 text-sm">
           {(open === "expenses" || open === "net") && (
             <div>
-              <div className="font-semibold mb-2 text-warning-foreground">Xarajatlar ({expRows.length})</div>
+              <div className="font-semibold mb-2 text-warning-foreground">{t("expenses.detail.expenses", { n: expRows.length })}</div>
               <div className="border rounded-lg divide-y max-h-72 overflow-y-auto">
                 {expRows.map(e => (
                   <div key={e.id} className="flex items-center justify-between px-3 py-2">
                     <div>
-                      <div className="font-medium">{e.category}</div>
+                      <div className="font-medium">{expenseCategoryLabel(t, e.category)}</div>
                       <div className="text-xs text-muted-foreground">{new Date(e.date).toLocaleDateString("uz-UZ")} · {e.note || "—"}</div>
                     </div>
                     <div className="tabular-nums text-destructive">−{formatSom(e.amount)}</div>
                   </div>
                 ))}
-                {expRows.length === 0 && <div className="px-3 py-4 text-muted-foreground text-center">Yo'q</div>}
+                {expRows.length === 0 && <div className="px-3 py-4 text-muted-foreground text-center">{t("common.none")}</div>}
               </div>
             </div>
           )}
           {(open === "profit" || open === "net") && (
             <div>
-              <div className="font-semibold mb-2 text-success">Sotuvlar foydasi ({saleRows.length})</div>
+              <div className="font-semibold mb-2 text-success">{t("expenses.salesProfit", { n: saleRows.length })}</div>
               <div className="border rounded-lg divide-y max-h-72 overflow-y-auto">
                 {saleRows.map(s => (
                   <div key={s.id} className="flex items-center justify-between px-3 py-2">
                     <div>
                       <div className="font-medium">#{s.id.slice(-6).toUpperCase()}</div>
-                      <div className="text-xs text-muted-foreground">{new Date(s.date).toLocaleDateString("uz-UZ")} · {s.paymentType} · sotuv {formatSom(s.total)}</div>
+                      <div className="text-xs text-muted-foreground">{new Date(s.date).toLocaleDateString("uz-UZ")} · {paymentLabel(t, s.paymentType)} · {formatSom(s.total)}</div>
                     </div>
                     <div className="tabular-nums text-success font-semibold">+{formatSom(s.profit)}</div>
                   </div>
                 ))}
-                {saleRows.length === 0 && <div className="px-3 py-4 text-muted-foreground text-center">Yo'q</div>}
+                {saleRows.length === 0 && <div className="px-3 py-4 text-muted-foreground text-center">{t("common.none")}</div>}
               </div>
             </div>
           )}

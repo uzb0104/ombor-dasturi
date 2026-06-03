@@ -44,10 +44,52 @@ if (!isSupabaseConfigured) {
   console.warn(`📂 Ma'lumotlar saqlanish fayli: ${DB_JSON_PATH}`);
 }
 
-// ─────────────── REDIS INTEGRATSIYASI (KESH TIZIMI) ───────────────
+// ─────────────── BOSHLANG'ICH ADMIN (SUPABASE) ───────────────
+async function ensureDefaultAdmin() {
+  if (!isSupabaseConfigured) return;
+  try {
+    const { data: existing } = await supabaseClient
+      .from("app_users")
+      .select("id")
+      .eq("email", "admin@autoerp.uz")
+      .maybeSingle();
+
+    if (existing) {
+      console.log("✅ Admin foydalanuvchi Supabase da mavjud");
+      return;
+    }
+
+    const passwordHash = bcrypt.hashSync("admin123", 10);
+    const { error } = await supabaseClient.from("app_users").insert([
+      {
+        id: "u_admin",
+        name: "Bosh admin",
+        email: "admin@autoerp.uz",
+        password: passwordHash,
+        role: "Admin",
+        permissions: [],
+        active: true,
+      },
+    ]);
+
+    if (error) {
+      console.error("❌ Admin seed xatosi:", error.message);
+      return;
+    }
+    console.log("✅ Bosh admin Supabase ga qo'shildi (admin@autoerp.uz / admin123)");
+  } catch (err) {
+    console.error("❌ Admin seed:", err.message);
+  }
+}
+
+// ─────────────── REDIS INTEGRATSIYASI UCHUN IN-MEMORY FALLBACK KESH TIZIMI ───────────────
 const redisUrl = process.env.REDIS_URL || "redis://127.0.0.1:6379";
 let redisClient = null;
 let isRedisConnected = false;
+
+// Mahalliy tezkor xotira keshi (Redis bo'lmasa fallback sifatida ishlaydi)
+const localMemoryCache = new Map();
+const localMemoryCacheExpiry = new Map();
 
 try {
   redisClient = createRedisClient({
@@ -58,7 +100,7 @@ try {
           // Stop retrying after 3 attempts to prevent infinite hang
           return new Error("Redis reconnection retries exhausted");
         }
-        return Math.min(retries * 100, 3000); // retry delay
+        return Math.min(retries * 100, 1000); // retry delay
       }
     }
   });
@@ -73,46 +115,75 @@ try {
     console.log("🚀 Redis kesh tizimi muvaffaqiyatli ulandi!");
   });
   redisClient.connect().catch((error) => {
-    console.log("⚠️ Redis ulanishida xatolik (keshsiz davom etiladi):", error.message);
+    console.log("⚠️ Redis serveri topilmadi. Tizim tezkor ishlashi uchun vaqtinchalik mahalliy tezkor xotira (In-Memory Cache) ishlatiladi.");
   });
 } catch (error) {
-  console.log("⚠️ Redis serveriga ulanib bo'lmadi, kesh tizimisiz ishlanmoqda:", error.message);
+  console.log("⚠️ Redis ulanishida xatolik, mahalliy tezkor xotira ishlatiladi:", error.message);
 }
 
 // ─────────────── KESH YORDAMCHI FUNKSIYALARI ───────────────
 async function getCached(key) {
-  if (!isRedisConnected || !redisClient) return null;
-  try {
-    const value = await redisClient.get(key);
-    if (value) {
-      console.log(`⚡ [Redis Cache] O'qildi: ${key}`);
-      return JSON.parse(value);
+  if (isRedisConnected && redisClient) {
+    try {
+      const value = await redisClient.get(key);
+      if (value) {
+        console.log(`⚡ [Redis Cache] O'qildi: ${key}`);
+        return JSON.parse(value);
+      }
+    } catch (err) {
+      console.error(`❌ Redis get xatosi (${key}):`, err.message);
     }
-  } catch (err) {
-    console.error(`❌ Redis get xatosi (${key}):`, err.message);
+  } else {
+    // In-memory fallback
+    const now = Date.now();
+    const expiry = localMemoryCacheExpiry.get(key);
+    if (expiry && expiry > now) {
+      const val = localMemoryCache.get(key);
+      if (val !== undefined) {
+        console.log(`⚡ [Memory Cache] O'qildi: ${key}`);
+        return JSON.parse(val);
+      }
+    } else {
+      localMemoryCache.delete(key);
+      localMemoryCacheExpiry.delete(key);
+    }
   }
   return null;
 }
 
-async function setCached(key, data, ttl = 3600) {
-  if (!isRedisConnected || !redisClient) return;
-  try {
-    await redisClient.setEx(key, ttl, JSON.stringify(data));
-    console.log(`💾 [Redis Cache] Saqlandi: ${key}`);
-  } catch (err) {
-    console.error(`❌ Redis set xatosi (${key}):`, err.message);
+async function setCached(key, data, ttl = 60) {
+  if (isRedisConnected && redisClient) {
+    try {
+      await redisClient.setEx(key, ttl, JSON.stringify(data));
+      console.log(`💾 [Redis Cache] Saqlandi: ${key}`);
+    } catch (err) {
+      console.error(`❌ Redis set xatosi (${key}):`, err.message);
+    }
+  } else {
+    // In-memory fallback
+    const now = Date.now();
+    localMemoryCache.set(key, JSON.stringify(data));
+    localMemoryCacheExpiry.set(key, now + ttl * 1000);
+    console.log(`💾 [Memory Cache] Saqlandi: ${key} (TTL: ${ttl}s)`);
   }
 }
 
 async function clearCached(key) {
-  if (!isRedisConnected || !redisClient) return;
-  try {
-    await redisClient.del(key);
-    console.log(`🧹 [Redis Cache] Tozalandi: ${key}`);
-  } catch (err) {
-    console.error(`❌ Redis del xatosi (${key}):`, err.message);
+  if (isRedisConnected && redisClient) {
+    try {
+      await redisClient.del(key);
+      console.log(`🧹 [Redis Cache] Tozalandi: ${key}`);
+    } catch (err) {
+      console.error(`❌ :-D Redis del xatosi (${key}):`, err.message);
+    }
+  } else {
+    // In-memory fallback
+    localMemoryCache.delete(key);
+    localMemoryCacheExpiry.delete(key);
+    console.log(`🧹 [Memory Cache] Tozalandi: ${key}`);
   }
 }
+
 
 // ─────────────── MAPPER FUNCTIONS (FRONTEND <-> DATABASE) ───────────────
 
@@ -353,7 +424,8 @@ const initialJsonDb = {
   vehicle_brands: ["Shineray T30", "JAC", "FAW", "ISUZU", "Chevrolet", "Hyundai", "Kia", "Toyota", "Nexia", "Damas", "Labo"],
   branches: ["Asosiy ombor", "Filial 1", "Filial 2"],
   debt_payments: [],
-  audit_logs: []
+  audit_logs: [],
+  price_history: []
 };
 
 function readLocalDb() {
@@ -373,6 +445,69 @@ function writeLocalDb(db) {
   fs.writeFileSync(DB_JSON_PATH, JSON.stringify(db, null, 2));
 }
 
+// ─────────────── NARX TARIXI ───────────────
+function toFePriceHistory(row) {
+  if (!row) return null;
+  return {
+    id: String(row.id),
+    productId: row.product_id,
+    productName: row.product_name,
+    field: row.field,
+    oldValue: row.old_value != null ? Number(row.old_value) : null,
+    newValue: Number(row.new_value || 0),
+    changedById: row.changed_by_id,
+    changedByName: row.changed_by_name,
+    createdAt: row.created_at,
+  };
+}
+
+async function insertPriceHistoryEntries(entries) {
+  if (!entries.length) return;
+  if (isSupabaseConfigured) {
+    const { error } = await supabaseClient.from("price_history").insert(entries);
+    if (error) console.error("❌ price_history insert:", error.message);
+  } else {
+    const db = readLocalDb();
+    if (!db.price_history) db.price_history = [];
+    for (const e of entries) {
+      db.price_history.unshift({
+        id: `ph_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+        ...e,
+        created_at: new Date().toISOString(),
+      });
+    }
+    if (db.price_history.length > 5000) db.price_history = db.price_history.slice(0, 5000);
+    writeLocalDb(db);
+  }
+}
+
+async function recordPriceChanges(productId, productName, before, afterDbObj, user) {
+  const uid = user?.id || "system";
+  const uname = user?.name || "Tizim";
+  const entries = [];
+  const pairs = [
+    ["buy_price", before?.buy_price, afterDbObj.buy_price],
+    ["sell_price", before?.sell_price, afterDbObj.sell_price],
+  ];
+  for (const [field, oldRaw, newRaw] of pairs) {
+    if (newRaw === undefined) continue;
+    const oldNum = oldRaw != null && oldRaw !== "" ? Number(oldRaw) : null;
+    const newNum = Number(newRaw);
+    if (oldNum === newNum) continue;
+    if (!before && newNum === 0) continue;
+    entries.push({
+      product_id: productId,
+      product_name: productName,
+      field,
+      old_value: oldNum,
+      new_value: newNum,
+      changed_by_id: uid,
+      changed_by_name: uname,
+    });
+  }
+  await insertPriceHistoryEntries(entries);
+}
+
 // ─────────────── MIDDLEWARE: AUTH TOKEN TEKSHIRUVI ───────────────
 function authenticateToken(req, res, next) {
   const authHeader = req.headers["authorization"];
@@ -388,6 +523,17 @@ function authenticateToken(req, res, next) {
 }
 
 // ─────────────── API MARSHRUTLARI (ROUTES) ───────────────
+
+// TIZIM HOLATI (diagnostika)
+app.get("/api/health", async (_req, res) => {
+  res.json({
+    ok: true,
+    supabase: isSupabaseConfigured,
+    redis: isRedisConnected,
+    port: Number(PORT),
+    mode: isSupabaseConfigured ? "supabase" : "local-json",
+  });
+});
 
 // 1. TIZIMGA KIRISH (LOGIN)
 app.post("/api/auth/login", async (req, res) => {
@@ -415,10 +561,25 @@ app.post("/api/auth/login", async (req, res) => {
     if (!user && email.toLowerCase() === "admin@autoerp.uz") {
       const defaultHash = bcrypt.hashSync("admin123", 10);
       user = { id: "u_admin", name: "Bosh admin", email: "admin@autoerp.uz", password: defaultHash, role: "Admin", permissions: [], active: true };
-      if (!isSupabaseConfigured) {
+      if (isSupabaseConfigured) {
+        await supabaseClient.from("app_users").upsert(
+          {
+            id: user.id,
+            name: user.name,
+            email: user.email,
+            password: defaultHash,
+            role: user.role,
+            permissions: [],
+            active: true,
+          },
+          { onConflict: "id" }
+        );
+      } else {
         const db = readLocalDb();
-        db.app_users.push(user);
-        writeLocalDb(db);
+        if (!db.app_users.find((u) => u.id === user.id)) {
+          db.app_users.push(user);
+          writeLocalDb(db);
+        }
       }
     }
 
@@ -475,13 +636,15 @@ app.post("/api/products", authenticateToken, async (req, res) => {
         console.error("❌ [Products POST] Supabase xatolik:", error.message, error.details, error.hint);
         throw error;
       }
-      
+      await recordPriceChanges(data.id, data.name, null, dbObj, req.user);
       await clearCached("cache:products");
       res.json(toFeProduct(data));
     } else {
       const db = readLocalDb();
       db.products.unshift(p);
       writeLocalDb(db);
+      const dbObj = toDbProduct(p);
+      await recordPriceChanges(p.id, p.name, null, dbObj, req.user);
       res.json(p);
     }
   } catch (error) {
@@ -495,8 +658,8 @@ app.put("/api/products/:id", authenticateToken, async (req, res) => {
   const updates = req.body;
   try {
     if (isSupabaseConfigured) {
+      const { data: before } = await supabaseClient.from("products").select("*").eq("id", id).single();
       const dbObj = toDbProduct(updates);
-      // id ni update obyektidan olib tashlaymiz (PK yangilanmasligi kerak)
       delete dbObj.id;
       console.log(`📦 [Products PUT] ID: ${id}, Ma'lumot:`, JSON.stringify(dbObj, null, 2));
       const { data, error } = await supabaseClient.from("products").update(dbObj).eq("id", id).select().single();
@@ -504,14 +667,19 @@ app.put("/api/products/:id", authenticateToken, async (req, res) => {
         console.error("❌ [Products PUT] Supabase xatolik:", error.message, error.details, error.hint);
         throw error;
       }
-      
+      await recordPriceChanges(id, data.name, before, dbObj, req.user);
       await clearCached("cache:products");
       res.json(toFeProduct(data));
     } else {
       const db = readLocalDb();
+      const before = db.products.find((x) => x.id === id);
+      const beforeDb = before ? toDbProduct(before) : null;
       db.products = db.products.map(x => x.id === id ? { ...x, ...updates } : x);
       writeLocalDb(db);
-      res.json(db.products.find(x => x.id === id));
+      const updated = db.products.find(x => x.id === id);
+      const dbObj = toDbProduct(updates);
+      await recordPriceChanges(id, updated?.name || id, beforeDb, dbObj, req.user);
+      res.json(updated);
     }
   } catch (error) {
     console.error("❌ [Products PUT] Xatolik:", error.message);
@@ -536,6 +704,102 @@ app.delete("/api/products/:id", authenticateToken, async (req, res) => {
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
+});
+
+// Narx tarixi
+app.get("/api/price-history", authenticateToken, async (req, res) => {
+  const productId = req.query.productId;
+  const limit = Math.min(Number(req.query.limit) || 100, 500);
+  try {
+    if (isSupabaseConfigured) {
+      let q = supabaseClient.from("price_history").select("*").order("created_at", { ascending: false }).limit(limit);
+      if (productId) q = q.eq("product_id", productId);
+      const { data, error } = await q;
+      if (error) throw error;
+      res.json((data || []).map(toFePriceHistory));
+    } else {
+      const db = readLocalDb();
+      let rows = db.price_history || [];
+      if (productId) rows = rows.filter((r) => r.product_id === productId);
+      res.json(rows.slice(0, limit).map(toFePriceHistory));
+    }
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.get("/api/products/:id/price-history", authenticateToken, async (req, res) => {
+  const productId = req.params.id;
+  const limit = Math.min(Number(req.query.limit) || 100, 500);
+  try {
+    if (isSupabaseConfigured) {
+      const { data, error } = await supabaseClient
+        .from("price_history")
+        .select("*")
+        .eq("product_id", productId)
+        .order("created_at", { ascending: false })
+        .limit(limit);
+      if (error) throw error;
+      res.json((data || []).map(toFePriceHistory));
+    } else {
+      const db = readLocalDb();
+      const rows = (db.price_history || []).filter((r) => r.product_id === productId);
+      res.json(rows.slice(0, limit).map(toFePriceHistory));
+    }
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Tovarlarni ommaviy import
+app.post("/api/products/import", authenticateToken, async (req, res) => {
+  const items = Array.isArray(req.body.items) ? req.body.items : [];
+  if (!items.length) return res.status(400).json({ error: "Import ro'yxati bo'sh" });
+
+  const result = { created: 0, failed: 0, errors: [] };
+
+  for (const raw of items) {
+    try {
+      const p = { ...raw };
+      if (!p.id) p.id = `prd_${Math.random().toString(36).slice(2, 9)}`;
+      if (!p.name) throw new Error("Nomi majburiy");
+
+      if (isSupabaseConfigured) {
+        const dbObj = toDbProduct(p);
+        const { data: existing } = await supabaseClient.from("products").select("id").eq("id", p.id).maybeSingle();
+        if (existing) {
+          const { data: before } = await supabaseClient.from("products").select("*").eq("id", p.id).single();
+          delete dbObj.id;
+          const { error } = await supabaseClient.from("products").update(dbObj).eq("id", p.id);
+          if (error) throw error;
+          await recordPriceChanges(p.id, p.name, before, dbObj, req.user);
+        } else {
+          const { error } = await supabaseClient.from("products").insert([dbObj]);
+          if (error) throw error;
+          await recordPriceChanges(p.id, p.name, null, dbObj, req.user);
+        }
+      } else {
+        const db = readLocalDb();
+        const idx = db.products.findIndex((x) => x.id === p.id);
+        if (idx >= 0) {
+          const beforeDb = toDbProduct(db.products[idx]);
+          db.products[idx] = { ...db.products[idx], ...p };
+          await recordPriceChanges(p.id, p.name, beforeDb, toDbProduct(p), req.user);
+        } else {
+          db.products.unshift(p);
+          await recordPriceChanges(p.id, p.name, null, toDbProduct(p), req.user);
+        }
+        writeLocalDb(db);
+      }
+      result.created++;
+    } catch (e) {
+      result.failed++;
+      result.errors.push({ name: raw.name || raw.id, error: e.message });
+    }
+  }
+
+  await clearCached("cache:products");
+  res.json(result);
 });
 
 // 3. MIJOZLAR MARSHRUTLARI (CUSTOMERS)
@@ -1688,7 +1952,9 @@ app.delete("/api/branches/:name", authenticateToken, async (req, res) => {
 });
 
 // ULANISH VA ISHGA TUSHIRISH
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
   console.log(`📡 AutoERP Pro backend server port ${PORT} da muvaffaqiyatli ishga tushdi!`);
   console.log(`🔗 API manzili: http://localhost:${PORT}`);
+  console.log(`🩺 Health: http://localhost:${PORT}/api/health`);
+  await ensureDefaultAdmin();
 });

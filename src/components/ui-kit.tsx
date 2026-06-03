@@ -8,6 +8,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ChevronLeft, ChevronRight, Trash2 } from "lucide-react";
+import { useT } from "@/lib/i18n";
 
 export function StatCard({
   label, value, icon: Icon, accent = "primary", hint, onClick,
@@ -17,6 +18,7 @@ export function StatCard({
   hint?: string;
   onClick?: () => void;
 }) {
+  const t = useT();
   const accentBg = {
     primary: "bg-primary/10 text-primary",
     success: "bg-success/15 text-success",
@@ -36,7 +38,7 @@ export function StatCard({
             <div className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{label}</div>
             <div className="text-2xl font-bold tracking-tight">{value}</div>
             {hint && <div className="text-xs text-muted-foreground">{hint}</div>}
-            {onClick && <div className="text-[10px] text-primary mt-1 font-medium">Batafsil →</div>}
+            {onClick && <div className="text-[10px] text-primary mt-1 font-medium">{t("common.detailsArrow")}</div>}
           </div>
           <div className={`grid h-11 w-11 place-items-center rounded-xl shrink-0 ${accentBg}`}>
             <Icon className="h-5 w-5" />
@@ -60,10 +62,11 @@ export function PageHeader({ title, subtitle, actions }: { title: string; subtit
 }
 
 export function StatusBadge({ qty, min }: { qty: number; min: number }) {
-  let label = "Yetarli", cls = "bg-success/15 text-success border-success/30";
-  if (qty === 0) { label = "Tugagan"; cls = "bg-muted text-muted-foreground border-border"; }
-  else if (qty <= min) { label = "Kam"; cls = "bg-destructive/10 text-destructive border-destructive/30"; }
-  else if (qty <= min * 2) { label = "O'rta"; cls = "bg-warning/20 text-warning-foreground border-warning/40"; }
+  const t = useT();
+  let label = t("status.ok"), cls = "bg-success/15 text-success border-success/30";
+  if (qty === 0) { label = t("status.out"); cls = "bg-muted text-muted-foreground border-border"; }
+  else if (qty <= min) { label = t("status.low"); cls = "bg-destructive/10 text-destructive border-destructive/30"; }
+  else if (qty <= min * 2) { label = t("status.medium"); cls = "bg-warning/20 text-warning-foreground border-warning/40"; }
   return <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-medium ${cls}`}>{label}</span>;
 }
 
@@ -71,6 +74,7 @@ export function StatusBadge({ qty, min }: { qty: number; min: number }) {
 type ConfirmOpts = { title?: string; description?: string; confirmText?: string; cancelText?: string; destructive?: boolean };
 
 export function useConfirm() {
+  const t = useT();
   const [state, setState] = useState<(ConfirmOpts & { open: boolean }) | null>(null);
   const resolver = useRef<((v: boolean) => void) | null>(null);
 
@@ -89,16 +93,16 @@ export function useConfirm() {
     <AlertDialog open={!!state?.open} onOpenChange={(o) => { if (!o) close(false); }}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>{state?.title || "Tasdiqlash"}</AlertDialogTitle>
+          <AlertDialogTitle>{state?.title || t("common.confirmTitle")}</AlertDialogTitle>
           {state?.description && <AlertDialogDescription>{state.description}</AlertDialogDescription>}
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel onClick={() => close(false)}>{state?.cancelText || "Bekor qilish"}</AlertDialogCancel>
+          <AlertDialogCancel onClick={() => close(false)}>{state?.cancelText || t("common.cancel")}</AlertDialogCancel>
           <AlertDialogAction
             onClick={() => close(true)}
             className={state?.destructive ? "bg-destructive text-destructive-foreground hover:bg-destructive/90" : ""}
           >
-            {state?.confirmText || "Tasdiqlash"}
+            {state?.confirmText || t("common.confirm")}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
@@ -155,17 +159,18 @@ export function useSelection() {
   return { selected, toggle, toggleAll, clear, has, count: selected.size };
 }
 
-export function BulkBar({ count, onDelete, onClear, label = "tanlandi" }: {
+export function BulkBar({ count, onDelete, onClear, label }: {
   count: number; onDelete: () => void; onClear: () => void; label?: string;
 }) {
+  const t = useT();
   if (count === 0) return null;
   return (
     <div className="flex items-center justify-between gap-2 rounded-xl border border-primary/30 bg-primary/5 px-3 py-2 mb-3">
-      <div className="text-sm font-medium">{count} ta {label}</div>
+      <div className="text-sm font-medium">{count} {t("common.itemsUnit")} {label ?? ""}</div>
       <div className="flex items-center gap-2">
-        <Button variant="ghost" size="sm" onClick={onClear}>Bekor qilish</Button>
+        <Button variant="ghost" size="sm" onClick={onClear}>{t("common.cancel")}</Button>
         <Button variant="destructive" size="sm" onClick={onDelete}>
-          <Trash2 className="h-4 w-4 mr-1" />Tanlanganlarni o'chirish
+          <Trash2 className="h-4 w-4 mr-1" />{t("common.bulkDelete")}
         </Button>
       </div>
     </div>
@@ -173,7 +178,8 @@ export function BulkBar({ count, onDelete, onClear, label = "tanlandi" }: {
 }
 
 export function SelectCell({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) {
-  return <Checkbox checked={checked} onCheckedChange={(v) => onChange(!!v)} aria-label="Tanlash" />;
+  const t = useT();
+  return <Checkbox checked={checked} onCheckedChange={(v) => onChange(!!v)} aria-label={t("common.selectRow")} />;
 }
 
 // ─────────────── Sorting Hook & Button ───────────────

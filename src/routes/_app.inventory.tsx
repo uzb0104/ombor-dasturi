@@ -10,11 +10,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
-
+import { useT } from "@/lib/i18n";
 
 export const Route = createFileRoute("/_app/inventory")({ component: InventoryPage });
 
 function InventoryPage() {
+  const t = useT();
   const { products, vehicleBrands, deleteProduct } = useStore();
   const [selected, setSelected] = useState<string | null>(null);
   const [search, setSearch] = useState("");
@@ -49,15 +50,15 @@ function InventoryPage() {
   const allChecked = pageIds.length > 0 && pageIds.every(id => sel.has(id));
 
   const removeOne = async (id: string, name: string) => {
-    const ok = await confirm({ title: "Tovarni o'chirish", description: `"${name}" o'chirilsinmi?`, destructive: true, confirmText: "O'chirish" });
-    if (ok) { deleteProduct(id); toast.success("O'chirildi"); }
+    const ok = await confirm({ title: t("common.delete"), description: `"${name}"?`, destructive: true, confirmText: t("common.delete") });
+    if (ok) { deleteProduct(id); toast.success(t("toast.deleted")); }
   };
   const removeBulk = async () => {
-    const ok = await confirm({ title: "Tanlanganlarni o'chirish", description: `${sel.count} ta tovar o'chiriladi.`, destructive: true, confirmText: "O'chirish" });
+    const ok = await confirm({ title: t("common.delete"), description: `${sel.count}`, destructive: true, confirmText: t("common.delete") });
     if (!ok) return;
     const n = sel.count;
     sel.selected.forEach(id => deleteProduct(id));
-    sel.clear(); toast.success(`${n} ta tovar o'chirildi`);
+    sel.clear(); toast.success(t("toast.deletedMany", { n }));
   };
 
   if (selected) {
@@ -66,35 +67,35 @@ function InventoryPage() {
         {confirmNode}
         <PageHeader
           title={selected}
-          subtitle={`${brandProducts.length} ta tovar`}
+          subtitle={t("inventory.brandCount", { n: brandProducts.length })}
           actions={
             <Button variant="outline" onClick={() => { setSelected(null); setSearch(""); sel.clear(); }}>
-              <ChevronLeft className="h-4 w-4 mr-1" />Brendlarga qaytish
+              <ChevronLeft className="h-4 w-4 mr-1" />{t("dashboard.backBrands")}
             </Button>
           }
         />
         <Card className="p-4 rounded-2xl">
           <div className="relative max-w-md mb-4">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input placeholder="Tovar nomi yoki barkod..." className="pl-9" value={search} onChange={(e) => setSearch(e.target.value)} />
+            <Input placeholder={t("dashboard.searchProduct")} className="pl-9" value={search} onChange={(e) => setSearch(e.target.value)} />
           </div>
-          <BulkBar count={sel.count} onDelete={removeBulk} onClear={sel.clear} label="tovar tanlandi" />
+          <BulkBar count={sel.count} onDelete={removeBulk} onClear={sel.clear} label={t("inventory.bulk")} />
           <div className="overflow-x-auto">
             <Table>
               <TableHeader><TableRow>
                 <TableHead className="w-10"><Checkbox checked={allChecked} onCheckedChange={(v) => sel.toggleAll(pageIds, !!v)} /></TableHead>
-                <TableHead>Tovar</TableHead>
-                <TableHead className="hidden md:table-cell">Kategoriya</TableHead>
-                <TableHead className="text-right">Miqdor</TableHead>
-                <TableHead className="hidden sm:table-cell text-right">Sotib olish</TableHead>
-                <TableHead className="hidden sm:table-cell text-right">Sotuv</TableHead>
-                <TableHead className="hidden lg:table-cell text-right">Umumiy qiymati</TableHead>
-                <TableHead className="hidden sm:table-cell">Holat</TableHead>
-                <TableHead className="text-right">Amallar</TableHead>
+                <TableHead>{t("products.title")}</TableHead>
+                <TableHead className="hidden md:table-cell">{t("products.category")}</TableHead>
+                <TableHead className="text-right">{t("products.qty")}</TableHead>
+                <TableHead className="hidden sm:table-cell text-right">{t("products.buyPrice")}</TableHead>
+                <TableHead className="hidden sm:table-cell text-right">{t("products.sellPrice")}</TableHead>
+                <TableHead className="hidden lg:table-cell text-right">{t("dashboard.totalValue")}</TableHead>
+                <TableHead className="hidden sm:table-cell">{t("common.status")}</TableHead>
+                <TableHead className="text-right">{t("common.actions")}</TableHead>
               </TableRow></TableHeader>
               <TableBody>
                 {pg.paged.length === 0 && (
-                  <TableRow><TableCell colSpan={9} className="text-center py-10 text-muted-foreground">Bu brendda tovar yo'q</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={9} className="text-center py-10 text-muted-foreground">{t("dashboard.noBrandProducts")}</TableCell></TableRow>
                 )}
                 {pg.paged.map(p => (
                   <TableRow key={p.id} className="hover:bg-muted/40" data-state={sel.has(p.id) ? "selected" : undefined}>
@@ -109,7 +110,7 @@ function InventoryPage() {
                     <TableCell className="hidden lg:table-cell text-right tabular-nums text-sm font-semibold">{formatSom(p.buyPrice * p.quantity)}</TableCell>
                     <TableCell className="hidden sm:table-cell"><StatusBadge qty={p.quantity} min={p.minQty} /></TableCell>
                     <TableCell className="text-right whitespace-nowrap">
-                      <Button variant="ghost" size="icon" disabled title="Tovarni Tovarlar sahifasida tahrirlang"><Edit className="h-4 w-4 opacity-30" /></Button>
+                      <Button variant="ghost" size="icon" disabled title={t("inventory.editHint")}><Edit className="h-4 w-4 opacity-30" /></Button>
                       <Button variant="ghost" size="icon" onClick={() => removeOne(p.id, p.name)}>
                         <Trash2 className="h-4 w-4 text-destructive" />
                       </Button>
@@ -127,11 +128,11 @@ function InventoryPage() {
 
   return (
     <div className="space-y-5">
-      <PageHeader title="Omborxona" subtitle="Avtomobil brendlari bo'yicha zaxira" />
+      <PageHeader title={t("inventory.title")} subtitle={t("inventory.subtitle")} />
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <StatCard label="Ombor qiymati" value={formatSom(total)} icon={Warehouse} accent="primary" />
-        <StatCard label="Jami tovarlar" value={formatNumber(products.length)} icon={Package} accent="info" />
-        <StatCard label="Kam qolgan" value={String(low)} icon={AlertTriangle} accent="destructive" />
+        <StatCard label={t("dashboard.warehouseValue")} value={formatSom(total)} icon={Warehouse} accent="primary" />
+        <StatCard label={t("dashboard.totalProducts")} value={formatNumber(products.length)} icon={Package} accent="info" />
+        <StatCard label={t("dashboard.lowCount")} value={String(low)} icon={AlertTriangle} accent="destructive" />
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
@@ -147,16 +148,16 @@ function InventoryPage() {
               </div>
               {b.low > 0 && (
                 <span className="inline-flex items-center rounded-full border border-destructive/30 bg-destructive/10 text-destructive px-2 py-0.5 text-[11px] font-medium">
-                  {b.low} kam
+                  {t("inventory.lowBadge", { n: b.low })}
                 </span>
               )}
             </div>
             <div className="mt-4">
               <div className="text-lg font-bold tracking-tight">{b.brand}</div>
-              <div className="text-xs text-muted-foreground mt-0.5">{b.count} ta tovar · {formatNumber(b.qty)} dona</div>
+              <div className="text-xs text-muted-foreground mt-0.5">{t("inventory.summaryLine", { count: b.count, qty: formatNumber(b.qty) })}</div>
             </div>
             <div className="mt-3 pt-3 border-t text-sm">
-              <span className="text-muted-foreground">Qiymati: </span>
+              <span className="text-muted-foreground">{t("inventory.valueLabel")} </span>
               <span className="font-semibold">{formatSom(b.value)}</span>
             </div>
           </button>

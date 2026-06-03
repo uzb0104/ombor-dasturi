@@ -54,11 +54,16 @@ function CustomersPage() {
 
   const submit = () => {
     if (!form.name) { toast.error(t("crm.required.name")); return; }
+    if (vehicleBrands.length === 0) {
+      toast.error(t("crm.brandRequired"));
+      return;
+    }
+    const vehicle = vehicleBrands.includes(form.vehicle) ? form.vehicle : vehicleBrands[0];
     if (editing) {
-      updateCustomer(editing, { ...form, vehicle: form.vehicle as any });
+      updateCustomer(editing, { ...form, vehicle: vehicle as any });
       toast.success(t("crm.updated"));
     } else {
-      addCustomer({ id: `cust_${Math.random().toString(36).slice(2, 9)}`, ...form, vehicle: form.vehicle as any, totalPurchases: 0, debt: 0 });
+      addCustomer({ id: `cust_${Math.random().toString(36).slice(2, 9)}`, ...form, vehicle: vehicle as any, totalPurchases: 0, debt: 0 });
       toast.success(t("crm.created"));
     }
     setOpen(false); setEditing(null); setForm(empty(vehicleBrands[0] || ""));
@@ -87,28 +92,23 @@ function CustomersPage() {
     });
   };
 
+  const exportHeaders = () => [
+    { label: t("crm.name"), key: "name" },
+    { label: t("common.phone"), key: "phone" },
+    { label: t("common.address"), key: "address" },
+    { label: t("crm.vehicle"), key: "vehicle" },
+    { label: t("crm.exportPurchases"), key: "totalPurchases" },
+    { label: t("crm.exportDebt"), key: "debt" },
+  ];
+
   const handleExportCSV = () => {
-    const headers = [
-      { label: "Ism/Nomi", key: "name" },
-      { label: "Telefon", key: "phone" },
-      { label: "Manzil", key: "address" },
-      { label: "Avtomobil", key: "vehicle" },
-      { label: "Umumiy xaridlar (so'm)", key: "totalPurchases" },
-      { label: "Qarz miqdori (so'm)", key: "debt" },
-    ];
+    const headers = exportHeaders();
     exportToCSV(filtered, headers, `mijozlar_${new Date().toISOString().slice(0, 10)}.csv`);
   };
 
   const handleExportExcel = () => {
-    const headers = [
-      { label: "Ism/Nomi", key: "name" },
-      { label: "Telefon", key: "phone" },
-      { label: "Manzil", key: "address" },
-      { label: "Avtomobil", key: "vehicle" },
-      { label: "Umumiy xaridlar (so'm)", key: "totalPurchases" },
-      { label: "Qarz miqdori (so'm)", key: "debt" },
-    ];
-    exportToExcel(filtered, headers, "Mijozlar Ro'yxati", `mijozlar_${new Date().toISOString().slice(0, 10)}.xls`);
+    const headers = exportHeaders();
+    exportToExcel(filtered, headers, t("crm.exportTitle"), `mijozlar_${new Date().toISOString().slice(0, 10)}.xls`);
   };
 
   return (
@@ -175,7 +175,7 @@ function CustomersPage() {
             </TableHeader>
             <TableBody>
               {pg.paged.length === 0 && (
-                <TableRow><TableCell colSpan={8} className="text-center py-10 text-muted-foreground">Mijozlar topilmadi</TableCell></TableRow>
+                <TableRow><TableCell colSpan={8} className="text-center py-10 text-muted-foreground">{t("crm.notFound")}</TableCell></TableRow>
               )}
               {pg.paged.map(c => (
                 <TableRow key={c.id} className="hover:bg-muted/40 transition-colors" data-state={sel.has(c.id) ? "selected" : undefined}>

@@ -1,18 +1,19 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Card } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { PageHeader, StatCard, useConfirm, usePagination, PaginationBar, useSelection, BulkBar, SelectCell, useSortableData, SortButton, exportToCSV, exportToExcel } from "@/components/ui-kit";
+import { PageHeader, StatCard, useConfirm, usePagination, PaginationBar, useSelection, BulkBar, SelectCell } from "@/components/ui-kit";
 import { useStore } from "@/lib/store";
 import { formatSom, ROLES } from "@/lib/constants";
 import { Badge } from "@/components/ui/badge";
-import { Users, Wallet, TrendingDown, Plus, HandCoins, Edit, Trash2, Download } from "lucide-react";
+import { Users, Wallet, TrendingDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useState, useMemo } from "react";
+import { Plus, HandCoins, Edit, Trash2 } from "lucide-react";
+import { useState } from "react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_app/employees")({ component: EmployeesPage });
@@ -26,12 +27,7 @@ function EmployeesPage() {
   const [form, setForm] = useState({ name: "", phone: "", role: ROLES[1] as string, salary: 4000000, hireDate: new Date().toISOString().slice(0,10) });
   const { confirm, confirmNode } = useConfirm();
   const sel = useSelection();
-
-  // Sorting
-  const { items: sortedEmployees, sortConfig, requestSort } = useSortableData(employees);
-
-  // Pagination
-  const pg = usePagination(sortedEmployees, 10);
+  const pg = usePagination(employees, 10);
   const pageIds = pg.paged.map(p => p.id);
   const allChecked = pageIds.length > 0 && pageIds.every(id => sel.has(id));
 
@@ -70,7 +66,6 @@ function EmployeesPage() {
     const ok = await confirm({ title: "Xodimni o'chirish", description: `${name} o'chirilsinmi?`, destructive: true, confirmText: "O'chirish" });
     if (ok) { deleteEmployee(id); toast.success("O'chirildi"); }
   };
-
   const removeBulk = async () => {
     const ok = await confirm({ title: "Tanlanganlarni o'chirish", description: `${sel.count} ta xodim o'chiriladi.`, destructive: true, confirmText: "O'chirish" });
     if (!ok) return;
@@ -79,69 +74,29 @@ function EmployeesPage() {
     sel.clear(); toast.success(`${n} ta xodim o'chirildi`);
   };
 
-  const handleExportCSV = () => {
-    const exportData = employees.map(e => ({
-      ...e,
-      remaining: e.salary - e.advance
-    }));
-    const headers = [
-      { label: "F.I.SH", key: "name" },
-      { label: "Telefon", key: "phone" },
-      { label: "Lavozimi", key: "role" },
-      { label: "Ishga kirgan sana", key: "hireDate" },
-      { label: "Oylik maoshi", key: "salary" },
-      { label: "Olingan avans", key: "advance" },
-      { label: "Oylik qoldig'i", key: "remaining" },
-      { label: "Status", key: "status" },
-    ];
-    exportToCSV(exportData, headers, `xodimlar_${new Date().toISOString().slice(0, 10)}.csv`);
-  };
-
-  const handleExportExcel = () => {
-    const exportData = employees.map(e => ({
-      ...e,
-      remaining: e.salary - e.advance
-    }));
-    const headers = [
-      { label: "F.I.SH", key: "name" },
-      { label: "Telefon", key: "phone" },
-      { label: "Lavozimi", key: "role" },
-      { label: "Ishga kirgan sana", key: "hireDate" },
-      { label: "Oylik maoshi (so'm)", key: "salary" },
-      { label: "Olingan avans (so'm)", key: "advance" },
-      { label: "Oylik qoldig'i (so'm)", key: "remaining" },
-      { label: "Status", key: "status" },
-    ];
-    exportToExcel(exportData, headers, "Xodimlar Ro'yxati", `xodimlar_${new Date().toISOString().slice(0, 10)}.xls`);
-  };
-
   return (
-    <div className="space-y-5 animate-fade-in">
+    <div className="space-y-5">
       {confirmNode}
       <PageHeader title="Xodimlar" subtitle={`${employees.length} ta xodim`} actions={
-        <>
-          <Button variant="outline" size="sm" onClick={handleExportCSV}><Download className="h-4 w-4 mr-1" />CSV</Button>
-          <Button variant="outline" size="sm" onClick={handleExportExcel}><Download className="h-4 w-4 mr-1" />Excel</Button>
-          <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) setEditing(null); }}>
-            <DialogTrigger asChild><Button size="sm"><Plus className="h-4 w-4 mr-1" />Yangi xodim</Button></DialogTrigger>
-            <DialogContent className="bg-card border rounded-2xl shadow-elevated p-6 max-w-md">
-              <DialogHeader><DialogTitle>{editing ? "Xodimni tahrirlash" : "Yangi xodim"}</DialogTitle></DialogHeader>
-              <div className="space-y-3 py-2">
-                <div><Label>F.I.SH *</Label><Input value={form.name} onChange={(e) => setForm({...form, name: e.target.value})} className="mt-1" /></div>
-                <div><Label>Telefon</Label><Input value={form.phone} onChange={(e) => setForm({...form, phone: e.target.value})} className="mt-1" /></div>
-                <div><Label>Lavozim</Label>
-                  <Select value={form.role} onValueChange={(v) => setForm({...form, role: v})}>
-                    <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
-                    <SelectContent>{ROLES.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}</SelectContent>
-                  </Select>
-                </div>
-                <div><Label>Oylik (so'm)</Label><Input type="number" value={form.salary} onChange={(e) => setForm({...form, salary: +e.target.value})} className="mt-1" /></div>
-                <div><Label>Ishga olingan sana</Label><Input type="date" value={form.hireDate} onChange={(e) => setForm({...form, hireDate: e.target.value})} className="mt-1" /></div>
+        <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) setEditing(null); }}>
+          <DialogTrigger asChild><Button><Plus className="h-4 w-4 mr-1" />Yangi xodim</Button></DialogTrigger>
+          <DialogContent>
+            <DialogHeader><DialogTitle>{editing ? "Xodimni tahrirlash" : "Yangi xodim"}</DialogTitle></DialogHeader>
+            <div className="space-y-3">
+              <div><Label>F.I.SH</Label><Input value={form.name} onChange={(e) => setForm({...form, name: e.target.value})} /></div>
+              <div><Label>Telefon</Label><Input value={form.phone} onChange={(e) => setForm({...form, phone: e.target.value})} /></div>
+              <div><Label>Lavozim</Label>
+                <Select value={form.role} onValueChange={(v) => setForm({...form, role: v})}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>{ROLES.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}</SelectContent>
+                </Select>
               </div>
-              <DialogFooter><Button onClick={submit}>Saqlash</Button></DialogFooter>
-            </DialogContent>
-          </Dialog>
-        </>
+              <div><Label>Oylik (so'm)</Label><Input type="number" value={form.salary} onChange={(e) => setForm({...form, salary: +e.target.value})} /></div>
+              <div><Label>Ishga olingan sana</Label><Input type="date" value={form.hireDate} onChange={(e) => setForm({...form, hireDate: e.target.value})} /></div>
+            </div>
+            <DialogFooter><Button onClick={submit}>Saqlash</Button></DialogFooter>
+          </DialogContent>
+        </Dialog>
       } />
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -150,59 +105,42 @@ function EmployeesPage() {
         <StatCard label="Berilgan avanslar" value={formatSom(totalAdvance)} icon={TrendingDown} accent="warning" />
       </div>
 
-      <Card className="rounded-2xl p-4 card-elevated border-border/60">
+      <Card className="rounded-2xl p-3 md:p-4">
         <BulkBar count={sel.count} onDelete={removeBulk} onClear={sel.clear} label="xodim tanlandi" />
-        <div className="overflow-x-auto rounded-xl border border-border/60">
+        <div className="overflow-x-auto">
           <Table>
-            <TableHeader className="bg-muted/30">
-              <TableRow>
-                <TableHead className="w-10"><Checkbox checked={allChecked} onCheckedChange={(v) => sel.toggleAll(pageIds, !!v)} aria-label="Hammasi" /></TableHead>
-                <TableHead>
-                  <SortButton label="F.I.SH" sortKey="name" sortConfig={sortConfig} onSort={requestSort} />
-                </TableHead>
-                <TableHead className="hidden sm:table-cell">Telefon</TableHead>
-                <TableHead>
-                  <SortButton label="Lavozim" sortKey="role" sortConfig={sortConfig} onSort={requestSort} />
-                </TableHead>
-                <TableHead className="hidden md:table-cell">Ishga kirgan</TableHead>
-                <TableHead className="text-right">
-                  <SortButton label="Oylik" sortKey="salary" sortConfig={sortConfig} onSort={requestSort} />
-                </TableHead>
-                <TableHead className="hidden sm:table-cell text-right">
-                  <SortButton label="Avans" sortKey="advance" sortConfig={sortConfig} onSort={requestSort} />
-                </TableHead>
-                <TableHead className="hidden md:table-cell text-right">Qoldiq</TableHead>
-                <TableHead className="hidden sm:table-cell">Status</TableHead>
-                <TableHead className="text-right pr-4">Amallar</TableHead>
-              </TableRow>
-            </TableHeader>
+            <TableHeader><TableRow>
+              <TableHead className="w-10"><Checkbox checked={allChecked} onCheckedChange={(v) => sel.toggleAll(pageIds, !!v)} /></TableHead>
+              <TableHead>F.I.SH</TableHead>
+              <TableHead className="hidden sm:table-cell">Telefon</TableHead>
+              <TableHead>Lavozim</TableHead>
+              <TableHead className="hidden md:table-cell">Sana</TableHead>
+              <TableHead className="text-right">Oylik</TableHead>
+              <TableHead className="hidden sm:table-cell text-right">Avans</TableHead>
+              <TableHead className="hidden md:table-cell text-right">Qoldiq</TableHead>
+              <TableHead className="hidden sm:table-cell">Holat</TableHead>
+              <TableHead className="text-right">Amallar</TableHead>
+            </TableRow></TableHeader>
             <TableBody>
-              {pg.paged.length === 0 && (
-                <TableRow><TableCell colSpan={10} className="text-center py-10 text-muted-foreground">Xodimlar topilmadi</TableCell></TableRow>
-              )}
               {pg.paged.map(e => (
-                <TableRow key={e.id} className="hover:bg-muted/40 transition-colors" data-state={sel.has(e.id) ? "selected" : undefined}>
+                <TableRow key={e.id} className="hover:bg-muted/40" data-state={sel.has(e.id) ? "selected" : undefined}>
                   <TableCell><SelectCell checked={sel.has(e.id)} onChange={() => sel.toggle(e.id)} /></TableCell>
-                  <TableCell className="font-semibold">{e.name}
-                    <div className="sm:hidden text-xs text-muted-foreground font-normal mt-0.5">{e.phone}</div>
+                  <TableCell className="font-medium">{e.name}
+                    <div className="sm:hidden text-xs text-muted-foreground">{e.phone}</div>
                   </TableCell>
-                  <TableCell className="hidden sm:table-cell text-sm font-medium">{e.phone}</TableCell>
-                  <TableCell><Badge variant="secondary" className="font-medium">{e.role}</Badge></TableCell>
+                  <TableCell className="hidden sm:table-cell text-sm">{e.phone}</TableCell>
+                  <TableCell><Badge variant="secondary">{e.role}</Badge></TableCell>
                   <TableCell className="hidden md:table-cell text-sm text-muted-foreground">{e.hireDate}</TableCell>
-                  <TableCell className="text-right tabular-nums font-bold text-foreground">{formatSom(e.salary)}</TableCell>
-                  <TableCell className="hidden sm:table-cell text-right tabular-nums text-warning-foreground font-semibold">{formatSom(e.advance)}</TableCell>
-                  <TableCell className="hidden md:table-cell text-right tabular-nums font-bold text-primary">{formatSom(e.salary - e.advance)}</TableCell>
-                  <TableCell className="hidden sm:table-cell">
-                    <Badge variant={e.status === "Faol" ? "default" : "secondary"} className="font-medium">
-                      {e.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-right whitespace-nowrap pr-4">
-                    <Button size="sm" variant="outline" onClick={() => { setAdvanceFor(e.id); setAdvanceAmount(0); }} className="h-7 text-xs font-semibold">
-                      <HandCoins className="h-3.5 w-3.5 mr-1" />Avans
+                  <TableCell className="text-right tabular-nums">{formatSom(e.salary)}</TableCell>
+                  <TableCell className="hidden sm:table-cell text-right tabular-nums text-warning-foreground">{formatSom(e.advance)}</TableCell>
+                  <TableCell className="hidden md:table-cell text-right tabular-nums font-semibold">{formatSom(e.salary - e.advance)}</TableCell>
+                  <TableCell className="hidden sm:table-cell"><Badge variant={e.status === "Faol" ? "default" : "secondary"}>{e.status}</Badge></TableCell>
+                  <TableCell className="text-right whitespace-nowrap">
+                    <Button size="sm" variant="outline" onClick={() => { setAdvanceFor(e.id); setAdvanceAmount(0); }}>
+                      <HandCoins className="h-3 w-3 mr-1" />Avans
                     </Button>
-                    <Button variant="ghost" size="icon" onClick={() => startEdit(e.id)} className="h-8 w-8"><Edit className="h-4 w-4 text-muted-foreground hover:text-foreground" /></Button>
-                    <Button variant="ghost" size="icon" onClick={() => removeOne(e.id, e.name)} className="h-8 w-8 hover:bg-destructive/10">
+                    <Button variant="ghost" size="icon" onClick={() => startEdit(e.id)}><Edit className="h-4 w-4" /></Button>
+                    <Button variant="ghost" size="icon" onClick={() => removeOne(e.id, e.name)}>
                       <Trash2 className="h-4 w-4 text-destructive" />
                     </Button>
                   </TableCell>
@@ -215,12 +153,9 @@ function EmployeesPage() {
       </Card>
 
       <Dialog open={!!advanceFor} onOpenChange={(v) => !v && setAdvanceFor(null)}>
-        <DialogContent className="bg-card border rounded-2xl shadow-elevated p-6 max-w-sm">
+        <DialogContent>
           <DialogHeader><DialogTitle>Avans berish</DialogTitle></DialogHeader>
-          <div className="py-2">
-            <Label>Summa (so'm)</Label>
-            <Input type="number" value={advanceAmount} onChange={(e) => setAdvanceAmount(+e.target.value)} className="mt-1" />
-          </div>
+          <div><Label>Summa (so'm)</Label><Input type="number" value={advanceAmount} onChange={(e) => setAdvanceAmount(+e.target.value)} /></div>
           <DialogFooter><Button onClick={giveAdvance}>Tasdiqlash</Button></DialogFooter>
         </DialogContent>
       </Dialog>

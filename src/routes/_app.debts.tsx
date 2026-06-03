@@ -13,11 +13,14 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useState } from "react";
 import { toast } from "sonner";
+import { useT } from "@/lib/i18n";
+import { paymentLabel } from "@/lib/i18n/helpers";
 import { Badge } from "@/components/ui/badge";
 
 export const Route = createFileRoute("/_app/debts")({ component: DebtsPage });
 
 function DebtsPage() {
+  const t = useT();
   const { customers, suppliers, debtPayments, addDebtPayment } = useStore();
   
   const fromCustomers = customers.filter(c => c.debt > 0);
@@ -52,11 +55,11 @@ function DebtsPage() {
 
   const handlePay = () => {
     if (amount <= 0) {
-      toast.error("To'lov summasi 0 dan katta bo'lishi kerak");
+      toast.error(t("debts.amountInvalid"));
       return;
     }
     if (amount > maxDebt) {
-      toast.error("To'lov summasi qarzdan ko'p bo'lishi mumkin emas");
+      toast.error(t("debts.amountTooMuch"));
       return;
     }
 
@@ -71,17 +74,17 @@ function DebtsPage() {
       note: note.trim() || undefined,
     });
 
-    toast.success("To'lov muvaffaqiyatli amalga oshirildi");
+    toast.success(t("debts.paymentSuccess"));
     setOpen(false);
   };
 
   return (
     <div className="space-y-5 animate-fade-in">
-      <PageHeader title="Qarzdorlik" subtitle="Mijozlar va ta'minotchilar bilan qarzdorlik hisob-kitoblari" />
+      <PageHeader title={t("debts.title")} subtitle={t("debts.subtitle")} />
       
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <StatCard label="Bizga qarzdor (Mijozlar)" value={formatSom(totalIn)} icon={ArrowDownCircle} accent="success" />
-        <StatCard label="Biz qarzdormiz (Ta'minotchilar)" value={formatSom(totalOut)} icon={ArrowUpCircle} accent="destructive" />
+        <StatCard label={t("debts.owedToUs")} value={formatSom(totalIn)} icon={ArrowDownCircle} accent="success" />
+        <StatCard label={t("debts.weOwe")} value={formatSom(totalOut)} icon={ArrowUpCircle} accent="destructive" />
       </div>
 
       {/* Repayment Dialog */}
@@ -89,24 +92,24 @@ function DebtsPage() {
         <DialogContent className="max-w-md bg-card border rounded-2xl shadow-elevated p-6">
           <DialogHeader>
             <DialogTitle className="text-xl font-bold flex items-center gap-2">
-              <Wallet className="h-5 w-5 text-primary" /> Qarz To'lash
+              <Wallet className="h-5 w-5 text-primary" /> {t("debts.payTitle")}
             </DialogTitle>
           </DialogHeader>
 
           <div className="space-y-4 py-2">
             <div className="bg-muted/40 p-3.5 rounded-xl border border-border/40 space-y-1">
               <div className="text-xs text-muted-foreground uppercase font-semibold">
-                {paymentType === "customer" ? "Mijoz" : "Yetkazib beruvchi"}
+                {paymentType === "customer" ? t("sales.customer") : t("common.supplier")}
               </div>
               <div className="font-bold text-base text-foreground">{targetName}</div>
               <div className="flex justify-between text-xs pt-1.5 border-t border-border/60">
-                <span className="text-muted-foreground">Umumiy qarz:</span>
+                <span className="text-muted-foreground">{t("debts.totalDebt")}</span>
                 <span className="font-bold text-destructive tabular-nums">{formatSom(maxDebt)}</span>
               </div>
             </div>
 
             <div>
-              <Label className="text-xs font-semibold text-muted-foreground uppercase">To'lov summasi *</Label>
+              <Label className="text-xs font-semibold text-muted-foreground uppercase">{t("debts.paymentAmount")} *</Label>
               <Input
                 type="number"
                 className="mt-1"
@@ -125,24 +128,24 @@ function DebtsPage() {
                   onClick={() => setAmount(maxDebt)}
                   className="text-[10px] bg-primary/10 hover:bg-primary/20 text-primary px-2 py-0.5 rounded border border-primary/20 font-medium"
                 >
-                  Hammasi
+                  {t("debts.allAmount")}
                 </button>
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <Label className="text-xs font-semibold text-muted-foreground uppercase">To'lov turi</Label>
+                <Label className="text-xs font-semibold text-muted-foreground uppercase">{t("sales.payment")}</Label>
                 <Select value={paymentMethod} onValueChange={(v) => setPaymentMethod(v as any)}>
                   <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Naqd">Naqd pul</SelectItem>
-                    <SelectItem value="Karta">Plastik karta</SelectItem>
+                    <SelectItem value="Naqd">{paymentLabel(t, "Naqd")}</SelectItem>
+                    <SelectItem value="Karta">{paymentLabel(t, "Karta")}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <div>
-                <Label className="text-xs font-semibold text-muted-foreground uppercase">Qolgan qarz</Label>
+                <Label className="text-xs font-semibold text-muted-foreground uppercase">{t("debts.remainingDebt")}</Label>
                 <div className="h-9 border rounded-md px-3 bg-muted/20 flex items-center mt-1 text-sm font-semibold tabular-nums text-foreground">
                   {formatSom(maxDebt - amount)}
                 </div>
@@ -150,9 +153,9 @@ function DebtsPage() {
             </div>
 
             <div>
-              <Label className="text-xs font-semibold text-muted-foreground uppercase">Izoh</Label>
+              <Label className="text-xs font-semibold text-muted-foreground uppercase">{t("expenses.note")}</Label>
               <Input
-                placeholder="masalan: Qisman to'lov"
+                placeholder={t("debts.notePh")}
                 className="mt-1"
                 value={note}
                 onChange={(e) => setNote(e.target.value)}
@@ -161,9 +164,9 @@ function DebtsPage() {
           </div>
 
           <DialogFooter className="mt-2">
-            <Button variant="outline" onClick={() => setOpen(false)}>Bekor qilish</Button>
+            <Button variant="outline" onClick={() => setOpen(false)}>{t("common.cancel")}</Button>
             <Button onClick={handlePay} disabled={amount <= 0}>
-              To'lovni tasdiqlash
+              {t("debts.confirmPayment")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -173,15 +176,15 @@ function DebtsPage() {
         <TabsList>
           <TabsTrigger value="in" className="flex items-center gap-1.5">
             <ArrowDownCircle className="h-4 w-4 text-success" />
-            <span>Kimdan olinadi ({fromCustomers.length})</span>
+            <span>{t("debts.tab.inCount", { n: fromCustomers.length })}</span>
           </TabsTrigger>
           <TabsTrigger value="out" className="flex items-center gap-1.5">
             <ArrowUpCircle className="h-4 w-4 text-destructive" />
-            <span>Kimga beriladi ({toSuppliers.length})</span>
+            <span>{t("debts.tab.outCount", { n: toSuppliers.length })}</span>
           </TabsTrigger>
           <TabsTrigger value="history" className="flex items-center gap-1.5">
             <History className="h-4 w-4 text-primary" />
-            <span>To'lovlar tarixi ({historyList.length})</span>
+            <span>{t("debts.tab.historyCount", { n: historyList.length })}</span>
           </TabsTrigger>
         </TabsList>
 
@@ -191,17 +194,17 @@ function DebtsPage() {
               <Table>
                 <TableHeader className="bg-muted/30">
                   <TableRow>
-                    <TableHead>Mijoz</TableHead>
-                    <TableHead>Telefon</TableHead>
-                    <TableHead className="text-right">Qarz miqdori</TableHead>
-                    <TableHead className="text-right pr-4">Amallar</TableHead>
+                    <TableHead>{t("sales.customer")}</TableHead>
+                    <TableHead>{t("common.phone")}</TableHead>
+                    <TableHead className="text-right">{t("debts.debtAmount")}</TableHead>
+                    <TableHead className="text-right pr-4">{t("common.actions")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {fromCustomers.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={4} className="text-center py-10 text-muted-foreground">
-                        Hozirda bizga qarzdor mijozlar mavjud emas.
+                        {t("debts.noDebtCustomers")}
                       </TableCell>
                     </TableRow>
                   ) : (
@@ -221,7 +224,7 @@ function DebtsPage() {
                             size="sm"
                             onClick={() => handleOpenPayment("customer", c.id, c.name, c.debt)}
                           >
-                            Qarzni to'lash
+                            {t("debts.payDebt")}
                           </Button>
                         </TableCell>
                       </TableRow>
@@ -239,17 +242,17 @@ function DebtsPage() {
               <Table>
                 <TableHeader className="bg-muted/30">
                   <TableRow>
-                    <TableHead>Yetkazib beruvchi</TableHead>
-                    <TableHead>Telefon</TableHead>
-                    <TableHead className="text-right">Qarz miqdori</TableHead>
-                    <TableHead className="text-right pr-4">Amallar</TableHead>
+                    <TableHead>{t("common.supplier")}</TableHead>
+                    <TableHead>{t("common.phone")}</TableHead>
+                    <TableHead className="text-right">{t("debts.debtAmount")}</TableHead>
+                    <TableHead className="text-right pr-4">{t("common.actions")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {toSuppliers.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={4} className="text-center py-10 text-muted-foreground">
-                        Hozirda bizning qarzdorligimiz mavjud emas.
+                        {t("debts.noDebtSuppliers")}
                       </TableCell>
                     </TableRow>
                   ) : (
@@ -269,7 +272,7 @@ function DebtsPage() {
                             size="sm"
                             onClick={() => handleOpenPayment("supplier", s.id, s.name, s.debt)}
                           >
-                            Qarzni to'lash
+                            {t("debts.payDebt")}
                           </Button>
                         </TableCell>
                       </TableRow>
@@ -287,19 +290,19 @@ function DebtsPage() {
               <Table>
                 <TableHeader className="bg-muted/30">
                   <TableRow>
-                    <TableHead>Sana</TableHead>
-                    <TableHead>Kim</TableHead>
-                    <TableHead>Turi</TableHead>
-                    <TableHead>To'lov turi</TableHead>
-                    <TableHead className="text-right">Summa</TableHead>
-                    <TableHead>Izoh</TableHead>
+                    <TableHead>{t("common.date")}</TableHead>
+                    <TableHead>{t("debts.who")}</TableHead>
+                    <TableHead>{t("debts.targetType")}</TableHead>
+                    <TableHead>{t("debts.paymentMethod")}</TableHead>
+                    <TableHead className="text-right">{t("common.amount")}</TableHead>
+                    <TableHead>{t("expenses.note")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {pgHistory.paged.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={6} className="text-center py-10 text-muted-foreground">
-                        Hozircha qarz to'lovlari tarixi mavjud emas.
+                        {t("debts.noPaymentHistory")}
                       </TableCell>
                     </TableRow>
                   ) : (
@@ -311,10 +314,10 @@ function DebtsPage() {
                         <TableCell className="font-semibold">{p.targetName}</TableCell>
                         <TableCell>
                           <Badge variant={p.type === "customer" ? "secondary" : "outline"}>
-                            {p.type === "customer" ? "Mijoz" : "Ta'minotchi"}
+                            {p.type === "customer" ? t("sales.customer") : t("debts.supplierShort")}
                           </Badge>
                         </TableCell>
-                        <TableCell>{p.paymentMethod}</TableCell>
+                        <TableCell>{paymentLabel(t, p.paymentMethod)}</TableCell>
                         <TableCell className="text-right text-success font-bold tabular-nums">
                           {formatSom(p.amount)}
                         </TableCell>

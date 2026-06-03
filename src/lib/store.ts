@@ -9,6 +9,8 @@ import {
   salesApi, expensesApi, incomingApi, debtPaymentsApi,
   usersApi, categoriesApi, vehicleBrandsApi, branchesApi, auditApi,
 } from "./api";
+import { syncApi } from "./api-sync";
+import { toast } from "sonner";
 
 export type AuditEntry = {
   id: string;
@@ -130,7 +132,10 @@ type State = {
 
 export const useStore = create<State>()(
   persist(
-    (set, get) => ({
+    (set, get) => {
+      const resync = () => { void get().loadFromBackend(); };
+
+      return {
       user: null,
       appUsers: [],
       _loading: false,
@@ -201,8 +206,9 @@ export const useStore = create<State>()(
             categories, vehicleBrands, branches, auditLog,
             _loading: false, _initialized: true,
           });
-        } catch {
+        } catch (err) {
           set({ _loading: false });
+          toast.error(err instanceof Error ? err.message : "Ma'lumotlarni yuklab bo'lmadi");
         }
       },
 
@@ -210,19 +216,19 @@ export const useStore = create<State>()(
         const id = `usr_${Math.random().toString(36).slice(2, 9)}`;
         const newUser = { ...u, id };
         set({ appUsers: [newUser, ...get().appUsers] });
-        usersApi.create(newUser).catch(() => {});
+        syncApi(usersApi.create(newUser), { onFail: resync });
         get().logAudit({ action: "create", entity: "user", entityId: id, summary: `Yangi foydalanuvchi: ${u.name} (${u.role})` });
       },
       updateAppUser: (id, u) => {
         const prev = get().appUsers.find(x => x.id === id);
         set({ appUsers: get().appUsers.map(x => x.id === id ? { ...x, ...u } : x) });
-        usersApi.update(id, u).catch(() => {});
+        syncApi(usersApi.update(id, u), { onFail: resync });
         get().logAudit({ action: "update", entity: "user", entityId: id, summary: `Foydalanuvchi yangilandi: ${prev?.name}` });
       },
       deleteAppUser: (id) => {
         const prev = get().appUsers.find(x => x.id === id);
         set({ appUsers: get().appUsers.filter(x => x.id !== id) });
-        usersApi.delete(id).catch(() => {});
+        syncApi(usersApi.delete(id), { onFail: resync });
         get().logAudit({ action: "delete", entity: "user", entityId: id, summary: `Foydalanuvchi o'chirildi: ${prev?.name}` });
       },
       updateProfile: (data) => {
@@ -230,7 +236,7 @@ export const useStore = create<State>()(
         if (!u) return;
         set({ user: { ...u, name: data.name } });
         set({ appUsers: get().appUsers.map(x => x.id === u.id ? { ...x, name: data.name } : x) });
-        usersApi.update(u.id, { name: data.name }).catch(() => {});
+        syncApi(usersApi.update(u.id, { name: data.name }), { onFail: resync });
         get().logAudit({ action: "update", entity: "profile", summary: `Profil yangilandi: ${data.name}` });
       },
       changePassword: async (currentPassword, newPassword) => {
@@ -240,7 +246,8 @@ export const useStore = create<State>()(
           await usersApi.update(u.id, { password: newPassword });
           get().logAudit({ action: "update", entity: "security", summary: `Parol o'zgartirildi` });
           return true;
-        } catch {
+        } catch (err) {
+          toast.error(err instanceof Error ? err.message : "Parol o'zgartirilmadi");
           return false;
         }
       },
@@ -272,73 +279,73 @@ export const useStore = create<State>()(
       // ─── TOVARLAR (OPTIMISTIC + BACKEND) ───
       addProduct: (p) => {
         set({ products: [p, ...get().products] });
-        productsApi.create(p).catch(() => {});
+        syncApi(productsApi.create(p), { onFail: resync });
         get().logAudit({ action: "create", entity: "product", entityId: p.id, summary: `Tovar qo'shildi: ${p.name}` });
       },
       updateProduct: (id, p) => {
         const prev = get().products.find(x => x.id === id);
         set({ products: get().products.map(x => x.id === id ? { ...x, ...p } : x) });
-        productsApi.update(id, p).catch(() => {});
+        syncApi(productsApi.update(id, p), { onFail: resync });
         get().logAudit({ action: "update", entity: "product", entityId: id, summary: `Tovar yangilandi: ${prev?.name}` });
       },
       deleteProduct: (id) => {
         const prev = get().products.find(x => x.id === id);
         set({ products: get().products.filter(x => x.id !== id) });
-        productsApi.delete(id).catch(() => {});
+        syncApi(productsApi.delete(id), { onFail: resync });
         get().logAudit({ action: "delete", entity: "product", entityId: id, summary: `Tovar o'chirildi: ${prev?.name}` });
       },
 
       // ─── MIJOZLAR ───
       addCustomer: (c) => {
         set({ customers: [c, ...get().customers] });
-        customersApi.create(c).catch(() => {});
+        syncApi(customersApi.create(c), { onFail: resync });
         get().logAudit({ action: "create", entity: "customer", entityId: c.id, summary: `Mijoz qo'shildi: ${c.name}` });
       },
       updateCustomer: (id, c) => {
         set({ customers: get().customers.map(x => x.id === id ? { ...x, ...c } : x) });
-        customersApi.update(id, c).catch(() => {});
+        syncApi(customersApi.update(id, c), { onFail: resync });
         get().logAudit({ action: "update", entity: "customer", entityId: id, summary: `Mijoz yangilandi` });
       },
       deleteCustomer: (id) => {
         const prev = get().customers.find(x => x.id === id);
         set({ customers: get().customers.filter(x => x.id !== id) });
-        customersApi.delete(id).catch(() => {});
+        syncApi(customersApi.delete(id), { onFail: resync });
         get().logAudit({ action: "delete", entity: "customer", entityId: id, summary: `Mijoz o'chirildi: ${prev?.name}` });
       },
 
       // ─── YETKAZIB BERUVCHILAR ───
       addSupplier: (s) => {
         set({ suppliers: [s, ...get().suppliers] });
-        suppliersApi.create(s).catch(() => {});
+        syncApi(suppliersApi.create(s), { onFail: resync });
         get().logAudit({ action: "create", entity: "supplier", entityId: s.id, summary: `Yetkazib beruvchi: ${s.name}` });
       },
       updateSupplier: (id, s) => {
         set({ suppliers: get().suppliers.map(x => x.id === id ? { ...x, ...s } : x) });
-        suppliersApi.update(id, s).catch(() => {});
+        syncApi(suppliersApi.update(id, s), { onFail: resync });
         get().logAudit({ action: "update", entity: "supplier", entityId: id, summary: `Yetkazib beruvchi yangilandi` });
       },
       deleteSupplier: (id) => {
         const prev = get().suppliers.find(x => x.id === id);
         set({ suppliers: get().suppliers.filter(x => x.id !== id) });
-        suppliersApi.delete(id).catch(() => {});
+        syncApi(suppliersApi.delete(id), { onFail: resync });
         get().logAudit({ action: "delete", entity: "supplier", entityId: id, summary: `Yetkazib beruvchi o'chirildi: ${prev?.name}` });
       },
 
       // ─── XODIMLAR ───
       addEmployee: (e) => {
         set({ employees: [e, ...get().employees] });
-        employeesApi.create(e).catch(() => {});
+        syncApi(employeesApi.create(e), { onFail: resync });
         get().logAudit({ action: "create", entity: "employee", entityId: e.id, summary: `Xodim: ${e.name} (${e.role})` });
       },
       updateEmployee: (id, e) => {
         set({ employees: get().employees.map(x => x.id === id ? { ...x, ...e } : x) });
-        employeesApi.update(id, e).catch(() => {});
+        syncApi(employeesApi.update(id, e), { onFail: resync });
         get().logAudit({ action: "update", entity: "employee", entityId: id, summary: `Xodim yangilandi` });
       },
       deleteEmployee: (id) => {
         const prev = get().employees.find(x => x.id === id);
         set({ employees: get().employees.filter(x => x.id !== id) });
-        employeesApi.delete(id).catch(() => {});
+        syncApi(employeesApi.delete(id), { onFail: resync });
         get().logAudit({ action: "delete", entity: "employee", entityId: id, summary: `Xodim o'chirildi: ${prev?.name}` });
       },
 
@@ -354,7 +361,7 @@ export const useStore = create<State>()(
           return { ...c, debt: c.debt + debtDelta, totalPurchases: c.totalPurchases + s.total };
         });
         set({ sales: [s, ...get().sales], products, customers });
-        salesApi.create(s).catch(() => {});
+        syncApi(salesApi.create(s), { onFail: resync });
         get().logAudit({ action: "create", entity: "sale", entityId: s.id, summary: `Sotuv: ${s.total.toLocaleString()} so'm (${s.paymentType})` });
       },
       deleteSale: (id) => {
@@ -370,25 +377,25 @@ export const useStore = create<State>()(
           return { ...c, debt: Math.max(0, c.debt - debtDelta), totalPurchases: Math.max(0, c.totalPurchases - s.total) };
         });
         set({ sales: get().sales.filter(x => x.id !== id), products, customers });
-        salesApi.delete(id).catch(() => {});
+        syncApi(salesApi.delete(id), { onFail: resync });
         get().logAudit({ action: "delete", entity: "sale", entityId: id, summary: `Sotuv bekor qilindi: ${s.total.toLocaleString()} so'm` });
       },
 
       // ─── XARAJATLAR ───
       addExpense: (e) => {
         set({ expenses: [e, ...get().expenses] });
-        expensesApi.create(e).catch(() => {});
+        syncApi(expensesApi.create(e), { onFail: resync });
         get().logAudit({ action: "create", entity: "expense", entityId: e.id, summary: `Xarajat: ${e.category} — ${e.amount.toLocaleString()} so'm` });
       },
       updateExpense: (id, e) => {
         set({ expenses: get().expenses.map(x => x.id === id ? { ...x, ...e } : x) });
-        expensesApi.update(id, e).catch(() => {});
+        syncApi(expensesApi.update(id, e), { onFail: resync });
         get().logAudit({ action: "update", entity: "expense", entityId: id, summary: `Xarajat yangilandi` });
       },
       deleteExpense: (id) => {
         const prev = get().expenses.find(x => x.id === id);
         set({ expenses: get().expenses.filter(x => x.id !== id) });
-        expensesApi.delete(id).catch(() => {});
+        syncApi(expensesApi.delete(id), { onFail: resync });
         get().logAudit({ action: "delete", entity: "expense", entityId: id, summary: `Xarajat o'chirildi: ${prev?.category}` });
       },
 
@@ -396,7 +403,7 @@ export const useStore = create<State>()(
       addIncoming: (i) => {
         const products = get().products.map(p => p.id === i.productId ? { ...p, quantity: p.quantity + i.qty } : p);
         set({ incoming: [i, ...get().incoming], products });
-        incomingApi.create(i).catch(() => {});
+        syncApi(incomingApi.create(i), { onFail: resync });
         const prod = products.find(p => p.id === i.productId);
         get().logAudit({ action: "create", entity: "incoming", entityId: i.id, summary: `Kirim: ${prod?.name || ""} +${i.qty} dona` });
       },
@@ -405,7 +412,7 @@ export const useStore = create<State>()(
         if (!inc) return;
         const products = get().products.map(p => p.id === inc.productId ? { ...p, quantity: Math.max(0, p.quantity - inc.qty) } : p);
         set({ incoming: get().incoming.filter(x => x.id !== id), products });
-        incomingApi.delete(id).catch(() => {});
+        syncApi(incomingApi.delete(id), { onFail: resync });
         get().logAudit({ action: "delete", entity: "incoming", entityId: id, summary: `Kirim bekor qilindi` });
       },
 
@@ -424,7 +431,7 @@ export const useStore = create<State>()(
           return s;
         });
         set({ debtPayments: [p, ...get().debtPayments], customers, suppliers });
-        debtPaymentsApi.create(p).catch(() => {});
+        syncApi(debtPaymentsApi.create(p), { onFail: resync });
         get().logAudit({
           action: "create",
           entity: "debt_payment",
@@ -438,7 +445,7 @@ export const useStore = create<State>()(
         const name = c.trim();
         if (!name || get().categories.includes(name)) return;
         set({ categories: [...get().categories, name] });
-        categoriesApi.create(name).catch(() => {});
+        syncApi(categoriesApi.create(name), { onFail: resync });
       },
       updateCategory: (oldName, newName) => {
         const n = newName.trim();
@@ -447,11 +454,11 @@ export const useStore = create<State>()(
           categories: get().categories.map(c => c === oldName ? n : c),
           products: get().products.map(p => p.category === oldName ? { ...p, category: n } : p),
         });
-        categoriesApi.update(oldName, n).catch(() => {});
+        syncApi(categoriesApi.update(oldName, n), { onFail: resync });
       },
       deleteCategory: (c) => {
         set({ categories: get().categories.filter(x => x !== c) });
-        categoriesApi.delete(c).catch(() => {});
+        syncApi(categoriesApi.delete(c), { onFail: resync });
       },
 
       // ─── MASHINA BRENDLARI ───
@@ -459,7 +466,7 @@ export const useStore = create<State>()(
         const n = b.trim();
         if (!n || get().vehicleBrands.includes(n)) return;
         set({ vehicleBrands: [...get().vehicleBrands, n] });
-        vehicleBrandsApi.create(n).catch(() => {});
+        syncApi(vehicleBrandsApi.create(n), { onFail: resync });
       },
       updateVehicleBrand: (oldName, newName) => {
         const n = newName.trim();
@@ -469,11 +476,11 @@ export const useStore = create<State>()(
           products: get().products.map(p => p.vehicle === oldName ? { ...p, vehicle: n } : p),
           customers: get().customers.map(c => c.vehicle === oldName ? { ...c, vehicle: n } : c),
         });
-        vehicleBrandsApi.update(oldName, n).catch(() => {});
+        syncApi(vehicleBrandsApi.update(oldName, n), { onFail: resync });
       },
       deleteVehicleBrand: (b) => {
         set({ vehicleBrands: get().vehicleBrands.filter(x => x !== b) });
-        vehicleBrandsApi.delete(b).catch(() => {});
+        syncApi(vehicleBrandsApi.delete(b), { onFail: resync });
       },
 
       // ─── FILIALLAR ───
@@ -482,20 +489,20 @@ export const useStore = create<State>()(
         const n = b.trim();
         if (!n || get().branches.includes(n)) return;
         set({ branches: [...get().branches, n] });
-        branchesApi.create(n).catch(() => {});
+        syncApi(branchesApi.create(n), { onFail: resync });
       },
       updateBranch: (oldName, newName) => {
         const n = newName.trim();
         if (!n) return;
         set({ branches: get().branches.map(x => x === oldName ? n : x) });
         if (get().warehouse === oldName) set({ warehouse: n });
-        branchesApi.update(oldName, n).catch(() => {});
+        syncApi(branchesApi.update(oldName, n), { onFail: resync });
       },
       deleteBranch: (b) => {
         if (get().branches.length <= 1) return;
         set({ branches: get().branches.filter(x => x !== b) });
         if (get().warehouse === b) set({ warehouse: get().branches[0] });
-        branchesApi.delete(b).catch(() => {});
+        syncApi(branchesApi.delete(b), { onFail: resync });
       },
 
       // ─── AUDIT LOG ───
@@ -512,11 +519,11 @@ export const useStore = create<State>()(
         const log = [entry, ...get().auditLog].slice(0, 2000);
         set({ auditLog: log });
         // Backendga ham yozamiz (fire-and-forget)
-        auditApi.log(entry).catch(() => {});
+        syncApi(auditApi.log(entry), { silent: true });
       },
       clearAudit: () => {
         set({ auditLog: [] });
-        auditApi.clear().catch(() => {});
+        syncApi(auditApi.clear(), { onFail: resync });
       },
 
       resetData: () => {
@@ -529,7 +536,8 @@ export const useStore = create<State>()(
           auditLog: [], debtPayments: []
         });
       },
-    }),
+    };
+    },
     {
       name: "autoerp-pro-v2",
       version: 6,

@@ -4,6 +4,7 @@ import { useStore } from "@/lib/store";
 import { getToken } from "@/lib/api";
 import { useEffect, useState } from "react";
 import { Loader2 } from "lucide-react";
+import { useT } from "@/lib/i18n";
 
 export const Route = createFileRoute("/_app")({
   beforeLoad: () => {
@@ -28,6 +29,7 @@ export const Route = createFileRoute("/_app")({
 });
 
 function AppLayout() {
+  const t = useT();
   const user = useStore((s) => s.user);
   const restoreSession = useStore((s) => s.restoreSession);
   const navigate = useNavigate();
@@ -51,7 +53,7 @@ function AppLayout() {
       <div className="flex h-screen w-full items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-3">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          <span className="text-sm text-muted-foreground">Yuklanmoqda...</span>
+          <span className="text-sm text-muted-foreground">{t("common.loading")}</span>
         </div>
       </div>
     );

@@ -13,10 +13,13 @@ import {
   ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid,
   BarChart, Bar, PieChart, Pie, Cell, Legend,
 } from "recharts";
+import { useT } from "@/lib/i18n";
+import { paymentLabel } from "@/lib/i18n/helpers";
 
 export const Route = createFileRoute("/_app/dashboard")({ component: Dashboard });
 
 function Dashboard() {
+  const t = useT();
   const { products, sales, expenses, employees, customers, suppliers, vehicleFilter } = useStore();
   const [detail, setDetail] = useState<null | "warehouse" | "today" | "week" | "month" | "profit" | "expenses" | "salary" | "net" | "debt">(null);
 
@@ -105,20 +108,20 @@ function Dashboard() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Boshqaruv paneli"
-        subtitle={vehicleFilter === "all" ? "Umumiy ko'rsatkichlar" : `Filter: ${vehicleFilter}`}
+        title={t("dashboard.title")}
+        subtitle={vehicleFilter === "all" ? t("dashboard.subtitleAll") : t("dashboard.subtitleFilter", { brand: vehicleFilter })}
       />
 
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4">
-        <StatCard label="Ombor qiymati" value={formatSom(warehouseValue)} icon={Wallet} accent="primary" onClick={() => setDetail("warehouse")} />
-        <StatCard label="Bugungi sotuv" value={formatSom(todaySales)} icon={TrendingUp} accent="success" onClick={() => setDetail("today")} />
-        <StatCard label="Haftalik sotuv" value={formatSom(weekSales)} icon={Calendar} accent="info" onClick={() => setDetail("week")} />
-        <StatCard label="Oylik sotuv" value={formatSom(monthSales)} icon={CalendarDays} accent="info" onClick={() => setDetail("month")} />
-        <StatCard label="Yalpi foyda" value={formatSom(totalProfit)} icon={PiggyBank} accent="success" onClick={() => setDetail("profit")} />
-        <StatCard label="Xarajatlar" value={formatSom(totalExpenses)} icon={Receipt} accent="warning" onClick={() => setDetail("expenses")} />
-        <StatCard label="Ish haqi (oylik)" value={formatSom(salaryExpense)} icon={Users} accent="primary" onClick={() => setDetail("salary")} />
-        <StatCard label="Sof foyda" value={formatSom(netProfit)} icon={netProfit >= 0 ? PiggyBank : AlertTriangle} accent={netProfit >= 0 ? "success" : "destructive"} onClick={() => setDetail("net")} />
-        <StatCard label="Qarzdorlik" value={formatSom(totalDebt)} icon={AlertTriangle} accent="destructive" onClick={() => setDetail("debt")} />
+        <StatCard label={t("dashboard.warehouseValue")} value={formatSom(warehouseValue)} icon={Wallet} accent="primary" onClick={() => setDetail("warehouse")} />
+        <StatCard label={t("dashboard.todaySales")} value={formatSom(todaySales)} icon={TrendingUp} accent="success" onClick={() => setDetail("today")} />
+        <StatCard label={t("dashboard.weekSales")} value={formatSom(weekSales)} icon={Calendar} accent="info" onClick={() => setDetail("week")} />
+        <StatCard label={t("dashboard.monthSales")} value={formatSom(monthSales)} icon={CalendarDays} accent="info" onClick={() => setDetail("month")} />
+        <StatCard label={t("dashboard.grossProfit")} value={formatSom(totalProfit)} icon={PiggyBank} accent="success" onClick={() => setDetail("profit")} />
+        <StatCard label={t("dashboard.expenses")} value={formatSom(totalExpenses)} icon={Receipt} accent="warning" onClick={() => setDetail("expenses")} />
+        <StatCard label={t("dashboard.salary")} value={formatSom(salaryExpense)} icon={Users} accent="primary" onClick={() => setDetail("salary")} />
+        <StatCard label={t("dashboard.netProfit")} value={formatSom(netProfit)} icon={netProfit >= 0 ? PiggyBank : AlertTriangle} accent={netProfit >= 0 ? "success" : "destructive"} onClick={() => setDetail("net")} />
+        <StatCard label={t("dashboard.debt")} value={formatSom(totalDebt)} icon={AlertTriangle} accent="destructive" onClick={() => setDetail("debt")} />
       </div>
 
       <DetailDialog
@@ -132,9 +135,9 @@ function Dashboard() {
         <div className="rounded-2xl border border-warning/40 bg-warning/10 p-4 flex items-start gap-3">
           <AlertTriangle className="h-5 w-5 text-warning-foreground mt-0.5" />
           <div className="text-sm">
-            <div className="font-medium">Diqqat: ombor holatini tekshiring</div>
+            <div className="font-medium">{t("dashboard.stockAlert")}</div>
             <div className="text-muted-foreground mt-0.5">
-              {lowStock.length} ta mahsulot kam qoldi, {outStock.length} ta tugagan.
+              {t("dashboard.stockAlertDesc", { low: lowStock.length, out: outStock.length })}
             </div>
           </div>
         </div>
@@ -142,7 +145,7 @@ function Dashboard() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <Card className="lg:col-span-2 rounded-2xl">
-          <CardHeader className="pb-2"><CardTitle className="text-base">Kunlik sotuv (14 kun)</CardTitle></CardHeader>
+          <CardHeader className="pb-2"><CardTitle className="text-base">{t("dashboard.chartDaily")}</CardTitle></CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={280}>
               <LineChart data={dailyData}>
@@ -158,7 +161,7 @@ function Dashboard() {
         </Card>
 
         <Card className="rounded-2xl">
-          <CardHeader className="pb-2"><CardTitle className="text-base">Brendlar bo'yicha sotuv</CardTitle></CardHeader>
+          <CardHeader className="pb-2"><CardTitle className="text-base">{t("dashboard.chartBrand")}</CardTitle></CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={280}>
               <PieChart>
@@ -175,7 +178,7 @@ function Dashboard() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <Card className="rounded-2xl">
-          <CardHeader className="pb-2"><CardTitle className="text-base">Oylik foyda (6 oy)</CardTitle></CardHeader>
+          <CardHeader className="pb-2"><CardTitle className="text-base">{t("dashboard.chartMonthly")}</CardTitle></CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={250}>
               <BarChart data={monthlyData}>
@@ -191,7 +194,7 @@ function Dashboard() {
         </Card>
 
         <Card className="rounded-2xl">
-          <CardHeader className="pb-2"><CardTitle className="text-base">Eng ko'p sotilgan tovarlar</CardTitle></CardHeader>
+          <CardHeader className="pb-2"><CardTitle className="text-base">{t("dashboard.chartTop")}</CardTitle></CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={250}>
               <BarChart data={topProducts} layout="vertical" margin={{ left: 10 }}>
@@ -208,32 +211,32 @@ function Dashboard() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <Card className="rounded-2xl">
-          <CardHeader className="pb-2"><CardTitle className="text-base">Kam qolgan tovarlar</CardTitle></CardHeader>
+          <CardHeader className="pb-2"><CardTitle className="text-base">{t("dashboard.lowStockCard")}</CardTitle></CardHeader>
           <CardContent className="space-y-2">
-            {lowStock.length === 0 && <div className="text-sm text-muted-foreground py-6 text-center">Hammasi yetarli</div>}
+            {lowStock.length === 0 && <div className="text-sm text-muted-foreground py-6 text-center">{t("dashboard.allStockOk")}</div>}
             {lowStock.map(p => (
               <div key={p.id} className="flex items-center justify-between p-2 rounded-lg hover:bg-muted/50">
                 <div className="min-w-0">
                   <div className="font-medium text-sm truncate">{p.name}</div>
                   <div className="text-xs text-muted-foreground">{p.vehicle} · {p.category}</div>
                 </div>
-                <Badge variant="destructive" className="ml-2">{p.quantity} dona</Badge>
+                <Badge variant="destructive" className="ml-2">{p.quantity} {t("common.pcsUnit")}</Badge>
               </div>
             ))}
           </CardContent>
         </Card>
 
         <Card className="rounded-2xl">
-          <CardHeader className="pb-2"><CardTitle className="text-base">So'nggi tranzaksiyalar</CardTitle></CardHeader>
+          <CardHeader className="pb-2"><CardTitle className="text-base">{t("dashboard.recentTx")}</CardTitle></CardHeader>
           <CardContent className="space-y-2">
             {recentSales.map(s => {
               const cust = customers.find(c => c.id === s.customerId);
               return (
                 <div key={s.id} className="flex items-center justify-between p-2 rounded-lg hover:bg-muted/50">
                   <div className="min-w-0">
-                    <div className="font-medium text-sm truncate">{cust?.name || "Mijoz"}</div>
+                    <div className="font-medium text-sm truncate">{cust?.name || t("sales.customer")}</div>
                     <div className="text-xs text-muted-foreground">
-                      {new Date(s.date).toLocaleDateString("uz-UZ")} · {s.paymentType}
+                      {new Date(s.date).toLocaleDateString("uz-UZ")} · {paymentLabel(t, s.paymentType)}
                     </div>
                   </div>
                   <div className="text-sm font-semibold tabular-nums">{formatSom(s.total)}</div>
@@ -244,7 +247,7 @@ function Dashboard() {
         </Card>
 
         <Card className="rounded-2xl">
-          <CardHeader className="pb-2"><CardTitle className="text-base">Ish haqi to'lovlari</CardTitle></CardHeader>
+          <CardHeader className="pb-2"><CardTitle className="text-base">{t("dashboard.salaryPayments")}</CardTitle></CardHeader>
           <CardContent className="space-y-2">
             {pendingSalaries.map(e => (
               <div key={e.id} className="flex items-center justify-between p-2 rounded-lg hover:bg-muted/50">
@@ -254,7 +257,7 @@ function Dashboard() {
                 </div>
                 <div className="text-right">
                   <div className="text-sm font-semibold tabular-nums">{formatSom(e.salary - e.advance)}</div>
-                  <div className="text-[10px] text-muted-foreground">qoldi</div>
+                  <div className="text-[10px] text-muted-foreground">{t("dashboard.remaining")}</div>
                 </div>
               </div>
             ))}
@@ -281,17 +284,18 @@ function DetailDialog({
     suppliers: ReturnType<typeof useStore.getState>["suppliers"];
   };
 }) {
+  const t = useT();
   if (!kind) return null;
   const titles: Record<Exclude<DetailKind, null>, string> = {
-    warehouse: "Ombor qiymati — tovarlar bo'yicha",
-    today: "Bugungi sotuv — tranzaksiyalar",
-    week: "Haftalik sotuv — tranzaksiyalar",
-    month: "Oylik sotuv — tranzaksiyalar",
-    profit: "Yalpi foyda — sotuvlar bo'yicha",
-    expenses: "Xarajatlar — barcha yozuvlar",
-    salary: "Ish haqi — faol xodimlar",
-    net: "Sof foyda — foyda va xarajatlar",
-    debt: "Qarzdorlik — mijoz va yetkazib beruvchilar",
+    warehouse: t("dashboard.detail.warehouse"),
+    today: t("dashboard.detail.today"),
+    week: t("dashboard.detail.week"),
+    month: t("dashboard.detail.month"),
+    profit: t("dashboard.detail.profit"),
+    expenses: t("dashboard.detail.expenses"),
+    salary: t("dashboard.detail.salary"),
+    net: t("dashboard.detail.net"),
+    debt: t("dashboard.detail.debt"),
   };
 
   const now = new Date(); now.setHours(0,0,0,0);
@@ -311,7 +315,7 @@ function DetailDialog({
               rows={[...ctx.products].sort((a,b) => b.buyPrice*b.quantity - a.buyPrice*a.quantity).map(p => ({
                 key: p.id,
                 title: p.name,
-                sub: `${p.vehicle} · ${p.quantity} dona × ${formatSom(p.buyPrice)}`,
+                sub: `${p.vehicle} · ${p.quantity} ${t("common.pcsUnit")} × ${formatSom(p.buyPrice)}`,
                 amount: formatSom(p.buyPrice * p.quantity),
               }))}
             />
@@ -340,9 +344,9 @@ function DetailDialog({
           )}
           {kind === "net" && (
             <>
-              <div className="font-semibold text-success">Foyda (sotuvlar)</div>
+              <div className="font-semibold text-success">{t("dashboard.profitSection")}</div>
               <SaleList sales={filterSales()} customers={ctx.customers} field="profit" sign="+" />
-              <div className="font-semibold text-destructive pt-2">Xarajatlar</div>
+              <div className="font-semibold text-destructive pt-2">{t("dashboard.expenses")}</div>
               <List rows={[...ctx.expenses].sort((a,b) => +new Date(b.date) - +new Date(a.date)).map(e => ({
                 key: e.id, title: e.category, sub: new Date(e.date).toLocaleDateString("uz-UZ"),
                 amount: `−${formatSom(e.amount)}`, tone: "destructive" as const,
@@ -351,11 +355,11 @@ function DetailDialog({
           )}
           {kind === "debt" && (
             <>
-              <div className="font-semibold">Mijozlar qarzi</div>
+              <div className="font-semibold">{t("dashboard.customerDebt")}</div>
               <List rows={ctx.customers.filter(c => c.debt > 0).map(c => ({
                 key: c.id, title: c.name, sub: c.phone, amount: formatSom(c.debt), tone: "destructive" as const,
               }))} />
-              <div className="font-semibold pt-2">Yetkazib beruvchilar qarzi</div>
+              <div className="font-semibold pt-2">{t("dashboard.supplierDebt")}</div>
               <List rows={ctx.suppliers.filter(s => s.debt > 0).map(s => ({
                 key: s.id, title: s.name, sub: s.phone, amount: formatSom(s.debt), tone: "destructive" as const,
               }))} />
@@ -368,7 +372,8 @@ function DetailDialog({
 }
 
 function List({ rows }: { rows: { key: string; title: string; sub: string; amount: string; tone?: "destructive" | "success" }[] }) {
-  if (rows.length === 0) return <div className="text-muted-foreground text-center py-4">Yozuvlar topilmadi</div>;
+  const t = useT();
+  if (rows.length === 0) return <div className="text-muted-foreground text-center py-4">{t("audit.notFound")}</div>;
   return (
     <div className="border rounded-lg divide-y max-h-80 overflow-y-auto">
       {rows.map(r => (
@@ -390,13 +395,14 @@ function SaleList({ sales, customers, field, sign }: {
   field: "total" | "profit";
   sign: "+" | "−";
 }) {
+  const t = useT();
   return (
     <List rows={sales.map(s => {
       const cust = customers.find(c => c.id === s.customerId);
       return {
         key: s.id,
-        title: cust?.name || `Sotuv #${s.id.slice(-6).toUpperCase()}`,
-        sub: `${new Date(s.date).toLocaleDateString("uz-UZ")} · ${s.paymentType} · ${s.items.length} ta tovar`,
+        title: cust?.name || t("dashboard.saleRef", { id: s.id.slice(-6).toUpperCase() }),
+        sub: `${new Date(s.date).toLocaleDateString("uz-UZ")} · ${paymentLabel(t, s.paymentType)} · ${s.items.length} ${t("common.itemsUnit")}`,
         amount: `${sign}${formatSom(s[field])}`,
         tone: "success" as const,
       };

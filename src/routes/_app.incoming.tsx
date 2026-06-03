@@ -14,12 +14,14 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Trash2, Plus, Check, ChevronsUpDown } from "lucide-react";
 import { toast } from "sonner";
+import { useT } from "@/lib/i18n";
 import { useMemo, useState } from "react";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_app/incoming")({ component: IncomingPage });
 
 function IncomingPage() {
+  const t = useT();
   const { incoming, products, suppliers, addIncoming, deleteIncoming } = useStore();
   const { confirm, confirmNode } = useConfirm();
   const sel = useSelection();
@@ -50,24 +52,24 @@ function IncomingPage() {
   };
 
   const removeOne = async (id: string) => {
-    const ok = await confirm({ title: "Kirimni o'chirish", description: "Kirim o'chiriladi va tovar miqdori kamayadi. Davom etilsinmi?", destructive: true, confirmText: "O'chirish" });
-    if (ok) { deleteIncoming(id); toast.success("O'chirildi"); }
+    const ok = await confirm({ title: t("incoming.deleteTitle"), description: t("incoming.deleteDesc"), destructive: true, confirmText: t("common.delete") });
+    if (ok) { deleteIncoming(id); toast.success(t("toast.deleted")); }
   };
 
   const removeBulk = async () => {
-    const ok = await confirm({ title: "Tanlanganlarni o'chirish", description: `${sel.count} ta kirim o'chiriladi va mos tovar miqdorlari kamayadi.`, destructive: true, confirmText: "O'chirish" });
+    const ok = await confirm({ title: t("common.bulkDelete"), description: t("incoming.bulkDeleteDesc", { n: sel.count }), destructive: true, confirmText: t("common.delete") });
     if (!ok) return;
     const n = sel.count;
     sel.selected.forEach(id => deleteIncoming(id));
-    sel.clear(); toast.success(`${n} ta kirim o'chirildi`);
+    sel.clear(); toast.success(t("incoming.bulkDeleted", { n }));
   };
 
   const handleSubmit = () => {
-    if (!invoice.trim()) { toast.error("Invoice raqamini kiriting"); return; }
-    if (!supplierId) { toast.error("Yetkazib beruvchini tanlang"); return; }
-    if (!productId) { toast.error("Tovarni tanlang"); return; }
-    if (qty <= 0) { toast.error("Miqdor 1 dan kam bo'lishi mumkin emas"); return; }
-    if (buyPrice < 0) { toast.error("Sotib olish narxi manfiy bo'lishi mumkin emas"); return; }
+    if (!invoice.trim()) { toast.error(t("incoming.invoiceRequired")); return; }
+    if (!supplierId) { toast.error(t("incoming.supplierRequired")); return; }
+    if (!productId) { toast.error(t("incoming.productRequired")); return; }
+    if (qty <= 0) { toast.error(t("toast.qtyMin")); return; }
+    if (buyPrice < 0) { toast.error(t("incoming.priceNegative")); return; }
 
     addIncoming({
       id: `inc_${Math.random().toString(36).slice(2, 9)}`,
@@ -79,7 +81,7 @@ function IncomingPage() {
       invoice: invoice.trim(),
     });
 
-    toast.success("Kirim muvaffaqiyatli saqlandi");
+    toast.success(t("incoming.saved"));
     setOpen(false);
     // reset form
     setInvoice("");
@@ -93,11 +95,11 @@ function IncomingPage() {
     <div className="space-y-5 animate-fade-in">
       {confirmNode}
       <PageHeader
-        title="Kirimlar"
-        subtitle={`${incoming.length} ta kirim yozuvi`}
+        title={t("incoming.title")}
+        subtitle={t("incoming.subtitle", { n: incoming.length })}
         actions={
           <Button onClick={() => setOpen(true)}>
-            <Plus className="h-4 w-4 mr-1" /> Yangi kirim
+            <Plus className="h-4 w-4 mr-1" /> {t("incoming.new")}
           </Button>
         }
       />
@@ -107,15 +109,15 @@ function IncomingPage() {
         <DialogContent className="max-w-md bg-card border rounded-2xl shadow-elevated p-6">
           <DialogHeader>
             <DialogTitle className="text-xl font-bold flex items-center gap-2">
-              <Plus className="h-5 w-5 text-primary" /> Yangi kirim qo'shish
+              <Plus className="h-5 w-5 text-primary" /> {t("incoming.newFull")}
             </DialogTitle>
           </DialogHeader>
 
           <div className="space-y-4 py-2">
             <div>
-              <Label className="text-xs font-semibold text-muted-foreground uppercase">Invoice raqami *</Label>
+              <Label className="text-xs font-semibold text-muted-foreground uppercase">{t("incoming.invoiceLabel")}</Label>
               <Input
-                placeholder="masalan: INV-1002"
+                placeholder={t("incoming.invoicePh")}
                 className="mt-1"
                 value={invoice}
                 onChange={(e) => setInvoice(e.target.value)}
@@ -123,7 +125,7 @@ function IncomingPage() {
             </div>
 
             <div>
-              <Label className="text-xs font-semibold text-muted-foreground uppercase">Yetkazib beruvchi *</Label>
+              <Label className="text-xs font-semibold text-muted-foreground uppercase">{t("common.supplier")} *</Label>
               <div className="mt-1">
                 <Popover open={supplierComboOpen} onOpenChange={setSupplierComboOpen}>
                   <PopoverTrigger asChild>
@@ -136,15 +138,15 @@ function IncomingPage() {
                       <span className="truncate">
                         {supplierId
                           ? suppliers.find(s => s.id === supplierId)?.name
-                          : "Yetkazib beruvchini qidirish..."}
+                          : t("incoming.searchSupplier")}
                       </span>
                       <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-[340px] p-0" align="start">
                     <Command>
-                      <CommandInput placeholder="Yetkazib beruvchi nomini kiriting..." />
-                      <CommandEmpty>Yetkazib beruvchi topilmadi.</CommandEmpty>
+                      <CommandInput placeholder={t("incoming.searchSupplierPh")} />
+                      <CommandEmpty>{t("incoming.supplierNotFound")}</CommandEmpty>
                       <CommandGroup>
                         <CommandList className="max-h-[200px]">
                           {suppliers.map(s => (
@@ -173,7 +175,7 @@ function IncomingPage() {
             </div>
 
             <div>
-              <Label className="text-xs font-semibold text-muted-foreground uppercase">Tovar *</Label>
+              <Label className="text-xs font-semibold text-muted-foreground uppercase">{t("common.product")} *</Label>
               <div className="mt-1">
                 <Popover open={productComboOpen} onOpenChange={setProductComboOpen}>
                   <PopoverTrigger asChild>
@@ -186,15 +188,15 @@ function IncomingPage() {
                       <span className="truncate">
                         {productId
                           ? products.find(p => p.id === productId)?.name
-                          : "Tovarni qidirish..."}
+                          : t("sales.searchProduct")}
                       </span>
                       <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-[340px] p-0" align="start">
                     <Command>
-                      <CommandInput placeholder="Tovar nomini kiriting..." />
-                      <CommandEmpty>Tovar topilmadi.</CommandEmpty>
+                      <CommandInput placeholder={t("sales.searchProductPh")} />
+                      <CommandEmpty>{t("sales.productNotFound")}</CommandEmpty>
                       <CommandGroup>
                         <CommandList className="max-h-[200px]">
                           {products.map(p => (
@@ -214,7 +216,7 @@ function IncomingPage() {
                                   <span className="text-[10px] text-muted-foreground">SKU: {p.sku} · Model: {p.vehicle}</span>
                                 </div>
                               </div>
-                              <span className="text-[10px] text-muted-foreground font-semibold shrink-0">{p.quantity} ta bor</span>
+                              <span className="text-[10px] text-muted-foreground font-semibold shrink-0">{t("common.inStock", { n: p.quantity })}</span>
                             </CommandItem>
                           ))}
                         </CommandList>
@@ -227,7 +229,7 @@ function IncomingPage() {
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <Label className="text-xs font-semibold text-muted-foreground uppercase">Miqdor</Label>
+                <Label className="text-xs font-semibold text-muted-foreground uppercase">{t("products.qty")}</Label>
                 <Input
                   type="number"
                   min={1}
@@ -237,7 +239,7 @@ function IncomingPage() {
                 />
               </div>
               <div>
-                <Label className="text-xs font-semibold text-muted-foreground uppercase">Kirim narxi</Label>
+                <Label className="text-xs font-semibold text-muted-foreground uppercase">{t("incoming.incomingPrice")}</Label>
                 <Input
                   type="number"
                   min={0}
@@ -250,27 +252,27 @@ function IncomingPage() {
           </div>
 
           <DialogFooter className="mt-4">
-            <Button variant="outline" onClick={() => setOpen(false)}>Orqaga</Button>
-            <Button onClick={handleSubmit}>Saqlash</Button>
+            <Button variant="outline" onClick={() => setOpen(false)}>{t("common.back")}</Button>
+            <Button onClick={handleSubmit}>{t("common.save")}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
       <Card className="rounded-2xl p-3 md:p-4 card-elevated border-border/60">
-        <BulkBar count={sel.count} onDelete={removeBulk} onClear={sel.clear} label="kirim tanlandi" />
+        <BulkBar count={sel.count} onDelete={removeBulk} onClear={sel.clear} label={t("incoming.bulk")} />
         <div className="overflow-x-auto rounded-xl border border-border/60">
           <Table>
             <TableHeader className="bg-muted/30">
               <TableRow>
                 <TableHead className="w-10"><Checkbox checked={allChecked} onCheckedChange={(v) => sel.toggleAll(pageIds, !!v)} /></TableHead>
-                <TableHead>Sana</TableHead>
-                <TableHead className="hidden sm:table-cell">Invoice</TableHead>
-                <TableHead className="hidden md:table-cell">Yetkazib beruvchi</TableHead>
-                <TableHead>Tovar</TableHead>
-                <TableHead className="text-right">Miqdor</TableHead>
-                <TableHead className="hidden sm:table-cell text-right">Narx</TableHead>
-                <TableHead className="text-right">Jami</TableHead>
-                <TableHead className="text-right pr-4">Amallar</TableHead>
+                <TableHead>{t("common.date")}</TableHead>
+                <TableHead className="hidden sm:table-cell">{t("common.invoice")}</TableHead>
+                <TableHead className="hidden md:table-cell">{t("common.supplier")}</TableHead>
+                <TableHead>{t("common.product")}</TableHead>
+                <TableHead className="text-right">{t("products.qty")}</TableHead>
+                <TableHead className="hidden sm:table-cell text-right">{t("common.price")}</TableHead>
+                <TableHead className="text-right">{t("common.total")}</TableHead>
+                <TableHead className="text-right pr-4">{t("common.actions")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>

@@ -21,24 +21,24 @@ export const ROLES = ["Admin", "Sotuvchi", "Omborchi"] as const;
 export type Role = (typeof ROLES)[number];
 
 export const NAV = [
-  { to: "/dashboard", label: "Boshqaruv paneli", icon: "LayoutDashboard" },
-  { to: "/inventory", label: "Omborxona", icon: "Warehouse" },
-  { to: "/products", label: "Tovarlar", icon: "Package" },
-  { to: "/categories", label: "Kategoriyalar", icon: "Tags" },
-  { to: "/sales", label: "Sotuvlar", icon: "ShoppingCart" },
-  { to: "/incoming", label: "Kirimlar", icon: "PackagePlus" },
-  { to: "/customers", label: "Mijozlar (CRM)", icon: "Users" },
-  { to: "/suppliers", label: "Yetkazib beruvchilar", icon: "Truck" },
-  { to: "/debts", label: "Qarzdorlik", icon: "Wallet" },
-  { to: "/employees", label: "Xodimlar", icon: "UserCog" },
-  { to: "/expenses", label: "Xarajatlar", icon: "Receipt" },
-  { to: "/reports", label: "Hisobotlar", icon: "BarChart3" },
-  { to: "/audit", label: "Audit jurnali", icon: "FileClock" },
-  { to: "/barcode", label: "Barkod", icon: "ScanBarcode" },
-  { to: "/settings", label: "Sozlamalar", icon: "Settings" },
+  { to: "/dashboard", labelKey: "nav.dashboard", icon: "LayoutDashboard" },
+  { to: "/inventory", labelKey: "nav.inventory", icon: "Warehouse" },
+  { to: "/products", labelKey: "nav.products", icon: "Package" },
+  { to: "/categories", labelKey: "nav.categories", icon: "Tags" },
+  { to: "/sales", labelKey: "nav.sales", icon: "ShoppingCart" },
+  { to: "/incoming", labelKey: "nav.incoming", icon: "PackagePlus" },
+  { to: "/customers", labelKey: "nav.customers", icon: "Users" },
+  { to: "/suppliers", labelKey: "nav.suppliers", icon: "Truck" },
+  { to: "/debts", labelKey: "nav.debts", icon: "Wallet" },
+  { to: "/employees", labelKey: "nav.employees", icon: "UserCog" },
+  { to: "/expenses", labelKey: "nav.expenses", icon: "Receipt" },
+  { to: "/reports", labelKey: "nav.reports", icon: "BarChart3" },
+  { to: "/audit", labelKey: "nav.audit", icon: "FileClock" },
+  { to: "/barcode", labelKey: "nav.barcode", icon: "ScanBarcode" },
+  { to: "/settings", labelKey: "nav.settings", icon: "Settings" },
 ] as const;
 
-export const PERMISSION_MODULES = NAV.filter(n => n.to !== "/settings").map(n => ({ path: n.to, label: n.label }));
+export const PERMISSION_MODULES = NAV.filter(n => n.to !== "/settings").map(n => ({ path: n.to, labelKey: n.labelKey }));
 export const ALL_PERMISSIONS = PERMISSION_MODULES.map(m => m.path);
 
 export const formatSom = (n: number) =>

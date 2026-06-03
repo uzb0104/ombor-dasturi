@@ -3,15 +3,24 @@ import {
   Outlet, createRootRouteWithContext, useRouter,
 } from "@tanstack/react-router";
 import { Toaster } from "@/components/ui/sonner";
+import { useLang } from "@/lib/i18n";
+import { translate } from "@/lib/i18n/translations";
+
+function useRootT() {
+  const rawLang = useLang((s) => s.lang);
+  const lang = rawLang === "uz_cyr" ? "uz" : rawLang;
+  return (key: string) => translate(lang, key);
+}
 
 function NotFoundComponent() {
+  const t = useRootT();
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="max-w-md text-center">
         <h1 className="text-7xl font-bold text-foreground">404</h1>
-        <h2 className="mt-4 text-xl font-semibold">Sahifa topilmadi</h2>
-        <p className="mt-2 text-sm text-muted-foreground">Siz qidirayotgan sahifa mavjud emas.</p>
-        <a href="/dashboard" className="mt-6 inline-flex rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground">Bosh sahifaga</a>
+        <h2 className="mt-4 text-xl font-semibold">{t("error.pageNotFound")}</h2>
+        <p className="mt-2 text-sm text-muted-foreground">{t("error.pageNotFoundDesc")}</p>
+        <a href="/dashboard" className="mt-6 inline-flex rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground">{t("error.goHome")}</a>
       </div>
     </div>
   );
@@ -20,12 +29,13 @@ function NotFoundComponent() {
 function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   console.error(error);
   const router = useRouter();
+  const t = useRootT();
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="max-w-md text-center">
-        <h1 className="text-xl font-semibold">Sahifa yuklanmadi</h1>
+        <h1 className="text-xl font-semibold">{t("error.loadFailed")}</h1>
         <p className="mt-2 text-sm text-muted-foreground">{error.message}</p>
-        <button onClick={() => { router.invalidate(); reset(); }} className="mt-6 inline-flex rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground">Qayta urinish</button>
+        <button onClick={() => { router.invalidate(); reset(); }} className="mt-6 inline-flex rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground">{t("error.retry")}</button>
       </div>
     </div>
   );
