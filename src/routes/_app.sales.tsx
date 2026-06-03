@@ -212,6 +212,9 @@ function SalesPage() {
     const itemsProfit = cart.reduce((acc, item) => acc + (item.price - item.buyPrice) * item.qty, 0);
     const netProfit = itemsProfit - form.discount;
 
+    // Qarz sotuvda hozir naqd to'langan qism (0 dan netTotal gacha)
+    const paidNow = mode === "credit" ? Math.min(Math.max(0, form.paidNow), netTotal) : netTotal;
+
     const newSale = {
       id: `sale_${Math.random().toString(36).slice(2, 9)}`,
       date: new Date().toISOString(),
@@ -227,6 +230,7 @@ function SalesPage() {
       paymentType: form.paymentType,
       total: netTotal,
       profit: netProfit,
+      paid: paidNow,
     };
 
     addSale(newSale);
