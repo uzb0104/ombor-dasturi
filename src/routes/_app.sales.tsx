@@ -643,6 +643,23 @@ function SalesPage() {
                       {formatSom(Math.max(0, cart.reduce((acc, item) => acc + item.qty * item.price, 0) - form.discount))}
                     </span>
                   </div>
+                  {mode === "credit" && (() => {
+                    const net = Math.max(0, cart.reduce((acc, item) => acc + item.qty * item.price, 0) - form.discount);
+                    const paid = Math.min(Math.max(0, form.paidNow), net);
+                    const remaining = net - paid;
+                    return (
+                      <div className="border-t pt-2 space-y-1">
+                        <div className="flex justify-between text-xs text-success">
+                          <span>Hozir to'lanadi (naqd):</span>
+                          <span className="font-semibold tabular-nums">{formatSom(paid)}</span>
+                        </div>
+                        <div className="flex justify-between text-sm font-bold text-destructive">
+                          <span>Qarzga qoladi:</span>
+                          <span className="tabular-nums">{formatSom(remaining)}</span>
+                        </div>
+                      </div>
+                    );
+                  })()}
                 </div>
 
                 <DialogFooter>
