@@ -764,6 +764,18 @@ function SalesPage() {
                   <span>JAMI TO'LOV:</span>
                   <span>{formatSom(selectedSale.total)}</span>
                 </div>
+                {selectedSale.paymentType === "Qarz" && (
+                  <>
+                    <div className="flex justify-between">
+                      <span>To'landi (naqd):</span>
+                      <span>{formatSom(selectedSale.paid || 0)}</span>
+                    </div>
+                    <div className="flex justify-between font-bold text-red-600">
+                      <span>Qarz qoldi:</span>
+                      <span>{formatSom(Math.max(0, selectedSale.total - (selectedSale.paid || 0)))}</span>
+                    </div>
+                  </>
+                )}
               </div>
 
               <div className="border-t border-dashed border-gray-300 my-2" />
