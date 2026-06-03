@@ -26,6 +26,7 @@ type Form = {
   discount: number;
   paymentType: "Naqd" | "Karta" | "Qarz";
   customerId: string; // existing customer id, or "" for new
+  paidNow: number; // qarz sotuvda hozir naqd to'lanadigan qism
   // new customer fields (used when credit + no customer selected)
   custName: string;
   custPhone: string;
@@ -45,6 +46,7 @@ const emptyForm = (): Form => ({
   discount: 0,
   paymentType: "Naqd",
   customerId: "",
+  paidNow: 0,
   custName: "",
   custPhone: "",
   custAddress: "",
