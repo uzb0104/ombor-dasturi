@@ -607,6 +607,19 @@ function SalesPage() {
                         </div>
                       );
                     })()}
+
+                    <div className="border-t border-border/60 pt-3">
+                      <Label className="text-[11px] font-semibold text-muted-foreground uppercase">Hozir naqd to'lanadi (qisman)</Label>
+                      <Input
+                        type="number"
+                        min={0}
+                        className="mt-1 h-9"
+                        value={form.paidNow}
+                        onChange={(e) => setForm({ ...form, paidNow: Math.max(0, +e.target.value) })}
+                        placeholder="0"
+                      />
+                      <p className="text-[10px] text-muted-foreground mt-1">Bo'sh qoldirilsa — to'liq qarzga yoziladi.</p>
+                    </div>
                   </div>
                 )}
               </div>
