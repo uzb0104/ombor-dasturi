@@ -37,7 +37,7 @@ export function toFeProduct(p) {
     image: p.image,
     description: p.description,
     attributes: p.attributes || {},
-    branchStock: p.branch_stock || {}
+    branchStock: p.branch_stock || {},
   };
 }
 
@@ -64,7 +64,7 @@ export function toFeCustomer(c) {
     address: c.address,
     vehicle: c.vehicle,
     totalPurchases: Number(c.total_purchases || 0),
-    debt: Number(c.debt || 0)
+    debt: Number(c.debt || 0),
   };
 }
 
@@ -93,7 +93,7 @@ export function toFeEmployee(e) {
     salary: Number(e.salary || 0),
     advance: Number(e.advance || 0),
     hireDate: e.hire_date,
-    status: e.status
+    status: e.status,
   };
 }
 
@@ -120,7 +120,7 @@ export function toFeIncoming(i) {
     productId: i.product_id,
     qty: Number(i.qty || 0),
     buyPrice: Number(i.buy_price || 0),
-    invoice: i.invoice
+    invoice: i.invoice,
   };
 }
 
@@ -136,6 +136,7 @@ export function toDbSale(s) {
   if (s.paymentType !== undefined) dbObj.payment_type = s.paymentType;
   if (s.total !== undefined) dbObj.total = s.total;
   if (s.profit !== undefined) dbObj.profit = s.profit;
+  if (s.paid !== undefined) dbObj.paid = s.paid;
   return dbObj;
 }
 
@@ -150,12 +151,14 @@ export function toFeSale(s, items = []) {
     paymentType: s.payment_type,
     total: Number(s.total || 0),
     profit: Number(s.profit || 0),
-    items: items.map(i => ({
+    paid: Number(s.paid || 0),
+    items: items.map((i) => ({
       productId: i.product_id,
+      productName: i.product_name || null,
       qty: Number(i.qty || 0),
       price: Number(i.price || 0),
-      buyPrice: Number(i.buy_price || 0)
-    }))
+      buyPrice: Number(i.buy_price || 0),
+    })),
   };
 }
 
@@ -184,7 +187,7 @@ export function toFeDebtPayment(p) {
     targetName: p.target_name,
     amount: Number(p.amount || 0),
     paymentMethod: p.payment_method,
-    note: p.note
+    note: p.note,
   };
 }
 
@@ -213,7 +216,7 @@ export function toFeAuditLog(l) {
     action: l.action,
     entity: l.entity,
     entityId: l.entity_id,
-    summary: l.summary
+    summary: l.summary,
   };
 }
 

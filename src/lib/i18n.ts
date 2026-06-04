@@ -12,10 +12,7 @@ export const LANG_LABELS: Record<Exclude<Lang, "uz_cyr">, string> = {
 export const UI_LANGS = ["uz", "ru"] as const satisfies readonly Lang[];
 
 export const useLang = create<{ lang: Lang; setLang: (l: Lang) => void }>()(
-  persist(
-    (set) => ({ lang: "uz", setLang: (l) => set({ lang: l }) }),
-    { name: "autoerp-lang-v1" }
-  )
+  persist((set) => ({ lang: "uz", setLang: (l) => set({ lang: l }) }), { name: "autoerp-lang-v1" }),
 );
 
 export function useT() {

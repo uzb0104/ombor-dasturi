@@ -48,7 +48,7 @@ export function downloadSaleReceiptPdf(
     customers: Customer[];
     employees: Employee[];
     labels?: Partial<ReceiptLabels>;
-  }
+  },
 ) {
   const L = { ...defaultLabels, ...ctx.labels };
   const doc = new jsPDF({ unit: "mm", format: [80, 297] });
@@ -56,7 +56,10 @@ export function downloadSaleReceiptPdf(
   let y = 8;
   const w = 70;
 
-  const line = (text: string, opts?: { bold?: boolean; size?: number; align?: "center" | "left" }) => {
+  const line = (
+    text: string,
+    opts?: { bold?: boolean; size?: number; align?: "center" | "left" },
+  ) => {
     doc.setFont("helvetica", opts?.bold ? "bold" : "normal");
     doc.setFontSize(opts?.size ?? 9);
     const align = opts?.align ?? "left";

@@ -18,14 +18,11 @@ export function removeToken(): void {
 }
 
 // ─── Umumiy fetch yordamchisi ───
-async function request<T>(
-  path: string,
-  options: RequestInit = {}
-): Promise<T> {
+async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const token = getToken();
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
-    ...(options.headers as Record<string, string> || {}),
+    ...((options.headers as Record<string, string>) || {}),
   };
 
   if (token) {
@@ -90,15 +87,14 @@ export const productsApi = {
   importBulk: (items: unknown[]) =>
     request<{ created: number; failed: number; errors: { name?: string; error: string }[] }>(
       "/api/products/import",
-      { method: "POST", body: JSON.stringify({ items }) }
+      { method: "POST", body: JSON.stringify({ items }) },
     ),
-  priceHistory: (productId: string) =>
-    request<any[]>(`/api/products/${productId}/price-history`),
+  priceHistory: (productId: string) => request<any[]>(`/api/products/${productId}/price-history`),
 };
 
 export const priceHistoryApi = {
   getAll: (productId?: string) =>
-    request<any[]>(`/api/price-history${productId ? `?productId=${productId}` : ""}`),
+    request<any[]>(`/api/products/price-history${productId ? `?productId=${productId}` : ""}`),
 };
 export const customersApi = createCrudApi<any>("customers");
 export const suppliersApi = createCrudApi<any>("suppliers");

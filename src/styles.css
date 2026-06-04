@@ -152,7 +152,8 @@
   * {
     border-color: var(--color-border);
   }
-  html, body {
+  html,
+  body {
     height: 100%;
   }
   body {
@@ -172,7 +173,10 @@
   .card-elevated {
     box-shadow: var(--shadow-elevated);
   }
-  .scrollbar-thin::-webkit-scrollbar { width: 6px; height: 6px; }
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
   .scrollbar-thin::-webkit-scrollbar-thumb {
     background: color-mix(in oklab, var(--color-muted-foreground) 30%, transparent);
     border-radius: 999px;
@@ -180,16 +184,25 @@
 }
 
 @keyframes fade-in {
-  from { opacity: 0; transform: translateY(6px); }
-  to   { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
-.animate-fade-in { animation: fade-in 0.35s ease-out both; }
+.animate-fade-in {
+  animation: fade-in 0.35s ease-out both;
+}
 
 @media print {
   body * {
     visibility: hidden;
   }
-  #print-area, #print-area * {
+  #print-area,
+  #print-area * {
     visibility: visible;
   }
   #print-area {
@@ -205,4 +218,3 @@
     box-shadow: none;
   }
 }
-

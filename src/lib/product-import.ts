@@ -38,7 +38,11 @@ function normHeader(h: string): string {
     .replace(/['']/g, "'");
 }
 
-function rowToProduct(row: Record<string, unknown>, categories: string[], brands: string[]): ImportRow | null {
+function rowToProduct(
+  row: Record<string, unknown>,
+  categories: string[],
+  brands: string[],
+): ImportRow | null {
   const mapped: Record<string, unknown> = {};
   for (const [key, val] of Object.entries(row)) {
     const field = HEADER_MAP[normHeader(key)];
@@ -70,7 +74,7 @@ function rowToProduct(row: Record<string, unknown>, categories: string[], brands
 export function parseProductSpreadsheet(
   buffer: ArrayBuffer,
   categories: string[],
-  brands: string[]
+  brands: string[],
 ): ImportRow[] {
   const wb = XLSX.read(buffer, { type: "array" });
   const sheet = wb.Sheets[wb.SheetNames[0]];
@@ -78,11 +82,7 @@ export function parseProductSpreadsheet(
   return rows.map((r) => rowToProduct(r, categories, brands)).filter((x): x is ImportRow => !!x);
 }
 
-export function parseProductCsv(
-  text: string,
-  categories: string[],
-  brands: string[]
-): ImportRow[] {
+export function parseProductCsv(text: string, categories: string[], brands: string[]): ImportRow[] {
   const wb = XLSX.read(text, { type: "string" });
   const sheet = wb.Sheets[wb.SheetNames[0]];
   const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: "" });

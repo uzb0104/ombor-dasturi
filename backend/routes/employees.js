@@ -1,5 +1,13 @@
 import express from "express";
-import { isSupabaseConfigured, supabaseClient, readLocalDb, writeLocalDb, getCached, setCached, clearCached } from "../lib/db.js";
+import {
+  isSupabaseConfigured,
+  supabaseClient,
+  readLocalDb,
+  writeLocalDb,
+  getCached,
+  setCached,
+  clearCached,
+} from "../lib/db.js";
 import { toFeEmployee, toDbEmployee } from "../lib/mappers.js";
 import { validate, employeeSchema } from "../lib/validators.js";
 import { authenticateToken } from "../middleware/auth.js";
@@ -13,9 +21,12 @@ router.get("/", authenticateToken, async (req, res) => {
     if (cached) return res.json(cached);
 
     if (isSupabaseConfigured) {
-      const { data, error } = await supabaseClient.from("employees").select("*").order("created_at", { ascending: false });
+      const { data, error } = await supabaseClient
+        .from("employees")
+        .select("*")
+        .order("created_at", { ascending: false });
       if (error) throw error;
-      
+
       const mapped = (data || []).map(toFeEmployee);
       await setCached(cacheKey, mapped);
       res.json(mapped);
@@ -33,9 +44,13 @@ router.post("/", authenticateToken, validate(employeeSchema), async (req, res) =
   try {
     if (isSupabaseConfigured) {
       const dbObj = toDbEmployee(e);
-      const { data, error } = await supabaseClient.from("employees").insert([dbObj]).select().single();
+      const { data, error } = await supabaseClient
+        .from("employees")
+        .insert([dbObj])
+        .select()
+        .single();
       if (error) throw error;
-      
+
       await clearCached("cache:employees");
       res.json(toFeEmployee(data));
     } else {
@@ -55,16 +70,21 @@ router.put("/:id", authenticateToken, validate(employeeSchema.partial()), async 
   try {
     if (isSupabaseConfigured) {
       const dbObj = toDbEmployee(updates);
-      const { data, error } = await supabaseClient.from("employees").update(dbObj).eq("id", id).select().single();
+      const { data, error } = await supabaseClient
+        .from("employees")
+        .update(dbObj)
+        .eq("id", id)
+        .select()
+        .single();
       if (error) throw error;
-      
+
       await clearCached("cache:employees");
       res.json(toFeEmployee(data));
     } else {
       const db = readLocalDb();
-      db.employees = db.employees.map(x => x.id === id ? { ...x, ...updates } : x);
+      db.employees = db.employees.map((x) => (x.id === id ? { ...x, ...updates } : x));
       writeLocalDb(db);
-      res.json(db.employees.find(x => x.id === id));
+      res.json(db.employees.find((x) => x.id === id));
     }
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -81,7 +101,7 @@ router.delete("/:id", authenticateToken, async (req, res) => {
       res.json({ success: true });
     } else {
       const db = readLocalDb();
-      db.employees = db.employees.filter(x => x.id !== id);
+      db.employees = db.employees.filter((x) => x.id !== id);
       writeLocalDb(db);
       res.json({ success: true });
     }

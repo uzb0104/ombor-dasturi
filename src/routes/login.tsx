@@ -16,8 +16,8 @@ function LoginPage() {
   const t = useT();
   const navigate = useNavigate();
   const login = useStore((s) => s.login);
-  const [email, setEmail] = useState("admin@autoerp.uz");
-  const [password, setPassword] = useState("admin123");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [remember, setRemember] = useState(true);
   const [loading, setLoading] = useState(false);
 
@@ -57,7 +57,10 @@ function LoginPage() {
               ["15+", t("nav.customers")],
               ["11", t("nav.vehicleBrand")],
             ].map(([n, l]) => (
-              <div key={l} className="rounded-xl bg-sidebar-accent/30 p-3 border border-sidebar-border">
+              <div
+                key={l}
+                className="rounded-xl bg-sidebar-accent/30 p-3 border border-sidebar-border"
+              >
                 <div className="text-2xl font-bold">{n}</div>
                 <div className="text-xs opacity-70">{l}</div>
               </div>
@@ -65,7 +68,9 @@ function LoginPage() {
           </div>
         </div>
         <div className="absolute -bottom-32 -right-32 h-96 w-96 rounded-full bg-primary/30 blur-3xl" />
-        <div className="text-xs opacity-50 relative z-10">© {new Date().getFullYear()} AutoERP Pro</div>
+        <div className="text-xs opacity-50 relative z-10">
+          © {new Date().getFullYear()} AutoERP Pro
+        </div>
       </div>
 
       <div className="flex items-center justify-center p-6">
@@ -80,11 +85,24 @@ function LoginPage() {
           <form onSubmit={onSubmit} className="space-y-4">
             <div className="space-y-1.5">
               <Label htmlFor="email">{t("login.email")}</Label>
-              <Input id="email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="admin@autoerp.uz" />
+              <Input
+                id="email"
+                type="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="admin@autoerp.uz"
+              />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="password">{t("login.password")}</Label>
-              <Input id="password" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} />
+              <Input
+                id="password"
+                type="password"
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
             </div>
             <div className="flex items-center justify-between">
               <label className="flex items-center gap-2 text-sm cursor-pointer">

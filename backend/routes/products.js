@@ -1,5 +1,13 @@
 import express from "express";
-import { isSupabaseConfigured, supabaseClient, readLocalDb, writeLocalDb, getCached, setCached, clearCached } from "../lib/db.js";
+import {
+  isSupabaseConfigured,
+  supabaseClient,
+  readLocalDb,
+  writeLocalDb,
+  getCached,
+  setCached,
+  clearCached,
+} from "../lib/db.js";
 import { toFeProduct, toDbProduct, toFePriceHistory } from "../lib/mappers.js";
 import { validate, productSchema } from "../lib/validators.js";
 import { authenticateToken } from "../middleware/auth.js";
@@ -63,9 +71,12 @@ router.get("/", authenticateToken, async (req, res) => {
     if (cached) return res.json(cached);
 
     if (isSupabaseConfigured) {
-      const { data, error } = await supabaseClient.from("products").select("*").order("created_at", { ascending: false });
+      const { data, error } = await supabaseClient
+        .from("products")
+        .select("*")
+        .order("created_at", { ascending: false });
       if (error) throw error;
-      
+
       const mapped = (data || []).map(toFeProduct);
       await setCached(cacheKey, mapped);
       res.json(mapped);
@@ -84,9 +95,18 @@ router.post("/", authenticateToken, validate(productSchema), async (req, res) =>
     if (isSupabaseConfigured) {
       const dbObj = toDbProduct(p);
       console.log("📦 [Products POST] Ma'lumot:", JSON.stringify(dbObj, null, 2));
-      const { data, error } = await supabaseClient.from("products").insert([dbObj]).select().single();
+      const { data, error } = await supabaseClient
+        .from("products")
+        .insert([dbObj])
+        .select()
+        .single();
       if (error) {
-        console.error("❌ [Products POST] Supabase xatolik:", error.message, error.details, error.hint);
+        console.error(
+          "❌ [Products POST] Supabase xatolik:",
+          error.message,
+          error.details,
+          error.hint,
+        );
         throw error;
       }
       await recordPriceChanges(data.id, data.name, null, dbObj, req.user);
@@ -111,13 +131,27 @@ router.put("/:id", authenticateToken, validate(productSchema.partial()), async (
   const updates = req.body;
   try {
     if (isSupabaseConfigured) {
-      const { data: before } = await supabaseClient.from("products").select("*").eq("id", id).single();
+      const { data: before } = await supabaseClient
+        .from("products")
+        .select("*")
+        .eq("id", id)
+        .single();
       const dbObj = toDbProduct(updates);
       delete dbObj.id;
       console.log(`📦 [Products PUT] ID: ${id}, Ma'lumot:`, JSON.stringify(dbObj, null, 2));
-      const { data, error } = await supabaseClient.from("products").update(dbObj).eq("id", id).select().single();
+      const { data, error } = await supabaseClient
+        .from("products")
+        .update(dbObj)
+        .eq("id", id)
+        .select()
+        .single();
       if (error) {
-        console.error("❌ [Products PUT] Supabase xatolik:", error.message, error.details, error.hint);
+        console.error(
+          "❌ [Products PUT] Supabase xatolik:",
+          error.message,
+          error.details,
+          error.hint,
+        );
         throw error;
       }
       await recordPriceChanges(id, data.name, before, dbObj, req.user);
@@ -127,9 +161,9 @@ router.put("/:id", authenticateToken, validate(productSchema.partial()), async (
       const db = readLocalDb();
       const before = db.products.find((x) => x.id === id);
       const beforeDb = before ? toDbProduct(before) : null;
-      db.products = db.products.map(x => x.id === id ? { ...x, ...updates } : x);
+      db.products = db.products.map((x) => (x.id === id ? { ...x, ...updates } : x));
       writeLocalDb(db);
-      const updated = db.products.find(x => x.id === id);
+      const updated = db.products.find((x) => x.id === id);
       const dbObj = toDbProduct(updates);
       await recordPriceChanges(id, updated?.name || id, beforeDb, dbObj, req.user);
       res.json(updated);
@@ -150,7 +184,7 @@ router.delete("/:id", authenticateToken, async (req, res) => {
       res.json({ success: true });
     } else {
       const db = readLocalDb();
-      db.products = db.products.filter(x => x.id !== id);
+      db.products = db.products.filter((x) => x.id !== id);
       writeLocalDb(db);
       res.json({ success: true });
     }
@@ -165,7 +199,11 @@ router.get("/price-history", authenticateToken, async (req, res) => {
   const limit = Math.min(Number(req.query.limit) || 100, 500);
   try {
     if (isSupabaseConfigured) {
-      let q = supabaseClient.from("price_history").select("*").order("created_at", { ascending: false }).limit(limit);
+      let q = supabaseClient
+        .from("price_history")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(limit);
       if (productId) q = q.eq("product_id", productId);
       const { data, error } = await q;
       if (error) throw error;
@@ -220,9 +258,17 @@ router.post("/import", authenticateToken, async (req, res) => {
 
       if (isSupabaseConfigured) {
         const dbObj = toDbProduct(p);
-        const { data: existing } = await supabaseClient.from("products").select("id").eq("id", p.id).maybeSingle();
+        const { data: existing } = await supabaseClient
+          .from("products")
+          .select("id")
+          .eq("id", p.id)
+          .maybeSingle();
         if (existing) {
-          const { data: before } = await supabaseClient.from("products").select("*").eq("id", p.id).single();
+          const { data: before } = await supabaseClient
+            .from("products")
+            .select("*")
+            .eq("id", p.id)
+            .single();
           delete dbObj.id;
           const { error } = await supabaseClient.from("products").update(dbObj).eq("id", p.id);
           if (error) throw error;

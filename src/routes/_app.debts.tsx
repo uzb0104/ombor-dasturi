@@ -1,16 +1,43 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Card } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { PageHeader, StatCard, usePagination, PaginationBar } from "@/components/ui-kit";
 import { useStore } from "@/lib/store";
 import { formatSom } from "@/lib/constants";
-import { ArrowDownCircle, ArrowUpCircle, History, Wallet, User, PlusCircle, Check } from "lucide-react";
+import {
+  ArrowDownCircle,
+  ArrowUpCircle,
+  History,
+  Wallet,
+  User,
+  PlusCircle,
+  Check,
+} from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useState } from "react";
 import { toast } from "sonner";
 import { useT } from "@/lib/i18n";
@@ -22,11 +49,11 @@ export const Route = createFileRoute("/_app/debts")({ component: DebtsPage });
 function DebtsPage() {
   const t = useT();
   const { customers, suppliers, debtPayments, addDebtPayment } = useStore();
-  
-  const fromCustomers = customers.filter(c => c.debt > 0);
-  const toSuppliers = suppliers.filter(s => s.debt > 0);
-  const totalIn = fromCustomers.reduce((a,c) => a + c.debt, 0);
-  const totalOut = toSuppliers.reduce((a,s) => a + s.debt, 0);
+
+  const fromCustomers = customers.filter((c) => c.debt > 0);
+  const toSuppliers = suppliers.filter((s) => s.debt > 0);
+  const totalIn = fromCustomers.reduce((a, c) => a + c.debt, 0);
+  const totalOut = toSuppliers.reduce((a, s) => a + s.debt, 0);
 
   // Dialog State
   const [open, setOpen] = useState(false);
@@ -42,7 +69,12 @@ function DebtsPage() {
   const historyList = debtPayments || [];
   const pgHistory = usePagination(historyList, 10);
 
-  const handleOpenPayment = (type: "customer" | "supplier", id: string, name: string, debt: number) => {
+  const handleOpenPayment = (
+    type: "customer" | "supplier",
+    id: string,
+    name: string,
+    debt: number,
+  ) => {
     setPaymentType(type);
     setTargetId(id);
     setTargetName(name);
@@ -81,10 +113,20 @@ function DebtsPage() {
   return (
     <div className="space-y-5 animate-fade-in">
       <PageHeader title={t("debts.title")} subtitle={t("debts.subtitle")} />
-      
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <StatCard label={t("debts.owedToUs")} value={formatSom(totalIn)} icon={ArrowDownCircle} accent="success" />
-        <StatCard label={t("debts.weOwe")} value={formatSom(totalOut)} icon={ArrowUpCircle} accent="destructive" />
+        <StatCard
+          label={t("debts.owedToUs")}
+          value={formatSom(totalIn)}
+          icon={ArrowDownCircle}
+          accent="success"
+        />
+        <StatCard
+          label={t("debts.weOwe")}
+          value={formatSom(totalOut)}
+          icon={ArrowUpCircle}
+          accent="destructive"
+        />
       </div>
 
       {/* Repayment Dialog */}
@@ -104,12 +146,16 @@ function DebtsPage() {
               <div className="font-bold text-base text-foreground">{targetName}</div>
               <div className="flex justify-between text-xs pt-1.5 border-t border-border/60">
                 <span className="text-muted-foreground">{t("debts.totalDebt")}</span>
-                <span className="font-bold text-destructive tabular-nums">{formatSom(maxDebt)}</span>
+                <span className="font-bold text-destructive tabular-nums">
+                  {formatSom(maxDebt)}
+                </span>
               </div>
             </div>
 
             <div>
-              <Label className="text-xs font-semibold text-muted-foreground uppercase">{t("debts.paymentAmount")} *</Label>
+              <Label className="text-xs font-semibold text-muted-foreground uppercase">
+                {t("debts.paymentAmount")} *
+              </Label>
               <Input
                 type="number"
                 className="mt-1"
@@ -135,9 +181,13 @@ function DebtsPage() {
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <Label className="text-xs font-semibold text-muted-foreground uppercase">{t("sales.payment")}</Label>
+                <Label className="text-xs font-semibold text-muted-foreground uppercase">
+                  {t("sales.payment")}
+                </Label>
                 <Select value={paymentMethod} onValueChange={(v) => setPaymentMethod(v as any)}>
-                  <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                  <SelectTrigger className="mt-1">
+                    <SelectValue />
+                  </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="Naqd">{paymentLabel(t, "Naqd")}</SelectItem>
                     <SelectItem value="Karta">{paymentLabel(t, "Karta")}</SelectItem>
@@ -145,7 +195,9 @@ function DebtsPage() {
                 </Select>
               </div>
               <div>
-                <Label className="text-xs font-semibold text-muted-foreground uppercase">{t("debts.remainingDebt")}</Label>
+                <Label className="text-xs font-semibold text-muted-foreground uppercase">
+                  {t("debts.remainingDebt")}
+                </Label>
                 <div className="h-9 border rounded-md px-3 bg-muted/20 flex items-center mt-1 text-sm font-semibold tabular-nums text-foreground">
                   {formatSom(maxDebt - amount)}
                 </div>
@@ -153,7 +205,9 @@ function DebtsPage() {
             </div>
 
             <div>
-              <Label className="text-xs font-semibold text-muted-foreground uppercase">{t("expenses.note")}</Label>
+              <Label className="text-xs font-semibold text-muted-foreground uppercase">
+                {t("expenses.note")}
+              </Label>
               <Input
                 placeholder={t("debts.notePh")}
                 className="mt-1"
@@ -164,7 +218,9 @@ function DebtsPage() {
           </div>
 
           <DialogFooter className="mt-2">
-            <Button variant="outline" onClick={() => setOpen(false)}>{t("common.cancel")}</Button>
+            <Button variant="outline" onClick={() => setOpen(false)}>
+              {t("common.cancel")}
+            </Button>
             <Button onClick={handlePay} disabled={amount <= 0}>
               {t("debts.confirmPayment")}
             </Button>
@@ -208,7 +264,7 @@ function DebtsPage() {
                       </TableCell>
                     </TableRow>
                   ) : (
-                    fromCustomers.map(c => (
+                    fromCustomers.map((c) => (
                       <TableRow
                         key={c.id}
                         className="hover:bg-muted/40 cursor-pointer transition-colors"
@@ -256,7 +312,7 @@ function DebtsPage() {
                       </TableCell>
                     </TableRow>
                   ) : (
-                    toSuppliers.map(s => (
+                    toSuppliers.map((s) => (
                       <TableRow
                         key={s.id}
                         className="hover:bg-muted/40 cursor-pointer transition-colors"
@@ -306,7 +362,7 @@ function DebtsPage() {
                       </TableCell>
                     </TableRow>
                   ) : (
-                    pgHistory.paged.map(p => (
+                    pgHistory.paged.map((p) => (
                       <TableRow key={p.id} className="hover:bg-muted/40">
                         <TableCell className="text-sm font-medium tabular-nums">
                           {new Date(p.date).toLocaleString("uz-UZ")}

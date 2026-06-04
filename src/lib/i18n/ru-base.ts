@@ -50,7 +50,8 @@ export const ruBase: Record<string, string> = {
   "inventory.bulk": "товаров выбрано",
 
   "products.edit": "Редактировать товар",
-  "products.importHint": "CSV или XLSX. Столбцы: название, код, марка, категория, кол-во, закуп, продажа",
+  "products.importHint":
+    "CSV или XLSX. Столбцы: название, код, марка, категория, кол-во, закуп, продажа",
   "products.importTemplate": "Скачать шаблон",
   "products.importSuccess": "товаров импортировано",
   "products.importFailed": "ошибок",

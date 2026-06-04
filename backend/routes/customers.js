@@ -1,5 +1,13 @@
 import express from "express";
-import { isSupabaseConfigured, supabaseClient, readLocalDb, writeLocalDb, getCached, setCached, clearCached } from "../lib/db.js";
+import {
+  isSupabaseConfigured,
+  supabaseClient,
+  readLocalDb,
+  writeLocalDb,
+  getCached,
+  setCached,
+  clearCached,
+} from "../lib/db.js";
 import { toFeCustomer, toDbCustomer } from "../lib/mappers.js";
 import { validate, customerSchema } from "../lib/validators.js";
 import { authenticateToken } from "../middleware/auth.js";
@@ -13,9 +21,12 @@ router.get("/", authenticateToken, async (req, res) => {
     if (cached) return res.json(cached);
 
     if (isSupabaseConfigured) {
-      const { data, error } = await supabaseClient.from("customers").select("*").order("created_at", { ascending: false });
+      const { data, error } = await supabaseClient
+        .from("customers")
+        .select("*")
+        .order("created_at", { ascending: false });
       if (error) throw error;
-      
+
       const mapped = (data || []).map(toFeCustomer);
       await setCached(cacheKey, mapped);
       res.json(mapped);
@@ -33,9 +44,13 @@ router.post("/", authenticateToken, validate(customerSchema), async (req, res) =
   try {
     if (isSupabaseConfigured) {
       const dbObj = toDbCustomer(c);
-      const { data, error } = await supabaseClient.from("customers").insert([dbObj]).select().single();
+      const { data, error } = await supabaseClient
+        .from("customers")
+        .insert([dbObj])
+        .select()
+        .single();
       if (error) throw error;
-      
+
       await clearCached("cache:customers");
       res.json(toFeCustomer(data));
     } else {
@@ -55,16 +70,21 @@ router.put("/:id", authenticateToken, validate(customerSchema.partial()), async 
   try {
     if (isSupabaseConfigured) {
       const dbObj = toDbCustomer(updates);
-      const { data, error } = await supabaseClient.from("customers").update(dbObj).eq("id", id).select().single();
+      const { data, error } = await supabaseClient
+        .from("customers")
+        .update(dbObj)
+        .eq("id", id)
+        .select()
+        .single();
       if (error) throw error;
-      
+
       await clearCached("cache:customers");
       res.json(toFeCustomer(data));
     } else {
       const db = readLocalDb();
-      db.customers = db.customers.map(x => x.id === id ? { ...x, ...updates } : x);
+      db.customers = db.customers.map((x) => (x.id === id ? { ...x, ...updates } : x));
       writeLocalDb(db);
-      res.json(db.customers.find(x => x.id === id));
+      res.json(db.customers.find((x) => x.id === id));
     }
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -81,7 +101,7 @@ router.delete("/:id", authenticateToken, async (req, res) => {
       res.json({ success: true });
     } else {
       const db = readLocalDb();
-      db.customers = db.customers.filter(x => x.id !== id);
+      db.customers = db.customers.filter((x) => x.id !== id);
       writeLocalDb(db);
       res.json({ success: true });
     }

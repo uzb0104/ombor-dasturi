@@ -16,6 +16,9 @@ dist-ssr
 .nitro
 *.local
 
+# Local JSON database (maxfiy ma'lumotlar)
+backend/db.json
+
 # Environment (maxfiy kalitlar)
 .env
 .env.*

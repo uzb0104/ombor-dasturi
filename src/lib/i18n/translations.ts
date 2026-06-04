@@ -143,7 +143,8 @@ const uz: Dict = {
   "products.edit": "Tovarni tahrirlash",
   "products.priceHistory": "Narx tarixi",
   "products.import": "Excel import",
-  "products.importHint": "CSV yoki XLSX fayl. Ustunlar: nom, kod, brend, kategoriya, miqdor, sotib, sotuv",
+  "products.importHint":
+    "CSV yoki XLSX fayl. Ustunlar: nom, kod, brend, kategoriya, miqdor, sotib, sotuv",
   "products.importTemplate": "Namuna yuklash",
   "products.importSelect": "Fayl tanlash",
   "products.importSuccess": "ta tovar import qilindi",
@@ -505,9 +506,7 @@ const ruCore: Dict = {
 };
 
 /** Barcha uz kalitlari uchun ruscha (uz fallback yo'q) */
-const ru: Dict = Object.fromEntries(
-  Object.keys(uz).map((k) => [k, ruCore[k] ?? k])
-);
+const ru: Dict = Object.fromEntries(Object.keys(uz).map((k) => [k, ruCore[k] ?? k]));
 
 const uz_cyr: Dict = {
   ...uz,
@@ -531,7 +530,11 @@ const uz_cyr: Dict = {
 export const translations: Record<Lang, Dict> = { uz, ru, uz_cyr };
 
 /** Tarjima + `{key}` placeholder almashtirish */
-export function translate(lang: Lang, key: string, params?: Record<string, string | number>): string {
+export function translate(
+  lang: Lang,
+  key: string,
+  params?: Record<string, string | number>,
+): string {
   let text = translations[lang]?.[key];
   if (text === undefined && lang !== "ru") text = translations.uz[key];
   if (text === undefined) text = key;

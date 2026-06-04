@@ -1,5 +1,13 @@
 import express from "express";
-import { isSupabaseConfigured, supabaseClient, readLocalDb, writeLocalDb, getCached, setCached, clearCached } from "../lib/db.js";
+import {
+  isSupabaseConfigured,
+  supabaseClient,
+  readLocalDb,
+  writeLocalDb,
+  getCached,
+  setCached,
+  clearCached,
+} from "../lib/db.js";
 import { validate, expenseSchema } from "../lib/validators.js";
 import { authenticateToken } from "../middleware/auth.js";
 
@@ -12,9 +20,12 @@ router.get("/", authenticateToken, async (req, res) => {
     if (cached) return res.json(cached);
 
     if (isSupabaseConfigured) {
-      const { data, error } = await supabaseClient.from("expenses").select("*").order("created_at", { ascending: false });
+      const { data, error } = await supabaseClient
+        .from("expenses")
+        .select("*")
+        .order("created_at", { ascending: false });
       if (error) throw error;
-      
+
       await setCached(cacheKey, data);
       res.json(data);
     } else {
@@ -50,15 +61,20 @@ router.put("/:id", authenticateToken, validate(expenseSchema.partial()), async (
   const updates = req.body;
   try {
     if (isSupabaseConfigured) {
-      const { data, error } = await supabaseClient.from("expenses").update(updates).eq("id", id).select().single();
+      const { data, error } = await supabaseClient
+        .from("expenses")
+        .update(updates)
+        .eq("id", id)
+        .select()
+        .single();
       if (error) throw error;
       await clearCached("cache:expenses");
       res.json(data);
     } else {
       const db = readLocalDb();
-      db.expenses = db.expenses.map(x => x.id === id ? { ...x, ...updates } : x);
+      db.expenses = db.expenses.map((x) => (x.id === id ? { ...x, ...updates } : x));
       writeLocalDb(db);
-      res.json(db.expenses.find(x => x.id === id));
+      res.json(db.expenses.find((x) => x.id === id));
     }
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -75,7 +91,7 @@ router.delete("/:id", authenticateToken, async (req, res) => {
       res.json({ success: true });
     } else {
       const db = readLocalDb();
-      db.expenses = db.expenses.filter(x => x.id !== id);
+      db.expenses = db.expenses.filter((x) => x.id !== id);
       writeLocalDb(db);
       res.json({ success: true });
     }

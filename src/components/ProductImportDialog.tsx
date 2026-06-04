@@ -1,10 +1,21 @@
 import { useRef, useState } from "react";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Upload, FileSpreadsheet } from "lucide-react";
 import { toast } from "sonner";
 import { useT } from "@/lib/i18n";
-import { parseProductCsv, parseProductSpreadsheet, downloadImportTemplate } from "@/lib/product-import";
+import {
+  parseProductCsv,
+  parseProductSpreadsheet,
+  downloadImportTemplate,
+} from "@/lib/product-import";
 import { productsApi } from "@/lib/api";
 import { useStore } from "@/lib/store";
 

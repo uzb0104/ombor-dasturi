@@ -70,7 +70,7 @@ export const extraUz: Record<string, string> = {
   "audit.section": "Bo'lim",
 
   "products.deleteTitle": "Tovarni o'chirish",
-  "products.deleteDesc": "\"{name}\" o'chirilsinmi?",
+  "products.deleteDesc": '"{name}" o\'chirilsinmi?',
   "products.bulkDeleteDesc": "{n} ta tovar o'chiriladi. Davom etilsinmi?",
   "products.exportListTitle": "Ombordagi Tovarlar Ro'yxati",
   "products.boxCode": "Karobka kodi",
@@ -82,7 +82,8 @@ export const extraUz: Record<string, string> = {
   "products.form.namePh": "Masalan: Tormoz kolodkasi",
   "products.form.codeLabel": "Kod (karobka raqami / SKU) — ixtiyoriy",
   "products.form.codePh": "Masalan: B7RTC, 32009, 48RCT3303",
-  "products.form.codeHint": "Karobka ustidagi kod yoki SKU. Lotin harflari katta yoziladi, raqam va belgilar ham mumkin.",
+  "products.form.codeHint":
+    "Karobka ustidagi kod yoki SKU. Lotin harflari katta yoziladi, raqam va belgilar ham mumkin.",
   "products.form.unitBrand": "Mahsulot brendi (ixtiyoriy)",
   "products.form.unitBrandPh": "Masalan: Bosch, Varta, Michelin",
   "products.form.amperage": "Amperaj (Ah) *",
@@ -129,7 +130,8 @@ export const extraUz: Record<string, string> = {
   "sales.receiptShop": "Avto Ehtiyot Qismlari Do'koni",
   "sales.receiptCity": "Toshkent shahar, O'zbekiston",
   "sales.receiptNo": "Chek №:",
-  "sales.cancelDescLong": "Haqiqatan ham ushbu sotuvni bekor qilmoqchimisiz? Bu tovar zaxiralarini qaytaradi va mijoz qarzini kamaytiradi.",
+  "sales.cancelDescLong":
+    "Haqiqatan ham ushbu sotuvni bekor qilmoqchimisiz? Bu tovar zaxiralarini qaytaradi va mijoz qarzini kamaytiradi.",
   "sales.csvExported": "CSV yuklandi",
   "sales.itemsKinds": "({n} xil)",
   "sales.deleteTitle": "O'chirish",
@@ -227,13 +229,16 @@ export const extraUz: Record<string, string> = {
   "settings.confirmPassword": "Yangi parolni tasdiqlash",
   "settings.darkMode": "Qorong'i rejim",
   "settings.darkModeHint": "Dark mode yoqish/o'chirish",
-  "settings.dangerDesc": "Barcha demo ma'lumotlarni dastlabki holatga qaytarish. Bu amalni qaytarib bo'lmaydi.",
+  "settings.dangerDesc":
+    "Barcha demo ma'lumotlarni dastlabki holatga qaytarish. Bu amalni qaytarib bo'lmaydi.",
   "settings.demoReset": "Demo ma'lumotlarni tiklash",
   "settings.demoResetTitle": "Demo ma'lumotlarni tiklash",
-  "settings.demoResetDesc": "Barcha ma'lumotlar dastlabki holatga qaytariladi. Bu amalni qaytarib bo'lmaydi.",
+  "settings.demoResetDesc":
+    "Barcha ma'lumotlar dastlabki holatga qaytariladi. Bu amalni qaytarib bo'lmaydi.",
   "settings.resetBtn": "Tiklash",
   "settings.usersTitle": "Foydalanuvchilar va ruxsatlar",
-  "settings.usersDesc": "Admin yangi foydalanuvchi yaratadi va ularga bo'limlarga kirish ruxsatini beradi",
+  "settings.usersDesc":
+    "Admin yangi foydalanuvchi yaratadi va ularga bo'limlarga kirish ruxsatini beradi",
   "settings.newUser": "Yangi foydalanuvchi",
   "settings.editUser": "Foydalanuvchini tahrirlash",
   "settings.passwordHint": "(o'zgartirish uchun yozing)",
@@ -246,13 +251,15 @@ export const extraUz: Record<string, string> = {
   "settings.brandsDesc": "Yangi avtomobil brendlarini qo'shing yoki mavjudlarini tahrirlang",
   "settings.brandPh": "Masalan: BYD",
   "settings.deleteBrand": "Brendni o'chirish",
-  "settings.brandDeleteLinked": "\"{name}\" brendiga {n} ta tovar bog'langan. Baribir o'chirilsinmi?",
-  "settings.brandDelete": "\"{name}\" brendi o'chirilsinmi?",
+  "settings.brandDeleteLinked":
+    "\"{name}\" brendiga {n} ta tovar bog'langan. Baribir o'chirilsinmi?",
+  "settings.brandDelete": '"{name}" brendi o\'chirilsinmi?',
   "settings.branchesTitle": "Filiallar (omborlar)",
-  "settings.branchesDesc": "Tizimda istalgancha filial yarating — masalan 5–6 ta. Har bir filial yuqori paneldan tanlanadi.",
+  "settings.branchesDesc":
+    "Tizimda istalgancha filial yarating — masalan 5–6 ta. Har bir filial yuqori paneldan tanlanadi.",
   "settings.branchPh": "Masalan: Chilonzor filiali",
   "settings.deleteBranch": "Filialni o'chirish",
-  "settings.branchDelete": "\"{name}\" filiali o'chirilsinmi?",
+  "settings.branchDelete": '"{name}" filiali o\'chirilsinmi?',
 
   "expenses.deleteTitle": "Xarajatni o'chirish",
   "expenses.deleteDesc": "Bu xarajat yozuvi o'chirilsinmi?",
@@ -335,7 +342,8 @@ export const extraUz: Record<string, string> = {
   "barcode.tab.scan": "Skanerlash",
   "barcode.tab.search": "Qidirish",
   "barcode.tab.without": "Kodsiz tovarlar ({n})",
-  "barcode.scanHint": "USB skaner avtomatik kiritadi. Yoki karobka kodini qo'lda yozib Enter bosing.",
+  "barcode.scanHint":
+    "USB skaner avtomatik kiritadi. Yoki karobka kodini qo'lda yozib Enter bosing.",
   "barcode.scanPh": "Karobka kodini skanerlang yoki yozing (B7RTC, 32009…)",
   "barcode.lastScan": "Oxirgi skan:",
   "barcode.notFoundShort": "Topilmadi",
@@ -353,7 +361,7 @@ export const extraUz: Record<string, string> = {
   "categories.examplePh": "Masalan: Aksessuarlar",
   "categories.deleteDesc": "\"{name}\" kategoriyasi o'chirilsinmi? Bog'langan tovarlar qoladi.",
   "categories.deleteWithProducts": "Bu kategoriyada {n} ta tovar bor. Baribir o'chirilsinmi?",
-  "categories.deleteSimple": "\"{name}\" o'chirilsinmi?",
+  "categories.deleteSimple": '"{name}" o\'chirilsinmi?',
 
   "products.importNoProducts": "Faylda tovar topilmadi",
   "products.importError": "Import xatosi",
@@ -451,7 +459,8 @@ export const extraRu: Record<string, string> = {
   "products.form.namePh": "Например: тормозные колодки",
   "products.form.codeLabel": "Код (коробка / SKU) — необязательно",
   "products.form.codePh": "Например: B7RTC, 32009, 48RCT3303",
-  "products.form.codeHint": "Код с коробки или SKU. Латиница заглавными, цифры и символы допустимы.",
+  "products.form.codeHint":
+    "Код с коробки или SKU. Латиница заглавными, цифры и символы допустимы.",
   "products.form.unitBrand": "Бренд товара (необязательно)",
   "products.form.unitBrandPh": "Например: Bosch, Varta, Michelin",
   "products.form.amperage": "Ёмкость (Ач) *",
@@ -498,7 +507,8 @@ export const extraRu: Record<string, string> = {
   "sales.receiptShop": "Магазин автозапчастей",
   "sales.receiptCity": "Ташкент, Узбекистан",
   "sales.receiptNo": "Чек №:",
-  "sales.cancelDescLong": "Отменить эту продажу? Запасы будут восстановлены, долг клиента уменьшен.",
+  "sales.cancelDescLong":
+    "Отменить эту продажу? Запасы будут восстановлены, долг клиента уменьшен.",
   "sales.csvExported": "CSV загружен",
   "sales.itemsKinds": "({n} видов)",
   "sales.deleteTitle": "Удалить",

@@ -1,6 +1,10 @@
 import jwt from "jsonwebtoken";
 
-const JWT_SECRET = process.env.JWT_SECRET || "super_secret_key_for_autoerp_token_generation_2026";
+const JWT_SECRET = process.env.JWT_SECRET;
+
+if (!JWT_SECRET) {
+  console.error("❌ JWT_SECRET .env faylda topilmadi! Server to'g'ri ishlamasligi mumkin.");
+}
 
 export function authenticateToken(req, res, next) {
   const authHeader = req.headers["authorization"];

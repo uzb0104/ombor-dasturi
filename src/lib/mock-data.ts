@@ -1,11 +1,11 @@
 import { VEHICLE_BRANDS, CATEGORIES, type VehicleBrand, type Category } from "./constants";
 
 export type ProductAttributes = {
-  amperage?: string;   // Akkumulyator: masalan "60", "75"
-  voltage?: string;    // Akkumulyator: "12V"
-  tireSize?: string;   // Balon: "175/70 R13"
+  amperage?: string; // Akkumulyator: masalan "60", "75"
+  voltage?: string; // Akkumulyator: "12V"
+  tireSize?: string; // Balon: "175/70 R13"
   tireSeason?: string; // "Yozgi" | "Qishki" | "Universal"
-  unitBrand?: string;  // mahsulot brendi (Bosch, Varta, Michelin) — avtomobil brendidan farqli
+  unitBrand?: string; // mahsulot brendi (Bosch, Varta, Michelin) — avtomobil brendidan farqli
 };
 
 export type Product = {
@@ -87,38 +87,108 @@ export type IncomingStock = {
 };
 
 const NAMES_UZ = [
-  "Akmal Karimov", "Sardor Tursunov", "Jasur Saidov", "Otabek Nazarov", "Bobur Yusupov",
-  "Dilshod Ergashev", "Sherzod Rahimov", "Aziz Tojiev", "Murod Qodirov", "Komil Xolmatov",
-  "Ulug'bek Mansurov", "Davron Salimov", "Farrux Yo'ldoshev", "Rustam Ibragimov", "Sanjar Pulatov",
+  "Akmal Karimov",
+  "Sardor Tursunov",
+  "Jasur Saidov",
+  "Otabek Nazarov",
+  "Bobur Yusupov",
+  "Dilshod Ergashev",
+  "Sherzod Rahimov",
+  "Aziz Tojiev",
+  "Murod Qodirov",
+  "Komil Xolmatov",
+  "Ulug'bek Mansurov",
+  "Davron Salimov",
+  "Farrux Yo'ldoshev",
+  "Rustam Ibragimov",
+  "Sanjar Pulatov",
 ];
 
 const PARTS = [
-  "Tormoz kolodkasi", "Moy filtri", "Havo filtri", "Yoqilg'i filtri", "Akkumulyator 60Ah",
-  "Akkumulyator 75Ah", "Far chirog'i", "Old tormoz diski", "Orqa tormoz diski", "Amortizator",
-  "Sharikli podshipnik", "Generator", "Starter", "Radiator", "Termostat",
-  "Suv nasosi", "Yoqilg'i nasosi", "Sham (svecha)", "Bobina", "ABS sensori",
-  "Old fara", "Orqa fara", "Yon oyna", "Old bamper", "Orqa bamper",
-  "Eshik tutqichi", "Ko'zgu", "Shina 175/70 R13", "Shina 185/65 R15", "Shina 195/65 R15",
-  "Yoqilg'i nay", "Klapan qopqog'i", "Tirsak val", "Tarqatish kamari", "Rolik",
-  "Vodyanoy", "Karbyurator", "Forsunka", "Yog' poddoni", "G'ildirak gaykasi",
-  "Tormoz suyuqligi", "Antifriz 5L", "Motor moyi 4L", "Transmissiya moyi", "G'ildirak diski",
-  "Salon filtri", "Glushitel", "Katalizator", "Klaksiv", "Stop signal",
-  "Old qanot", "Kapot", "Bagaj qopqog'i",
+  "Tormoz kolodkasi",
+  "Moy filtri",
+  "Havo filtri",
+  "Yoqilg'i filtri",
+  "Akkumulyator 60Ah",
+  "Akkumulyator 75Ah",
+  "Far chirog'i",
+  "Old tormoz diski",
+  "Orqa tormoz diski",
+  "Amortizator",
+  "Sharikli podshipnik",
+  "Generator",
+  "Starter",
+  "Radiator",
+  "Termostat",
+  "Suv nasosi",
+  "Yoqilg'i nasosi",
+  "Sham (svecha)",
+  "Bobina",
+  "ABS sensori",
+  "Old fara",
+  "Orqa fara",
+  "Yon oyna",
+  "Old bamper",
+  "Orqa bamper",
+  "Eshik tutqichi",
+  "Ko'zgu",
+  "Shina 175/70 R13",
+  "Shina 185/65 R15",
+  "Shina 195/65 R15",
+  "Yoqilg'i nay",
+  "Klapan qopqog'i",
+  "Tirsak val",
+  "Tarqatish kamari",
+  "Rolik",
+  "Vodyanoy",
+  "Karbyurator",
+  "Forsunka",
+  "Yog' poddoni",
+  "G'ildirak gaykasi",
+  "Tormoz suyuqligi",
+  "Antifriz 5L",
+  "Motor moyi 4L",
+  "Transmissiya moyi",
+  "G'ildirak diski",
+  "Salon filtri",
+  "Glushitel",
+  "Katalizator",
+  "Klaksiv",
+  "Stop signal",
+  "Old qanot",
+  "Kapot",
+  "Bagaj qopqog'i",
 ];
 
 function rnd(min: number, max: number) {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
-function pick<T>(arr: readonly T[]): T { return arr[rnd(0, arr.length - 1)]!; }
-function id(prefix: string) { return `${prefix}_${Math.random().toString(36).slice(2, 9)}`; }
+function pick<T>(arr: readonly T[]): T {
+  return arr[rnd(0, arr.length - 1)]!;
+}
+function id(prefix: string) {
+  return `${prefix}_${Math.random().toString(36).slice(2, 9)}`;
+}
 
 export function generateMockData() {
   const suppliers: Supplier[] = Array.from({ length: 12 }, (_, i) => ({
     id: id("sup"),
-    name: ["Auto Parts MChJ", "Avto Markaz", "Sharq Avto", "Avto Center", "OL Trade",
-      "AutoExpress", "Avto Olam", "Master Avto", "Avto Plus", "Global Auto",
-      "Avto Lider", "Yangi Avto"][i] || `Yetkazib ${i+1}`,
-    phone: `+998 90 ${rnd(100,999)} ${rnd(10,99)} ${rnd(10,99)}`,
+    name:
+      [
+        "Auto Parts MChJ",
+        "Avto Markaz",
+        "Sharq Avto",
+        "Avto Center",
+        "OL Trade",
+        "AutoExpress",
+        "Avto Olam",
+        "Master Avto",
+        "Avto Plus",
+        "Global Auto",
+        "Avto Lider",
+        "Yangi Avto",
+      ][i] || `Yetkazib ${i + 1}`,
+    phone: `+998 90 ${rnd(100, 999)} ${rnd(10, 99)} ${rnd(10, 99)}`,
     address: `Toshkent, ${rnd(1, 12)}-ko'cha, ${rnd(1, 99)}-uy`,
     debt: rnd(0, 1) ? rnd(500_000, 25_000_000) : 0,
   }));
@@ -126,7 +196,7 @@ export function generateMockData() {
   const customers: Customer[] = Array.from({ length: 18 }, () => ({
     id: id("cust"),
     name: pick(NAMES_UZ),
-    phone: `+998 ${pick(["90","91","93","94","97","99"])} ${rnd(100,999)} ${rnd(10,99)} ${rnd(10,99)}`,
+    phone: `+998 ${pick(["90", "91", "93", "94", "97", "99"])} ${rnd(100, 999)} ${rnd(10, 99)} ${rnd(10, 99)}`,
     address: `Toshkent, ${rnd(1, 12)}-mavze`,
     vehicle: pick(VEHICLE_BRANDS),
     totalPurchases: rnd(1_000_000, 80_000_000),
@@ -134,16 +204,106 @@ export function generateMockData() {
   }));
 
   const employees: Employee[] = [
-    { id: id("emp"), name: "Akmal Karimov", phone: "+998 90 111 22 33", role: "Admin", salary: 8_000_000, advance: 2_000_000, hireDate: "2022-01-15", status: "Faol" },
-    { id: id("emp"), name: "Sardor Tursunov", phone: "+998 91 222 33 44", role: "Sotuvchi", salary: 4_500_000, advance: 1_000_000, hireDate: "2023-03-10", status: "Faol" },
-    { id: id("emp"), name: "Jasur Saidov", phone: "+998 93 333 44 55", role: "Sotuvchi", salary: 4_500_000, advance: 0, hireDate: "2023-06-22", status: "Faol" },
-    { id: id("emp"), name: "Otabek Nazarov", phone: "+998 94 444 55 66", role: "Omborchi", salary: 5_000_000, advance: 1_500_000, hireDate: "2022-11-01", status: "Faol" },
-    { id: id("emp"), name: "Bobur Yusupov", phone: "+998 97 555 66 77", role: "Omborchi", salary: 5_000_000, advance: 0, hireDate: "2024-01-15", status: "Faol" },
-    { id: id("emp"), name: "Dilshod Ergashev", phone: "+998 99 666 77 88", role: "Sotuvchi", salary: 4_500_000, advance: 500_000, hireDate: "2024-04-20", status: "Faol" },
-    { id: id("emp"), name: "Sherzod Rahimov", phone: "+998 90 777 88 99", role: "Sotuvchi", salary: 4_200_000, advance: 0, hireDate: "2024-08-05", status: "Faol" },
-    { id: id("emp"), name: "Aziz Tojiev", phone: "+998 91 888 99 00", role: "Omborchi", salary: 4_800_000, advance: 800_000, hireDate: "2023-09-12", status: "Faol" },
-    { id: id("emp"), name: "Murod Qodirov", phone: "+998 93 999 00 11", role: "Sotuvchi", salary: 4_500_000, advance: 0, hireDate: "2024-11-30", status: "Faol" },
-    { id: id("emp"), name: "Komil Xolmatov", phone: "+998 94 000 11 22", role: "Sotuvchi", salary: 4_300_000, advance: 1_200_000, hireDate: "2025-02-18", status: "Nofaol" },
+    {
+      id: id("emp"),
+      name: "Akmal Karimov",
+      phone: "+998 90 111 22 33",
+      role: "Admin",
+      salary: 8_000_000,
+      advance: 2_000_000,
+      hireDate: "2022-01-15",
+      status: "Faol",
+    },
+    {
+      id: id("emp"),
+      name: "Sardor Tursunov",
+      phone: "+998 91 222 33 44",
+      role: "Sotuvchi",
+      salary: 4_500_000,
+      advance: 1_000_000,
+      hireDate: "2023-03-10",
+      status: "Faol",
+    },
+    {
+      id: id("emp"),
+      name: "Jasur Saidov",
+      phone: "+998 93 333 44 55",
+      role: "Sotuvchi",
+      salary: 4_500_000,
+      advance: 0,
+      hireDate: "2023-06-22",
+      status: "Faol",
+    },
+    {
+      id: id("emp"),
+      name: "Otabek Nazarov",
+      phone: "+998 94 444 55 66",
+      role: "Omborchi",
+      salary: 5_000_000,
+      advance: 1_500_000,
+      hireDate: "2022-11-01",
+      status: "Faol",
+    },
+    {
+      id: id("emp"),
+      name: "Bobur Yusupov",
+      phone: "+998 97 555 66 77",
+      role: "Omborchi",
+      salary: 5_000_000,
+      advance: 0,
+      hireDate: "2024-01-15",
+      status: "Faol",
+    },
+    {
+      id: id("emp"),
+      name: "Dilshod Ergashev",
+      phone: "+998 99 666 77 88",
+      role: "Sotuvchi",
+      salary: 4_500_000,
+      advance: 500_000,
+      hireDate: "2024-04-20",
+      status: "Faol",
+    },
+    {
+      id: id("emp"),
+      name: "Sherzod Rahimov",
+      phone: "+998 90 777 88 99",
+      role: "Sotuvchi",
+      salary: 4_200_000,
+      advance: 0,
+      hireDate: "2024-08-05",
+      status: "Faol",
+    },
+    {
+      id: id("emp"),
+      name: "Aziz Tojiev",
+      phone: "+998 91 888 99 00",
+      role: "Omborchi",
+      salary: 4_800_000,
+      advance: 800_000,
+      hireDate: "2023-09-12",
+      status: "Faol",
+    },
+    {
+      id: id("emp"),
+      name: "Murod Qodirov",
+      phone: "+998 93 999 00 11",
+      role: "Sotuvchi",
+      salary: 4_500_000,
+      advance: 0,
+      hireDate: "2024-11-30",
+      status: "Faol",
+    },
+    {
+      id: id("emp"),
+      name: "Komil Xolmatov",
+      phone: "+998 94 000 11 22",
+      role: "Sotuvchi",
+      salary: 4_300_000,
+      advance: 1_200_000,
+      hireDate: "2025-02-18",
+      status: "Nofaol",
+    },
   ];
 
   const products: Product[] = Array.from({ length: 56 }, (_, i) => {
@@ -176,7 +336,7 @@ export function generateMockData() {
       id: id("sale"),
       date: new Date(now - rnd(0, 30) * 86400000 - rnd(0, 86400000)).toISOString(),
       customerId: pick(customers).id,
-      sellerId: pick(employees.filter(e => e.role === "Sotuvchi")).id,
+      sellerId: pick(employees.filter((e) => e.role === "Sotuvchi")).id,
       items: [{ productId: item.id, qty, price, buyPrice: item.buyPrice }],
       discount: 0,
       paymentType: pick(["Naqd", "Karta", "Qarz"] as const),
@@ -186,14 +346,24 @@ export function generateMockData() {
   });
 
   const expenses: Expense[] = [
-    ...["Ish haqi","Soliq","Transport","Elektr","Ombor ijarasi","Ta'mirlash","Internet","Boshqa"]
-      .flatMap(cat => Array.from({length: 3}, () => ({
+    ...[
+      "Ish haqi",
+      "Soliq",
+      "Transport",
+      "Elektr",
+      "Ombor ijarasi",
+      "Ta'mirlash",
+      "Internet",
+      "Boshqa",
+    ].flatMap((cat) =>
+      Array.from({ length: 3 }, () => ({
         id: id("exp"),
         date: new Date(now - rnd(0, 60) * 86400000).toISOString(),
         category: cat,
         amount: rnd(200_000, 8_000_000),
         note: `${cat} xarajati`,
-      }))),
+      })),
+    ),
   ];
 
   const incoming: IncomingStock[] = Array.from({ length: 20 }, () => {

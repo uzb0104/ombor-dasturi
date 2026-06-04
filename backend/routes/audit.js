@@ -1,5 +1,13 @@
 import express from "express";
-import { isSupabaseConfigured, supabaseClient, readLocalDb, writeLocalDb, getCached, setCached, clearCached } from "../lib/db.js";
+import {
+  isSupabaseConfigured,
+  supabaseClient,
+  readLocalDb,
+  writeLocalDb,
+  getCached,
+  setCached,
+  clearCached,
+} from "../lib/db.js";
 import { toFeAuditLog, toDbAuditLog } from "../lib/mappers.js";
 import { authenticateToken } from "../middleware/auth.js";
 
@@ -12,9 +20,13 @@ router.get("/", authenticateToken, async (req, res) => {
     if (cached) return res.json(cached);
 
     if (isSupabaseConfigured) {
-      const { data, error } = await supabaseClient.from("audit_logs").select("*").order("ts", { ascending: false }).limit(2000);
+      const { data, error } = await supabaseClient
+        .from("audit_logs")
+        .select("*")
+        .order("ts", { ascending: false })
+        .limit(2000);
       if (error) throw error;
-      
+
       const mapped = (data || []).map(toFeAuditLog);
       await setCached(cacheKey, mapped);
       res.json(mapped);
@@ -32,9 +44,13 @@ router.post("/", authenticateToken, async (req, res) => {
   try {
     if (isSupabaseConfigured) {
       const dbObj = toDbAuditLog(log);
-      const { data, error } = await supabaseClient.from("audit_logs").insert([dbObj]).select().single();
+      const { data, error } = await supabaseClient
+        .from("audit_logs")
+        .insert([dbObj])
+        .select()
+        .single();
       if (error) throw error;
-      
+
       await clearCached("cache:audit_logs");
       res.json(toFeAuditLog(data));
     } else {

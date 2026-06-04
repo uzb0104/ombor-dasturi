@@ -6,8 +6,9 @@ export const apiLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   message: {
-    error: "Haddan tashqari ko'p so'rov yuborildi. Iltimos, 15 daqiqadan so'ng qayta urinib ko'ring."
-  }
+    error:
+      "Haddan tashqari ko'p so'rov yuborildi. Iltimos, 15 daqiqadan so'ng qayta urinib ko'ring.",
+  },
 });
 
 export const authLimiter = rateLimit({
@@ -16,6 +17,6 @@ export const authLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   message: {
-    error: "Kirish urinishlari ko'payib ketdi. Iltimos, 15 daqiqadan so'ng qayta urinib ko'ring."
-  }
+    error: "Kirish urinishlari ko'payib ketdi. Iltimos, 15 daqiqadan so'ng qayta urinib ko'ring.",
+  },
 });

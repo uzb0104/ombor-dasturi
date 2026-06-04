@@ -17,7 +17,12 @@ const supabaseKey = process.env.SUPABASE_KEY;
 export let isSupabaseConfigured = false;
 export let supabaseClient = null;
 
-if (supabaseUrl && supabaseKey && !supabaseUrl.includes("your-supabase-project") && supabaseKey !== "your-supabase-anon-key-here") {
+if (
+  supabaseUrl &&
+  supabaseKey &&
+  !supabaseUrl.includes("your-supabase-project") &&
+  supabaseKey !== "your-supabase-anon-key-here"
+) {
   try {
     supabaseClient = createClient(supabaseUrl, supabaseKey);
     isSupabaseConfigured = true;
@@ -28,7 +33,9 @@ if (supabaseUrl && supabaseKey && !supabaseUrl.includes("your-supabase-project")
 }
 
 if (!isSupabaseConfigured) {
-  console.warn("⚠️ DIQQAT: Supabase sozlanmagan! Tizim avtomatik ravishda MAHALLIY JSON DATABASE rejimida ishlamoqda.");
+  console.warn(
+    "⚠️ DIQQAT: Supabase sozlanmagan! Tizim avtomatik ravishda MAHALLIY JSON DATABASE rejimida ishlamoqda.",
+  );
   console.warn(`📂 Ma'lumotlar saqlanish fayli: ${DB_JSON_PATH}`);
 }
 
@@ -41,12 +48,34 @@ const initialJsonDb = {
   sales: [],
   expenses: [],
   incoming: [],
-  categories: ["Dvigatel", "Tormoz tizimi", "Elektr", "Shinalar (Balon)", "Akkumulyator", "Filtrlar", "Moy", "Kuzov qismlari", "Podveska"],
-  vehicle_brands: ["Shineray T30", "JAC", "FAW", "ISUZU", "Chevrolet", "Hyundai", "Kia", "Toyota", "Nexia", "Damas", "Labo"],
+  categories: [
+    "Dvigatel",
+    "Tormoz tizimi",
+    "Elektr",
+    "Shinalar (Balon)",
+    "Akkumulyator",
+    "Filtrlar",
+    "Moy",
+    "Kuzov qismlari",
+    "Podveska",
+  ],
+  vehicle_brands: [
+    "Shineray T30",
+    "JAC",
+    "FAW",
+    "ISUZU",
+    "Chevrolet",
+    "Hyundai",
+    "Kia",
+    "Toyota",
+    "Nexia",
+    "Damas",
+    "Labo",
+  ],
   branches: ["Asosiy ombor", "Filial 1", "Filial 2"],
   debt_payments: [],
   audit_logs: [],
-  price_history: []
+  price_history: [],
 };
 
 export function readLocalDb() {
@@ -83,8 +112,8 @@ try {
           return new Error("Redis reconnection retries exhausted");
         }
         return Math.min(retries * 100, 1000);
-      }
-    }
+      },
+    },
   });
   redisClient.on("error", (err) => {
     if (isRedisConnected) {
@@ -97,7 +126,9 @@ try {
     console.log("🚀 Redis kesh tizimi muvaffaqiyatli ulandi!");
   });
   redisClient.connect().catch((error) => {
-    console.log("⚠️ Redis serveri topilmadi. Tizim tezkor ishlashi uchun vaqtinchalik mahalliy tezkor xotira (In-Memory Cache) ishlatiladi.");
+    console.log(
+      "⚠️ Redis serveri topilmadi. Tizim tezkor ishlashi uchun vaqtinchalik mahalliy tezkor xotira (In-Memory Cache) ishlatiladi.",
+    );
   });
 } catch (error) {
   console.log("⚠️ Redis ulanishida xatolik, mahalliy tezkor xotira ishlatiladi:", error.message);

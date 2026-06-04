@@ -4,7 +4,13 @@ import dotenv from "dotenv";
 import bcrypt from "bcryptjs";
 
 // Import local utilities and databases
-import { isSupabaseConfigured, supabaseClient, readLocalDb, writeLocalDb, isRedisConnected } from "./lib/db.js";
+import {
+  isSupabaseConfigured,
+  supabaseClient,
+  readLocalDb,
+  writeLocalDb,
+  isRedisConnected,
+} from "./lib/db.js";
 import { apiLimiter } from "./middleware/rateLimiter.js";
 
 // Import router modules
@@ -28,22 +34,24 @@ const PORT = process.env.PORT || 5001;
 
 // CORS sozlamalari (Faza 1: Xavfsizlik bo'yicha cheklov)
 const allowedOrigins = [
-  "http://localhost:5173", 
+  "http://localhost:5173",
   "http://127.0.0.1:5173",
   // Kelajakda qo'shimcha production domenlar qo'shilishi mumkin
 ];
 
-app.use(cors({
-  origin: function (origin, callback) {
-    // Brauzer bo'lmagan so'rovlar (masalan, curl, postman yoki mobil app) yoki ruxsat etilgan origins
-    if (!origin || allowedOrigins.indexOf(origin) !== -1) {
-      callback(null, true);
-    } else {
-      callback(new Error("CORS siyosati tomonidan bloklandi"));
-    }
-  },
-  credentials: true
-}));
+app.use(
+  cors({
+    origin: function (origin, callback) {
+      // Brauzer bo'lmagan so'rovlar (masalan, curl, postman yoki mobil app) yoki ruxsat etilgan origins
+      if (!origin || allowedOrigins.indexOf(origin) !== -1) {
+        callback(null, true);
+      } else {
+        callback(new Error("CORS siyosati tomonidan bloklandi"));
+      }
+    },
+    credentials: true,
+  }),
+);
 
 app.use(express.json());
 
@@ -54,7 +62,7 @@ app.use("/api", apiLimiter);
 async function ensureDefaultAdmin() {
   const defaultEmail = "admin@autoerp.uz";
   const defaultPasswordHash = bcrypt.hashSync("admin123", 10);
-  
+
   if (isSupabaseConfigured) {
     try {
       const { data: existing } = await supabaseClient
@@ -92,13 +100,15 @@ async function ensureDefaultAdmin() {
     try {
       const db = readLocalDb();
       if (!db.app_users) db.app_users = [];
-      
-      const existing = db.app_users.find(u => u.email.toLowerCase() === defaultEmail.toLowerCase());
+
+      const existing = db.app_users.find(
+        (u) => u.email.toLowerCase() === defaultEmail.toLowerCase(),
+      );
       if (existing) {
         console.log("✅ Admin foydalanuvchi Mahalliy DB da mavjud");
         return;
       }
-      
+
       db.app_users.push({
         id: "u_admin",
         name: "Bosh admin",
@@ -106,7 +116,7 @@ async function ensureDefaultAdmin() {
         password: defaultPasswordHash,
         role: "Admin",
         permissions: [],
-        active: true
+        active: true,
       });
       writeLocalDb(db);
       console.log("✅ Bosh admin Mahalliy DB ga qo'shildi (admin@autoerp.uz / admin123)");

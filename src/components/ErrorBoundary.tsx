@@ -53,7 +53,8 @@ export class ErrorBoundary extends Component<Props, State> {
             <div className="space-y-1">
               <h2 className="text-lg font-bold">Kutilmagan xatolik yuz berdi</h2>
               <p className="text-xs text-muted-foreground">
-                Dastur ishlashida xatolik aniqlandi. Iltimos, sahifani yangilab ko'ring yoki bosh sahifaga qayting.
+                Dastur ishlashida xatolik aniqlandi. Iltimos, sahifani yangilab ko'ring yoki bosh
+                sahifaga qayting.
               </p>
             </div>
 
@@ -64,7 +65,12 @@ export class ErrorBoundary extends Component<Props, State> {
             )}
 
             <div className="grid grid-cols-2 gap-3 w-full mt-2">
-              <Button variant="outline" size="sm" onClick={this.handleReset} className="text-xs h-9">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={this.handleReset}
+                className="text-xs h-9"
+              >
                 Bosh sahifa
               </Button>
               <Button size="sm" onClick={this.handleReload} className="text-xs h-9">

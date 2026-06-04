@@ -5,7 +5,8 @@ export function formatApiError(err: unknown): string {
   if (err instanceof Error) {
     const msg = err.message;
     if (msg.includes("foreign key constraint")) {
-      if (msg.includes("customers_vehicle")) return "Avtomobil brendi ro'yxatda yo'q. Sozlamalardan brend qo'shing.";
+      if (msg.includes("customers_vehicle"))
+        return "Avtomobil brendi ro'yxatda yo'q. Sozlamalardan brend qo'shing.";
       if (msg.includes("products_vehicle")) return "Tovar brendi noto'g'ri. Ro'yxatdan tanlang.";
       if (msg.includes("products_category")) return "Kategoriya noto'g'ri. Ro'yxatdan tanlang.";
       if (msg.includes("supplier")) return "Yetkazib beruvchi topilmadi.";
