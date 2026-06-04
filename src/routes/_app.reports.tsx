@@ -6,11 +6,13 @@ import { formatSom } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
 import { Download, FileText, TrendingUp, Wallet, Receipt, Printer } from "lucide-react";
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid, BarChart, Bar } from "recharts";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { toast } from "sonner";
 import { useT } from "@/lib/i18n";
 import { paymentLabel } from "@/lib/i18n/helpers";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { priceHistoryApi } from "@/lib/api";
+import { Badge } from "@/components/ui/badge";
 
 export const Route = createFileRoute("/_app/reports")({ component: ReportsPage });
 
@@ -18,6 +20,13 @@ function ReportsPage() {
   const t = useT();
   const { sales, expenses, products, customers } = useStore();
   const [printOpen, setPrintOpen] = useState(false);
+  const [priceHistory, setPriceHistory] = useState<any[]>([]);
+
+  useEffect(() => {
+    priceHistoryApi.getAll()
+      .then(data => setPriceHistory(data))
+      .catch(() => {});
+  }, []);
 
   const totalSales = sales.reduce((a, s) => a + s.total, 0);
   const totalProfit = sales.reduce((a, s) => a + s.profit, 0);
@@ -288,6 +297,56 @@ function ReportsPage() {
               <Bar dataKey="value" fill="var(--chart-1)" radius={[8,8,0,0]} />
             </BarChart>
           </ResponsiveContainer>
+        </CardContent>
+      </Card>
+
+      <Card className="rounded-2xl card-elevated border-border/60">
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <TrendingUp className="h-4 w-4 text-primary" /> Narx o'zgarishlar tarixi
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="overflow-x-auto rounded-xl border border-border/60 text-xs">
+            <table className="w-full text-left">
+              <thead>
+                <tr className="bg-muted/40 border-b font-bold text-muted-foreground">
+                  <th className="p-3">Sana</th>
+                  <th className="p-3">Tovar nomi</th>
+                  <th className="p-3">Tur</th>
+                  <th className="p-3 text-right">Eski narx</th>
+                  <th className="p-3 text-right">Yangi narx</th>
+                  <th className="p-3">Kim tomonidan</th>
+                </tr>
+              </thead>
+              <tbody>
+                {priceHistory.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="text-center py-6 text-muted-foreground">
+                      Narx o'zgarishlari topilmadi.
+                    </td>
+                  </tr>
+                ) : (
+                  priceHistory.slice(0, 10).map((h) => (
+                    <tr key={h.id} className="border-b last:border-0 hover:bg-muted/30">
+                      <td className="p-3 tabular-nums text-muted-foreground">
+                        {new Date(h.createdAt).toLocaleDateString("uz-UZ", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}
+                      </td>
+                      <td className="p-3 font-semibold text-foreground">{h.productName}</td>
+                      <td className="p-3">
+                        <Badge variant="outline" className="text-[10px]">
+                          {h.field === "buy_price" ? "Kirim narx" : "Sotish narx"}
+                        </Badge>
+                      </td>
+                      <td className="p-3 text-right tabular-nums text-muted-foreground">{formatSom(h.oldValue || 0)}</td>
+                      <td className="p-3 text-right tabular-nums font-bold text-foreground">{formatSom(h.newValue)}</td>
+                      <td className="p-3 text-muted-foreground">{h.changedByName}</td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
         </CardContent>
       </Card>
     </div>

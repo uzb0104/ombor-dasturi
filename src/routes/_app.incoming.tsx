@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
-import { Trash2, Plus, Check, ChevronsUpDown } from "lucide-react";
+import { Trash2, Plus, Check, ChevronsUpDown, Edit } from "lucide-react";
 import { toast } from "sonner";
 import { useT } from "@/lib/i18n";
 import { useMemo, useState } from "react";
@@ -22,12 +22,13 @@ export const Route = createFileRoute("/_app/incoming")({ component: IncomingPage
 
 function IncomingPage() {
   const t = useT();
-  const { incoming, products, suppliers, addIncoming, deleteIncoming } = useStore();
+  const { incoming, products, suppliers, addIncoming, updateIncoming, deleteIncoming } = useStore();
   const { confirm, confirmNode } = useConfirm();
   const sel = useSelection();
   
   // Dialog form state
   const [open, setOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [invoice, setInvoice] = useState("");
   const [supplierId, setSupplierId] = useState("");
   const [productId, setProductId] = useState("");
@@ -51,6 +52,26 @@ function IncomingPage() {
     }
   };
 
+  const openNew = () => {
+    setEditingId(null);
+    setInvoice("");
+    setSupplierId("");
+    setProductId("");
+    setQty(1);
+    setBuyPrice(0);
+    setOpen(true);
+  };
+
+  const openEdit = (i: any) => {
+    setEditingId(i.id);
+    setInvoice(i.invoice || "");
+    setSupplierId(i.supplierId || "");
+    setProductId(i.productId || "");
+    setQty(i.qty || 1);
+    setBuyPrice(i.buyPrice || 0);
+    setOpen(true);
+  };
+
   const removeOne = async (id: string) => {
     const ok = await confirm({ title: t("incoming.deleteTitle"), description: t("incoming.deleteDesc"), destructive: true, confirmText: t("common.delete") });
     if (ok) { deleteIncoming(id); toast.success(t("toast.deleted")); }
@@ -71,17 +92,28 @@ function IncomingPage() {
     if (qty <= 0) { toast.error(t("toast.qtyMin")); return; }
     if (buyPrice < 0) { toast.error(t("incoming.priceNegative")); return; }
 
-    addIncoming({
-      id: `inc_${Math.random().toString(36).slice(2, 9)}`,
-      date: new Date().toISOString(),
-      supplierId,
-      productId,
-      qty,
-      buyPrice,
-      invoice: invoice.trim(),
-    });
+    if (editingId) {
+      updateIncoming(editingId, {
+        supplierId,
+        productId,
+        qty,
+        buyPrice,
+        invoice: invoice.trim(),
+      });
+      toast.success("Kirim muvaffaqiyatli tahrirlandi");
+    } else {
+      addIncoming({
+        id: `inc_${Math.random().toString(36).slice(2, 9)}`,
+        date: new Date().toISOString(),
+        supplierId,
+        productId,
+        qty,
+        buyPrice,
+        invoice: invoice.trim(),
+      });
+      toast.success(t("incoming.saved"));
+    }
 
-    toast.success(t("incoming.saved"));
     setOpen(false);
     // reset form
     setInvoice("");
@@ -89,6 +121,7 @@ function IncomingPage() {
     setProductId("");
     setQty(1);
     setBuyPrice(0);
+    setEditingId(null);
   };
 
   return (
@@ -98,18 +131,19 @@ function IncomingPage() {
         title={t("incoming.title")}
         subtitle={t("incoming.subtitle", { n: incoming.length })}
         actions={
-          <Button onClick={() => setOpen(true)}>
+          <Button onClick={openNew}>
             <Plus className="h-4 w-4 mr-1" /> {t("incoming.new")}
           </Button>
         }
       />
 
-      {/* New Incoming Stock Dialog */}
+      {/* New / Edit Incoming Stock Dialog */}
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-md bg-card border rounded-2xl shadow-elevated p-6">
           <DialogHeader>
             <DialogTitle className="text-xl font-bold flex items-center gap-2">
-              <Plus className="h-5 w-5 text-primary" /> {t("incoming.newFull")}
+              {editingId ? <Edit className="h-5 w-5 text-primary" /> : <Plus className="h-5 w-5 text-primary" />}
+              {editingId ? "Kirimni tahrirlash" : t("incoming.newFull")}
             </DialogTitle>
           </DialogHeader>
 
@@ -300,9 +334,14 @@ function IncomingPage() {
                       <TableCell className="hidden sm:table-cell text-right tabular-nums text-sm">{formatSom(i.buyPrice)}</TableCell>
                       <TableCell className="text-right tabular-nums font-bold text-foreground">{formatSom(i.buyPrice * i.qty)}</TableCell>
                       <TableCell className="text-right pr-4">
-                        <Button variant="ghost" size="icon" onClick={() => removeOne(i.id)} className="h-8 w-8 hover:bg-destructive/10">
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
+                        <div className="flex justify-end gap-1">
+                          <Button variant="ghost" size="icon" onClick={() => openEdit(i)} className="h-8 w-8 hover:bg-muted">
+                            <Edit className="h-4 w-4 text-muted-foreground" />
+                          </Button>
+                          <Button variant="ghost" size="icon" onClick={() => removeOne(i.id)} className="h-8 w-8 hover:bg-destructive/10">
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   );

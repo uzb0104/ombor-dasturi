@@ -22,6 +22,7 @@ export type Role = (typeof ROLES)[number];
 
 export const NAV = [
   { to: "/dashboard", labelKey: "nav.dashboard", icon: "LayoutDashboard" },
+  { to: "/pos", labelKey: "nav.pos", icon: "Smartphone" },
   { to: "/inventory", labelKey: "nav.inventory", icon: "Warehouse" },
   { to: "/products", labelKey: "nav.products", icon: "Package" },
   { to: "/categories", labelKey: "nav.categories", icon: "Tags" },

@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
-import { Plus, ShoppingCart, TrendingUp, Printer, Download, CreditCard, UserPlus, Check, ChevronsUpDown, Trash2, Minus, FileDown } from "lucide-react";
+import { Plus, ShoppingCart, TrendingUp, Printer, Download, CreditCard, UserPlus, Check, ChevronsUpDown, Trash2, Minus, FileDown, Edit } from "lucide-react";
 import { useT } from "@/lib/i18n";
 import { paymentLabel } from "@/lib/i18n/helpers";
 import { downloadSaleReceiptPdf } from "@/lib/receipt-pdf";
@@ -55,9 +55,10 @@ const emptyForm = (): Form => ({
 
 function SalesPage() {
   const t = useT();
-  const { sales, customers, products, employees, vehicleBrands, addSale, deleteSale, addCustomer } = useStore();
+  const { sales, customers, products, employees, vehicleBrands, addSale, updateSale, deleteSale, addCustomer } = useStore();
   const [period, setPeriod] = useState("all");
   const [open, setOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [mode, setMode] = useState<Mode>("cash");
   const [form, setForm] = useState<Form>(emptyForm());
 
@@ -172,9 +173,40 @@ function SalesPage() {
   };
 
   const openDialog = (m: Mode) => {
+    setEditingId(null);
     setMode(m);
     setForm({ ...emptyForm(), paymentType: m === "credit" ? "Qarz" : "Naqd" });
     setCart([]);
+    setSelectedProductId("");
+    setSelectedQty(1);
+    setSelectedPrice(0);
+    setOpen(true);
+  };
+
+  const openEdit = (s: any) => {
+    setEditingId(s.id);
+    setMode(s.paymentType === "Qarz" ? "credit" : "cash");
+    setForm({
+      vehicle: s.vehicle || "",
+      discount: s.discount || 0,
+      paymentType: s.paymentType,
+      customerId: s.customerId || "",
+      custName: "",
+      custPhone: "",
+      custAddress: "",
+    });
+    
+    const cartItems = s.items.map((item: any) => {
+      const p = products.find(prod => prod.id === item.productId);
+      return {
+        productId: item.productId,
+        name: p?.name || "Noma'lum tovar",
+        qty: item.qty,
+        price: item.price,
+        buyPrice: item.buyPrice || p?.buyPrice || 0,
+      };
+    });
+    setCart(cartItems);
     setSelectedProductId("");
     setSelectedQty(1);
     setSelectedPrice(0);
@@ -214,31 +246,48 @@ function SalesPage() {
     const itemsProfit = cart.reduce((acc, item) => acc + (item.price - item.buyPrice) * item.qty, 0);
     const netProfit = itemsProfit - form.discount;
 
-    const newSale = {
-      id: `sale_${Math.random().toString(36).slice(2, 9)}`,
-      date: new Date().toISOString(),
-      customerId,
-      sellerId: (employees && employees.find(e => e && e.role === "Sotuvchi")?.id) || (employees && employees[0] ? employees[0].id : ""),
-      items: cart.map(item => ({
-        productId: item.productId,
-        qty: item.qty,
-        price: item.price,
-        buyPrice: item.buyPrice,
-      })),
-      discount: form.discount,
-      paymentType: form.paymentType,
-      total: netTotal,
-      profit: netProfit,
-    };
+    if (editingId) {
+      updateSale(editingId, {
+        customerId,
+        items: cart.map(item => ({
+          productId: item.productId,
+          qty: item.qty,
+          price: item.price,
+          buyPrice: item.buyPrice,
+        })),
+        discount: form.discount,
+        paymentType: form.paymentType,
+        total: netTotal,
+        profit: netProfit,
+      });
+      toast.success("Sotuv muvaffaqiyatli tahrirlandi");
+    } else {
+      const newSale = {
+        id: `sale_${Math.random().toString(36).slice(2, 9)}`,
+        date: new Date().toISOString(),
+        customerId,
+        sellerId: (employees && employees.find(e => e && e.role === "Sotuvchi")?.id) || (employees && employees[0] ? employees[0].id : ""),
+        items: cart.map(item => ({
+          productId: item.productId,
+          qty: item.qty,
+          price: item.price,
+          buyPrice: item.buyPrice,
+        })),
+        discount: form.discount,
+        paymentType: form.paymentType,
+        total: netTotal,
+        profit: netProfit,
+      };
 
-    addSale(newSale);
-    toast.success(mode === "credit" ? t("sales.creditAdded") : t("sales.saleAdded"));
+      addSale(newSale);
+      toast.success(mode === "credit" ? t("sales.creditAdded") : t("sales.saleAdded"));
+      setSelectedSale(newSale);
+    }
+    
     setOpen(false);
     setCart([]);
     setForm(emptyForm());
-
-    // Open receipt modal for the new sale
-    setSelectedSale(newSale);
+    setEditingId(null);
   };
 
   const handleDelete = async (id: string) => {
@@ -294,7 +343,7 @@ function SalesPage() {
           <DialogHeader>
             <DialogTitle className="text-xl font-bold flex items-center gap-2">
               <ShoppingCart className="h-5 w-5 text-primary animate-pulse" />
-              {mode === "credit" ? t("sales.creditSale") : t("sales.new")}
+              {editingId ? "Sotuvni tahrirlash" : mode === "credit" ? t("sales.creditSale") : t("sales.new")}
             </DialogTitle>
           </DialogHeader>
 
@@ -887,6 +936,15 @@ function SalesPage() {
                             title={t("sales.viewReceipt")}
                           >
                             <Printer className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                            onClick={() => openEdit(s)}
+                            title="Tahrirlash"
+                          >
+                            <Edit className="h-4 w-4" />
                           </Button>
                           <Button
                             variant="ghost"

@@ -5,6 +5,7 @@ import {
 import { Toaster } from "@/components/ui/sonner";
 import { useLang } from "@/lib/i18n";
 import { translate } from "@/lib/i18n/translations";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 function useRootT() {
   const rawLang = useLang((s) => s.lang);
@@ -50,9 +51,11 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   return (
-    <QueryClientProvider client={queryClient}>
-      <Outlet />
-      <Toaster position="top-right" richColors />
-    </QueryClientProvider>
+    <ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <Outlet />
+        <Toaster position="top-right" richColors />
+      </QueryClientProvider>
+    </ErrorBoundary>
   );
 }

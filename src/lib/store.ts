@@ -95,6 +95,7 @@ type State = {
   deleteEmployee: (id: string) => void;
 
   addSale: (s: Sale) => void;
+  updateSale: (id: string, updates: Partial<Sale>) => void;
   deleteSale: (id: string) => void;
 
   addExpense: (e: Expense) => void;
@@ -102,6 +103,7 @@ type State = {
   deleteExpense: (id: string) => void;
 
   addIncoming: (i: IncomingStock) => void;
+  updateIncoming: (id: string, updates: Partial<IncomingStock>) => void;
   deleteIncoming: (id: string) => void;
 
   addCategory: (c: string) => void;
@@ -186,6 +188,7 @@ export const useStore = create<State>()(
             products, customers, suppliers, employees,
             sales, expenses, incoming, debtPayments,
             categories, vehicleBrands, branches, auditLog,
+            appUsers,
           ] = await Promise.all([
             productsApi.getAll().catch(() => get().products),
             customersApi.getAll().catch(() => get().customers),
@@ -199,11 +202,13 @@ export const useStore = create<State>()(
             vehicleBrandsApi.getAll().catch(() => get().vehicleBrands),
             branchesApi.getAll().catch(() => get().branches),
             auditApi.getAll().catch(() => get().auditLog),
+            usersApi.getAll().catch(() => get().appUsers),
           ]);
           set({
             products, customers, suppliers, employees,
             sales, expenses, incoming, debtPayments,
             categories, vehicleBrands, branches, auditLog,
+            appUsers,
             _loading: false, _initialized: true,
           });
         } catch (err) {
@@ -364,6 +369,54 @@ export const useStore = create<State>()(
         syncApi(salesApi.create(s), { onFail: resync });
         get().logAudit({ action: "create", entity: "sale", entityId: s.id, summary: `Sotuv: ${s.total.toLocaleString()} so'm (${s.paymentType})` });
       },
+      updateSale: (id, updates) => {
+        const oldSale = get().sales.find(x => x.id === id);
+        if (!oldSale) return;
+
+        const newSale = { ...oldSale, ...updates };
+
+        // 1. Tovar zaxiralarini to'g'rilash (optimistik)
+        let products = get().products;
+        // Eski zaxiralarni tiklash
+        products = products.map(p => {
+          const oldItem = oldSale.items.find(oi => oi.productId === p.id);
+          return oldItem ? { ...p, quantity: p.quantity + oldItem.qty } : p;
+        });
+        // Yangi zaxiralarni chegirish
+        const activeItems = newSale.items;
+        products = products.map(p => {
+          const newItem = activeItems.find(ni => ni.productId === p.id);
+          return newItem ? { ...p, quantity: Math.max(0, p.quantity - newItem.qty) } : p;
+        });
+
+        // 2. Mijoz qarzini va xaridini to'g'rilash
+        let customers = get().customers;
+        // Eski hisoblarni bekor qilish
+        if (oldSale.customerId) {
+          customers = customers.map(c => {
+            if (c.id !== oldSale.customerId) return c;
+            const oldDebtDelta = oldSale.paymentType === "Qarz" ? oldSale.total : 0;
+            return { ...c, debt: Math.max(0, c.debt - oldDebtDelta), totalPurchases: Math.max(0, c.totalPurchases - oldSale.total) };
+          });
+        }
+        // Yangi hisoblarni qo'shish
+        if (newSale.customerId) {
+          customers = customers.map(c => {
+            if (c.id !== newSale.customerId) return c;
+            const newDebtDelta = newSale.paymentType === "Qarz" ? newSale.total : 0;
+            return { ...c, debt: c.debt + newDebtDelta, totalPurchases: c.totalPurchases + newSale.total };
+          });
+        }
+
+        set({
+          sales: get().sales.map(x => x.id === id ? newSale : x),
+          products,
+          customers
+        });
+
+        syncApi(salesApi.update(id, updates), { onFail: resync });
+        get().logAudit({ action: "update", entity: "sale", entityId: id, summary: `Sotuv yangilandi: ${newSale.total.toLocaleString()} so'm` });
+      },
       deleteSale: (id) => {
         const s = get().sales.find(x => x.id === id);
         if (!s) return;
@@ -402,16 +455,74 @@ export const useStore = create<State>()(
       // ─── KIRIMLAR ───
       addIncoming: (i) => {
         const products = get().products.map(p => p.id === i.productId ? { ...p, quantity: p.quantity + i.qty } : p);
-        set({ incoming: [i, ...get().incoming], products });
+        const suppliers = get().suppliers.map(s => {
+          if (i.supplierId && s.id === i.supplierId) {
+            return { ...s, debt: (s.debt || 0) + (i.qty * i.buyPrice) };
+          }
+          return s;
+        });
+        set({ incoming: [i, ...get().incoming], products, suppliers });
         syncApi(incomingApi.create(i), { onFail: resync });
         const prod = products.find(p => p.id === i.productId);
         get().logAudit({ action: "create", entity: "incoming", entityId: i.id, summary: `Kirim: ${prod?.name || ""} +${i.qty} dona` });
+      },
+      updateIncoming: (id, updates) => {
+        const oldInc = get().incoming.find(x => x.id === id);
+        if (!oldInc) return;
+
+        const newInc = { ...oldInc, ...updates };
+
+        // 1. Tovar zaxiralarini to'g'rilash (optimistik)
+        let products = get().products;
+        if (oldInc.productId === newInc.productId) {
+          const qtyDiff = newInc.qty - oldInc.qty;
+          products = products.map(p => p.id === newInc.productId ? { ...p, quantity: Math.max(0, p.quantity + qtyDiff) } : p);
+        } else {
+          products = products.map(p => {
+            if (p.id === oldInc.productId) return { ...p, quantity: Math.max(0, p.quantity - oldInc.qty) };
+            if (p.id === newInc.productId) return { ...p, quantity: p.quantity + newInc.qty };
+            return p;
+          });
+        }
+
+        // 2. Yetkazib beruvchi qarzini to'g'rilash (optimistik)
+        let suppliers = get().suppliers;
+        const oldCost = oldInc.qty * oldInc.buyPrice;
+        const newCost = newInc.qty * newInc.buyPrice;
+
+        if (oldInc.supplierId === newInc.supplierId) {
+          const costDiff = newCost - oldCost;
+          if (costDiff !== 0 && newInc.supplierId) {
+            suppliers = suppliers.map(s => s.id === newInc.supplierId ? { ...s, debt: Math.max(0, (s.debt || 0) + costDiff) } : s);
+          }
+        } else {
+          suppliers = suppliers.map(s => {
+            if (s.id === oldInc.supplierId) return { ...s, debt: Math.max(0, (s.debt || 0) - oldCost) };
+            if (s.id === newInc.supplierId) return { ...s, debt: (s.debt || 0) + newCost };
+            return s;
+          });
+        }
+
+        set({
+          incoming: get().incoming.map(x => x.id === id ? newInc : x),
+          products,
+          suppliers
+        });
+
+        syncApi(incomingApi.update(id, updates), { onFail: resync });
+        get().logAudit({ action: "update", entity: "incoming", entityId: id, summary: `Kirim tahrirlandi` });
       },
       deleteIncoming: (id) => {
         const inc = get().incoming.find(x => x.id === id);
         if (!inc) return;
         const products = get().products.map(p => p.id === inc.productId ? { ...p, quantity: Math.max(0, p.quantity - inc.qty) } : p);
-        set({ incoming: get().incoming.filter(x => x.id !== id), products });
+        const suppliers = get().suppliers.map(s => {
+          if (inc.supplierId && s.id === inc.supplierId) {
+            return { ...s, debt: Math.max(0, (s.debt || 0) - (inc.qty * inc.buyPrice)) };
+          }
+          return s;
+        });
+        set({ incoming: get().incoming.filter(x => x.id !== id), products, suppliers });
         syncApi(incomingApi.delete(id), { onFail: resync });
         get().logAudit({ action: "delete", entity: "incoming", entityId: id, summary: `Kirim bekor qilindi` });
       },
@@ -549,7 +660,7 @@ export const useStore = create<State>()(
         employees: s.employees, sales: s.sales, expenses: s.expenses, incoming: s.incoming,
         categories: s.categories, vehicleBrands: s.vehicleBrands,
         branches: s.branches, auditLog: s.auditLog,
-        debtPayments: s.debtPayments,
+        debtPayments: s.debtPayments, appUsers: s.appUsers,
       }),
       migrate: (persisted: any) => {
         if (!persisted) return persisted;

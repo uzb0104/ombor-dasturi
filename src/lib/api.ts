@@ -111,6 +111,11 @@ export const salesApi = {
       method: "POST",
       body: JSON.stringify(sale),
     }),
+  update: (id: string, updates: any) =>
+    request<any>(`/api/sales/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(updates),
+    }),
   delete: (id: string) =>
     request<{ success: boolean }>(`/api/sales/${id}`, {
       method: "DELETE",
@@ -122,6 +127,11 @@ export const incomingApi = {
     request<any>("/api/incoming", {
       method: "POST",
       body: JSON.stringify(item),
+    }),
+  update: (id: string, updates: any) =>
+    request<any>(`/api/incoming/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(updates),
     }),
   delete: (id: string) =>
     request<{ success: boolean }>(`/api/incoming/${id}`, {

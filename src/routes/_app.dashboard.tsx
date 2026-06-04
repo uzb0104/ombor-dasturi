@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useStore } from "@/lib/store";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatCard, PageHeader } from "@/components/ui-kit";
 import { Badge } from "@/components/ui/badge";
@@ -22,6 +22,17 @@ function Dashboard() {
   const t = useT();
   const { products, sales, expenses, employees, customers, suppliers, vehicleFilter } = useStore();
   const [detail, setDetail] = useState<null | "warehouse" | "today" | "week" | "month" | "profit" | "expenses" | "salary" | "net" | "debt">(null);
+  
+  const [systemHealth, setSystemHealth] = useState<{ ok: boolean; supabase: boolean; redis: boolean; port: number; mode: string } | null>(null);
+
+  useEffect(() => {
+    // API base URL ni env dan yoki default holatda aniqlaymiz
+    const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:5001";
+    fetch(`${API_BASE}/api/health`)
+      .then(res => res.json())
+      .then(data => setSystemHealth(data))
+      .catch(() => setSystemHealth(null));
+  }, []);
 
 
   const filtered = useMemo(() => {
@@ -123,6 +134,44 @@ function Dashboard() {
         <StatCard label={t("dashboard.netProfit")} value={formatSom(netProfit)} icon={netProfit >= 0 ? PiggyBank : AlertTriangle} accent={netProfit >= 0 ? "success" : "destructive"} onClick={() => setDetail("net")} />
         <StatCard label={t("dashboard.debt")} value={formatSom(totalDebt)} icon={AlertTriangle} accent="destructive" onClick={() => setDetail("debt")} />
       </div>
+
+      {systemHealth && (
+        <Card className="rounded-2xl bg-card border shadow-sm">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-xs font-semibold tracking-tight text-muted-foreground uppercase flex items-center gap-2">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+              </span>
+              Tizim holati diagnostikasi
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="grid grid-cols-2 sm:grid-cols-4 gap-4 py-2 text-xs">
+            <div className="flex flex-col">
+              <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">Server status</span>
+              <span className="text-xs font-bold text-emerald-500 mt-0.5">Ishlamoqda (Port: {systemHealth.port})</span>
+            </div>
+            <div className="flex flex-col">
+              <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">DB rejim</span>
+              <span className="text-xs font-bold text-foreground mt-0.5">
+                {systemHealth.mode === "supabase" ? "Supabase Cloud" : "Mahalliy JSON DB"}
+              </span>
+            </div>
+            <div className="flex flex-col">
+              <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">Supabase ulanishi</span>
+              <span className={`text-xs font-bold mt-0.5 ${systemHealth.supabase ? "text-emerald-500" : "text-destructive"}`}>
+                {systemHealth.supabase ? "Muvaffaqiyatli" : "Ulanmagan"}
+              </span>
+            </div>
+            <div className="flex flex-col">
+              <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">Redis kesh</span>
+              <span className={`text-xs font-bold mt-0.5 ${systemHealth.redis ? "text-emerald-500" : "text-amber-500"}`}>
+                {systemHealth.redis ? "Faol (Tezkor)" : "In-Memory (Keshlanmagan)"}
+              </span>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <DetailDialog
         kind={detail}
