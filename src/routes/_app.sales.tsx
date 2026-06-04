@@ -248,7 +248,9 @@ function SalesPage() {
     const itemsProfit = cart.reduce((acc, item) => acc + (item.price - item.buyPrice) * item.qty, 0);
     const netProfit = itemsProfit - form.discount;
 
-<<<<<<< HEAD
+    // Qarz sotuvda hozir naqd to'langan qism (0 dan netTotal gacha)
+    const paidNow = mode === "credit" ? Math.min(Math.max(0, form.paidNow), netTotal) : netTotal;
+
     if (editingId) {
       updateSale(editingId, {
         customerId,
@@ -262,6 +264,7 @@ function SalesPage() {
         paymentType: form.paymentType,
         total: netTotal,
         profit: netProfit,
+        paid: paidNow,
       });
       toast.success("Sotuv muvaffaqiyatli tahrirlandi");
     } else {
@@ -280,29 +283,8 @@ function SalesPage() {
         paymentType: form.paymentType,
         total: netTotal,
         profit: netProfit,
+        paid: paidNow,
       };
-=======
-    // Qarz sotuvda hozir naqd to'langan qism (0 dan netTotal gacha)
-    const paidNow = mode === "credit" ? Math.min(Math.max(0, form.paidNow), netTotal) : netTotal;
-
-    const newSale = {
-      id: `sale_${Math.random().toString(36).slice(2, 9)}`,
-      date: new Date().toISOString(),
-      customerId,
-      sellerId: (employees && employees.find(e => e && e.role === "Sotuvchi")?.id) || (employees && employees[0] ? employees[0].id : ""),
-      items: cart.map(item => ({
-        productId: item.productId,
-        qty: item.qty,
-        price: item.price,
-        buyPrice: item.buyPrice,
-      })),
-      discount: form.discount,
-      paymentType: form.paymentType,
-      total: netTotal,
-      profit: netProfit,
-      paid: paidNow,
-    };
->>>>>>> b820f867645d9a45a55a21684d6f2159d457221d
 
       addSale(newSale);
       toast.success(mode === "credit" ? t("sales.creditAdded") : t("sales.saleAdded"));
