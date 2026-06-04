@@ -29,6 +29,7 @@ type Form = {
   discount: number;
   paymentType: "Naqd" | "Karta" | "Qarz";
   customerId: string; // existing customer id, or "" for new
+  paidNow: number; // qarz sotuvda hozir naqd to'lanadigan qism
   // new customer fields (used when credit + no customer selected)
   custName: string;
   custPhone: string;
@@ -48,6 +49,7 @@ const emptyForm = (): Form => ({
   discount: 0,
   paymentType: "Naqd",
   customerId: "",
+  paidNow: 0,
   custName: "",
   custPhone: "",
   custAddress: "",
@@ -246,6 +248,7 @@ function SalesPage() {
     const itemsProfit = cart.reduce((acc, item) => acc + (item.price - item.buyPrice) * item.qty, 0);
     const netProfit = itemsProfit - form.discount;
 
+<<<<<<< HEAD
     if (editingId) {
       updateSale(editingId, {
         customerId,
@@ -278,6 +281,28 @@ function SalesPage() {
         total: netTotal,
         profit: netProfit,
       };
+=======
+    // Qarz sotuvda hozir naqd to'langan qism (0 dan netTotal gacha)
+    const paidNow = mode === "credit" ? Math.min(Math.max(0, form.paidNow), netTotal) : netTotal;
+
+    const newSale = {
+      id: `sale_${Math.random().toString(36).slice(2, 9)}`,
+      date: new Date().toISOString(),
+      customerId,
+      sellerId: (employees && employees.find(e => e && e.role === "Sotuvchi")?.id) || (employees && employees[0] ? employees[0].id : ""),
+      items: cart.map(item => ({
+        productId: item.productId,
+        qty: item.qty,
+        price: item.price,
+        buyPrice: item.buyPrice,
+      })),
+      discount: form.discount,
+      paymentType: form.paymentType,
+      total: netTotal,
+      profit: netProfit,
+      paid: paidNow,
+    };
+>>>>>>> b820f867645d9a45a55a21684d6f2159d457221d
 
       addSale(newSale);
       toast.success(mode === "credit" ? t("sales.creditAdded") : t("sales.saleAdded"));
@@ -654,6 +679,19 @@ function SalesPage() {
                         </div>
                       );
                     })()}
+
+                    <div className="border-t border-border/60 pt-3">
+                      <Label className="text-[11px] font-semibold text-muted-foreground uppercase">Hozir naqd to'lanadi (qisman)</Label>
+                      <Input
+                        type="number"
+                        min={0}
+                        className="mt-1 h-9"
+                        value={form.paidNow}
+                        onChange={(e) => setForm({ ...form, paidNow: Math.max(0, +e.target.value) })}
+                        placeholder="0"
+                      />
+                      <p className="text-[10px] text-muted-foreground mt-1">Bo'sh qoldirilsa — to'liq qarzga yoziladi.</p>
+                    </div>
                   </div>
                 )}
               </div>
@@ -677,6 +715,23 @@ function SalesPage() {
                       {formatSom(Math.max(0, cart.reduce((acc, item) => acc + item.qty * item.price, 0) - form.discount))}
                     </span>
                   </div>
+                  {mode === "credit" && (() => {
+                    const net = Math.max(0, cart.reduce((acc, item) => acc + item.qty * item.price, 0) - form.discount);
+                    const paid = Math.min(Math.max(0, form.paidNow), net);
+                    const remaining = net - paid;
+                    return (
+                      <div className="border-t pt-2 space-y-1">
+                        <div className="flex justify-between text-xs text-success">
+                          <span>Hozir to'lanadi (naqd):</span>
+                          <span className="font-semibold tabular-nums">{formatSom(paid)}</span>
+                        </div>
+                        <div className="flex justify-between text-sm font-bold text-destructive">
+                          <span>Qarzga qoladi:</span>
+                          <span className="tabular-nums">{formatSom(remaining)}</span>
+                        </div>
+                      </div>
+                    );
+                  })()}
                 </div>
 
                 <DialogFooter>
@@ -781,6 +836,18 @@ function SalesPage() {
                   <span>{t("sales.totalPayment")}</span>
                   <span>{formatSom(selectedSale.total)}</span>
                 </div>
+                {selectedSale.paymentType === "Qarz" && (
+                  <>
+                    <div className="flex justify-between">
+                      <span>To'landi (naqd):</span>
+                      <span>{formatSom(selectedSale.paid || 0)}</span>
+                    </div>
+                    <div className="flex justify-between font-bold text-red-600">
+                      <span>Qarz qoldi:</span>
+                      <span>{formatSom(Math.max(0, selectedSale.total - (selectedSale.paid || 0)))}</span>
+                    </div>
+                  </>
+                )}
               </div>
 
               <div className="border-t border-dashed border-gray-300 my-2" />
