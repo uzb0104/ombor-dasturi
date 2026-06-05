@@ -12,16 +12,7 @@ import { History } from "lucide-react";
 import { useT } from "@/lib/i18n";
 import { productsApi } from "@/lib/api";
 import { formatSom } from "@/lib/constants";
-import type { Product } from "@/lib/mock-data";
-
-type PriceHistoryRow = {
-  id: string;
-  field: "buy_price" | "sell_price";
-  oldValue: number | null;
-  newValue: number;
-  changedByName: string;
-  createdAt: string;
-};
+import type { Product, PriceHistoryEntry } from "@/lib/types";
 
 export function PriceHistoryDialog({
   product,
@@ -33,7 +24,7 @@ export function PriceHistoryDialog({
   onOpenChange: (v: boolean) => void;
 }) {
   const t = useT();
-  const [rows, setRows] = useState<PriceHistoryRow[]>([]);
+  const [rows, setRows] = useState<PriceHistoryEntry[]>([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -44,7 +35,7 @@ export function PriceHistoryDialog({
       .then(setRows)
       .catch(() => setRows([]))
       .finally(() => setLoading(false));
-  }, [open, product?.id]);
+  }, [open, product]);
 
   const fieldLabel = (f: string) =>
     f === "buy_price" ? t("products.history.field.buy") : t("products.history.field.sell");

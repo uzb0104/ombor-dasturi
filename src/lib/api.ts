@@ -2,6 +2,21 @@
 // Barcha REST API so'rovlarini markazlashtirgan yordamchi modul.
 // JWT tokenni localStorage-da saqlaydi va har bir so'rovga Authorization header qo'shadi.
 
+import type {
+  Product,
+  Customer,
+  Supplier,
+  Employee,
+  Sale,
+  Expense,
+  IncomingStock,
+  AppUser,
+  SessionUser,
+  DebtPayment,
+  PriceHistoryEntry,
+  AuditEntry,
+} from "./types";
+
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:5001";
 
 // ─── Token boshqaruvi ───
@@ -44,7 +59,7 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 
 // ─── AUTH ───
 export async function apiLogin(email: string, password: string) {
-  const data = await request<{ token: string; user: any }>("/api/auth/login", {
+  const data = await request<{ token: string; user: SessionUser }>("/api/auth/login", {
     method: "POST",
     body: JSON.stringify({ email, password }),
   });
@@ -53,7 +68,7 @@ export async function apiLogin(email: string, password: string) {
 }
 
 export async function apiGetMe() {
-  return request<{ user: any }>("/api/auth/me");
+  return request<{ user: SessionUser }>("/api/auth/me");
 }
 
 export function apiLogout() {
@@ -83,32 +98,37 @@ function createCrudApi<T>(resource: string) {
 
 // ─── RESURS API-LARI ───
 export const productsApi = {
-  ...createCrudApi<any>("products"),
+  ...createCrudApi<Product>("products"),
   importBulk: (items: unknown[]) =>
     request<{ created: number; failed: number; errors: { name?: string; error: string }[] }>(
       "/api/products/import",
       { method: "POST", body: JSON.stringify({ items }) },
     ),
-  priceHistory: (productId: string) => request<any[]>(`/api/products/${productId}/price-history`),
+  priceHistory: (productId: string) =>
+    request<PriceHistoryEntry[]>(`/api/products/${productId}/price-history`),
 };
 
 export const priceHistoryApi = {
   getAll: (productId?: string) =>
-    request<any[]>(`/api/products/price-history${productId ? `?productId=${productId}` : ""}`),
+    request<PriceHistoryEntry[]>(
+      `/api/products/price-history${productId ? `?productId=${productId}` : ""}`,
+    ),
 };
-export const customersApi = createCrudApi<any>("customers");
-export const suppliersApi = createCrudApi<any>("suppliers");
-export const employeesApi = createCrudApi<any>("employees");
-export const expensesApi = createCrudApi<any>("expenses");
+
+export const customersApi = createCrudApi<Customer>("customers");
+export const suppliersApi = createCrudApi<Supplier>("suppliers");
+export const employeesApi = createCrudApi<Employee>("employees");
+export const expensesApi = createCrudApi<Expense>("expenses");
+
 export const salesApi = {
-  getAll: () => request<any[]>("/api/sales"),
-  create: (sale: any) =>
-    request<any>("/api/sales", {
+  getAll: () => request<Sale[]>("/api/sales"),
+  create: (sale: Omit<Sale, "id">) =>
+    request<Sale>("/api/sales", {
       method: "POST",
       body: JSON.stringify(sale),
     }),
-  update: (id: string, updates: any) =>
-    request<any>(`/api/sales/${id}`, {
+  update: (id: string, updates: Partial<Sale>) =>
+    request<Sale>(`/api/sales/${id}`, {
       method: "PUT",
       body: JSON.stringify(updates),
     }),
@@ -117,15 +137,16 @@ export const salesApi = {
       method: "DELETE",
     }),
 };
+
 export const incomingApi = {
-  getAll: () => request<any[]>("/api/incoming"),
-  create: (item: any) =>
-    request<any>("/api/incoming", {
+  getAll: () => request<IncomingStock[]>("/api/incoming"),
+  create: (item: Omit<IncomingStock, "id">) =>
+    request<IncomingStock>("/api/incoming", {
       method: "POST",
       body: JSON.stringify(item),
     }),
-  update: (id: string, updates: any) =>
-    request<any>(`/api/incoming/${id}`, {
+  update: (id: string, updates: Partial<IncomingStock>) =>
+    request<IncomingStock>(`/api/incoming/${id}`, {
       method: "PUT",
       body: JSON.stringify(updates),
     }),
@@ -134,23 +155,25 @@ export const incomingApi = {
       method: "DELETE",
     }),
 };
+
 export const debtPaymentsApi = {
-  getAll: () => request<any[]>("/api/debt-payments"),
-  create: (payment: any) =>
-    request<any>("/api/debt-payments", {
+  getAll: () => request<DebtPayment[]>("/api/debt-payments"),
+  create: (payment: Omit<DebtPayment, "id">) =>
+    request<DebtPayment>("/api/debt-payments", {
       method: "POST",
       body: JSON.stringify(payment),
     }),
 };
+
 export const usersApi = {
-  getAll: () => request<any[]>("/api/users"),
-  create: (user: any) =>
-    request<any>("/api/users", {
+  getAll: () => request<AppUser[]>("/api/users"),
+  create: (user: Omit<AppUser, "id">) =>
+    request<AppUser>("/api/users", {
       method: "POST",
       body: JSON.stringify(user),
     }),
-  update: (id: string, updates: any) =>
-    request<any>(`/api/users/${id}`, {
+  update: (id: string, updates: Partial<AppUser>) =>
+    request<AppUser>(`/api/users/${id}`, {
       method: "PUT",
       body: JSON.stringify(updates),
     }),
@@ -159,15 +182,16 @@ export const usersApi = {
       method: "DELETE",
     }),
 };
+
 export const categoriesApi = {
   getAll: () => request<string[]>("/api/categories"),
   create: (name: string) =>
-    request<any>("/api/categories", {
+    request<{ name: string }>("/api/categories", {
       method: "POST",
       body: JSON.stringify({ name }),
     }),
   update: (oldName: string, newName: string) =>
-    request<any>(`/api/categories/${encodeURIComponent(oldName)}`, {
+    request<{ name: string }>(`/api/categories/${encodeURIComponent(oldName)}`, {
       method: "PUT",
       body: JSON.stringify({ name: newName }),
     }),
@@ -176,15 +200,16 @@ export const categoriesApi = {
       method: "DELETE",
     }),
 };
+
 export const vehicleBrandsApi = {
   getAll: () => request<string[]>("/api/vehicle-brands"),
   create: (name: string) =>
-    request<any>("/api/vehicle-brands", {
+    request<{ name: string }>("/api/vehicle-brands", {
       method: "POST",
       body: JSON.stringify({ name }),
     }),
   update: (oldName: string, newName: string) =>
-    request<any>(`/api/vehicle-brands/${encodeURIComponent(oldName)}`, {
+    request<{ name: string }>(`/api/vehicle-brands/${encodeURIComponent(oldName)}`, {
       method: "PUT",
       body: JSON.stringify({ name: newName }),
     }),
@@ -193,15 +218,16 @@ export const vehicleBrandsApi = {
       method: "DELETE",
     }),
 };
+
 export const branchesApi = {
   getAll: () => request<string[]>("/api/branches"),
   create: (name: string) =>
-    request<any>("/api/branches", {
+    request<{ name: string }>("/api/branches", {
       method: "POST",
       body: JSON.stringify({ name }),
     }),
   update: (oldName: string, newName: string) =>
-    request<any>(`/api/branches/${encodeURIComponent(oldName)}`, {
+    request<{ name: string }>(`/api/branches/${encodeURIComponent(oldName)}`, {
       method: "PUT",
       body: JSON.stringify({ name: newName }),
     }),
@@ -210,10 +236,11 @@ export const branchesApi = {
       method: "DELETE",
     }),
 };
+
 export const auditApi = {
-  getAll: () => request<any[]>("/api/audit-logs"),
-  log: (entry: any) =>
-    request<any>("/api/audit-logs", {
+  getAll: () => request<AuditEntry[]>("/api/audit-logs"),
+  log: (entry: Omit<AuditEntry, "id" | "ts" | "userId" | "userName">) =>
+    request<AuditEntry>("/api/audit-logs", {
       method: "POST",
       body: JSON.stringify(entry),
     }),

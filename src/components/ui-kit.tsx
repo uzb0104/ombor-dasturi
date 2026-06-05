@@ -242,7 +242,11 @@ export function useSelection() {
   const toggle = (id: string) =>
     setSelected((s) => {
       const n = new Set(s);
-      n.has(id) ? n.delete(id) : n.add(id);
+      if (n.has(id)) {
+        n.delete(id);
+      } else {
+        n.add(id);
+      }
       return n;
     });
   const toggleAll = (ids: string[], checked: boolean) =>
@@ -315,16 +319,22 @@ export function useSortableData<T>(items: T[], config: SortConfig<T> = null) {
   const [sortConfig, setSortConfig] = useState<SortConfig<T>>(config);
 
   const sortedItems = useMemo(() => {
-    let sortableItems = [...items];
+    const sortableItems = [...items];
     if (sortConfig !== null) {
       sortableItems.sort((a, b) => {
-        let aVal: any = a[sortConfig.key as keyof T];
-        let bVal: any = b[sortConfig.key as keyof T];
+        let aVal: unknown = a[sortConfig.key as keyof T];
+        let bVal: unknown = b[sortConfig.key as keyof T];
 
         if (typeof sortConfig.key === "string" && sortConfig.key.includes(".")) {
           const parts = sortConfig.key.split(".");
-          aVal = parts.reduce((acc, part) => acc?.[part], a as any);
-          bVal = parts.reduce((acc, part) => acc?.[part], b as any);
+          aVal = parts.reduce(
+            (acc, part) => (acc as Record<string, unknown>)?.[part],
+            a as unknown,
+          );
+          bVal = parts.reduce(
+            (acc, part) => (acc as Record<string, unknown>)?.[part],
+            b as unknown,
+          );
         }
 
         if (aVal === undefined || aVal === null) aVal = "";
@@ -369,7 +379,7 @@ export function SortButton({
 }: {
   label: string;
   sortKey: string;
-  sortConfig: any;
+  sortConfig: SortConfig<unknown>;
   onSort: (key: string) => void;
 }) {
   const isSorted = sortConfig?.key === sortKey;
@@ -395,8 +405,8 @@ export function SortButton({
 }
 
 // ─────────────── Universal Export Helpers ───────────────
-export function exportToCSV(
-  data: any[],
+export function exportToCSV<T extends Record<string, unknown>>(
+  data: T[],
   headers: { label: string; key: string }[],
   filename: string,
 ) {
@@ -409,7 +419,10 @@ export function exportToCSV(
         let val = item[h.key];
         if (h.key.includes(".")) {
           const parts = h.key.split(".");
-          val = parts.reduce((acc, part) => acc?.[part], item);
+          val = parts.reduce<unknown>(
+            (acc, part) => (acc as Record<string, unknown>)?.[part],
+            item as unknown,
+          );
         }
         return String(val ?? "");
       }),
@@ -425,8 +438,8 @@ export function exportToCSV(
   a.click();
 }
 
-export function exportToExcel(
-  data: any[],
+export function exportToExcel<T extends Record<string, unknown>>(
+  data: T[],
   headers: { label: string; key: string }[],
   title: string,
   filename: string,
@@ -461,7 +474,10 @@ export function exportToExcel(
                   let val = item[h.key];
                   if (h.key.includes(".")) {
                     const parts = h.key.split(".");
-                    val = parts.reduce((acc, part) => acc?.[part], item);
+                    val = parts.reduce<unknown>(
+                      (acc, part) => (acc as Record<string, unknown>)?.[part],
+                      item as unknown,
+                    );
                   }
                   return `<td>${val ?? ""}</td>`;
                 })

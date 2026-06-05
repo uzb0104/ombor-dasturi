@@ -15,9 +15,9 @@ export const Route = createFileRoute("/_app")({
       // Zustand keshida ham tekshiramiz (tezkor redirect)
       const raw = window.localStorage.getItem("autoerp-pro-v2");
       if (!raw) throw redirect({ to: "/login" });
-      let parsed: any = null;
+      let parsed: { state?: { user?: unknown } } | null = null;
       try {
-        parsed = JSON.parse(raw);
+        parsed = JSON.parse(raw) as { state?: { user?: unknown } };
       } catch (e) {
         if (isRedirect(e)) throw e;
         throw redirect({ to: "/login" });
@@ -40,7 +40,7 @@ function AppLayout() {
     setHydrated(true);
     // Sahifa yangilanganda sessiyani backenddan tekshiramiz
     restoreSession();
-  }, []);
+  }, [restoreSession]);
 
   useEffect(() => {
     if (hydrated && !user) {

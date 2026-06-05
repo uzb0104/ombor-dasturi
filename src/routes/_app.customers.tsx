@@ -100,13 +100,13 @@ function CustomersPage() {
     }
     const vehicle = vehicleBrands.includes(form.vehicle) ? form.vehicle : vehicleBrands[0];
     if (editing) {
-      updateCustomer(editing, { ...form, vehicle: vehicle as any });
+      updateCustomer(editing, { ...form, vehicle });
       toast.success(t("crm.updated"));
     } else {
       addCustomer({
         id: `cust_${Math.random().toString(36).slice(2, 9)}`,
         ...form,
-        vehicle: vehicle as any,
+        vehicle,
         totalPurchases: 0,
         debt: 0,
       });

@@ -157,7 +157,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 active
                   ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
                   : "hover:bg-sidebar-accent/40"
-              } ${item.to === "/pos" ? "ring-1 ring-primary/40" : ""}`}
+              } ${String(item.to) === "/pos" ? "ring-1 ring-primary/40" : ""}`}
             >
               <Icon className="h-4 w-4" />
               <span>{t(item.labelKey)}</span>
@@ -168,7 +168,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           {t("nav.vehicleBrand")}
         </div>
         <div className="px-2">
-          <Select value={vehicleFilter} onValueChange={(v) => setVehicleFilter(v as any)}>
+          <Select value={vehicleFilter} onValueChange={(v) => setVehicleFilter(v)}>
             <SelectTrigger className="w-full bg-sidebar-accent/30 border-sidebar-border text-sidebar-foreground">
               <SelectValue />
             </SelectTrigger>
@@ -219,7 +219,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               {now.toLocaleString("uz-UZ", { dateStyle: "medium", timeStyle: "short" })}
             </div>
 
-            <Select value={warehouse} onValueChange={(v) => setWarehouse(v as any)}>
+            <Select value={warehouse} onValueChange={(v) => setWarehouse(v)}>
               <SelectTrigger className="hidden sm:flex h-9 w-[160px]">
                 <SelectValue />
               </SelectTrigger>

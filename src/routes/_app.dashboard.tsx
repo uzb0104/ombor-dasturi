@@ -119,6 +119,7 @@ function Dashboard() {
       });
     }
     return days;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filtered.sales]);
 
   const monthlyData = useMemo(() => {
@@ -141,6 +142,7 @@ function Dashboard() {
       });
     }
     return months;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filtered.sales]);
 
   const brandPie = useMemo(() => {

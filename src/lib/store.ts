@@ -8,7 +8,11 @@ import type {
   Sale,
   Expense,
   IncomingStock,
-} from "./mock-data";
+  AuditEntry,
+  AppUser,
+  SessionUser,
+  DebtPayment,
+} from "./types";
 import type { Warehouse, Role } from "./constants";
 import {
   DEFAULT_CATEGORIES,
@@ -37,40 +41,6 @@ import {
 } from "./api";
 import { syncApi } from "./api-sync";
 import { toast } from "sonner";
-
-export type AuditEntry = {
-  id: string;
-  ts: string;
-  userId: string;
-  userName: string;
-  action: "create" | "update" | "delete" | "login" | "logout";
-  entity: string;
-  entityId?: string;
-  summary: string;
-};
-
-export type AppUser = {
-  id: string;
-  name: string;
-  email: string;
-  password: string;
-  role: Role;
-  permissions: string[];
-  active: boolean;
-};
-
-type SessionUser = { id: string; name: string; email: string; role: Role; permissions: string[] };
-
-export type DebtPayment = {
-  id: string;
-  date: string;
-  type: "customer" | "supplier";
-  targetId: string;
-  targetName: string;
-  amount: number;
-  paymentMethod: "Naqd" | "Karta";
-  note?: string;
-};
 
 type State = {
   user: SessionUser | null;
@@ -895,6 +865,7 @@ export const useStore = create<State>()(
         debtPayments: s.debtPayments,
         appUsers: s.appUsers,
       }),
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       migrate: (persisted: any) => {
         if (!persisted) return persisted;
         if (!persisted.categories) persisted.categories = [...DEFAULT_CATEGORIES];

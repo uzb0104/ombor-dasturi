@@ -77,13 +77,13 @@ function EmployeesPage() {
       return;
     }
     if (editing) {
-      updateEmployee(editing, { ...form, role: form.role as any });
+      updateEmployee(editing, { ...form, role: form.role as "Admin" | "Sotuvchi" | "Omborchi" });
       toast.success("Yangilandi");
     } else {
       addEmployee({
         id: `emp_${Math.random().toString(36).slice(2, 9)}`,
         ...form,
-        role: form.role as any,
+        role: form.role as "Admin" | "Sotuvchi" | "Omborchi",
         advance: 0,
         status: "Faol",
       });

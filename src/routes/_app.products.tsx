@@ -37,7 +37,7 @@ import { Plus, Search, Edit, Trash2, Package, ScanBarcode, Download, History } f
 import { useT } from "@/lib/i18n";
 import { ProductImportDialog } from "@/components/ProductImportDialog";
 import { PriceHistoryDialog } from "@/components/PriceHistoryDialog";
-import type { Product } from "@/lib/mock-data";
+import type { Product, ProductAttributes } from "@/lib/types";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
@@ -146,7 +146,7 @@ function ProductsPage() {
       barcode: p.barcode || "",
       vehicle: p.vehicle,
       category: p.category,
-      supplierId: p.supplierId,
+      supplierId: p.supplierId || "",
       buyPrice: p.buyPrice,
       sellPrice: p.sellPrice,
       quantity: p.quantity,
@@ -197,7 +197,7 @@ function ProductsPage() {
         return;
       }
     }
-    const attributes: any = {};
+    const attributes: ProductAttributes = {};
     if (form.unitBrand.trim()) attributes.unitBrand = form.unitBrand.trim();
     if (isBattery(category)) {
       if (!form.amperage.trim()) {

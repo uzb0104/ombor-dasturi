@@ -1,5 +1,5 @@
 import * as XLSX from "xlsx";
-import type { Product } from "./mock-data";
+import type { Product } from "./types";
 
 export type ImportRow = Partial<Product> & { name: string };
 

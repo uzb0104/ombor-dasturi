@@ -18,6 +18,7 @@ import {
   SelectCell,
 } from "@/components/ui-kit";
 import { useStore } from "@/lib/store";
+import type { IncomingStock } from "@/lib/types";
 import { formatSom } from "@/lib/constants";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -93,7 +94,7 @@ function IncomingPage() {
     setOpen(true);
   };
 
-  const openEdit = (i: any) => {
+  const openEdit = (i: IncomingStock) => {
     setEditingId(i.id);
     setInvoice(i.invoice || "");
     setSupplierId(i.supplierId || "");

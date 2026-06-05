@@ -151,10 +151,17 @@ app.use("/api", constantsRouter); // mount constant endpoints under root /api
 app.use("/api/incoming", incomingRouter);
 app.use("/api/sales", salesRouter);
 
-// Serverni ishga tushirish
-app.listen(PORT, async () => {
-  console.log(`📡 AutoERP Pro backend server port ${PORT} da muvaffaqiyatli ishga tushdi!`);
-  console.log(`🔗 API manzili: http://localhost:${PORT}`);
-  console.log(`🩺 Health: http://localhost:${PORT}/api/health`);
+// Serverni ishga tushirish (test rejimida port tinglanmaydi, faqat app eksport qilinadi)
+if (process.env.NODE_ENV !== "test") {
+  app.listen(PORT, async () => {
+    console.log(`📡 AutoERP Pro backend server port ${PORT} da muvaffaqiyatli ishga tushdi!`);
+    console.log(`🔗 API manzili: http://localhost:${PORT}`);
+    console.log(`🩺 Health: http://localhost:${PORT}/api/health`);
+    await ensureDefaultAdmin();
+  });
+} else {
+  // Test rejimida ham default admin foydalanuvchi mavjudligini ta'minlash
   await ensureDefaultAdmin();
-});
+}
+
+export default app;

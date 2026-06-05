@@ -42,7 +42,7 @@ import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { useT } from "@/lib/i18n";
 
-const ICONS: Record<string, any> = {
+const ICONS: Record<string, React.ElementType> = {
   Dvigatel: Cog,
   "Tormoz tizimi": Disc,
   Elektr: Zap,

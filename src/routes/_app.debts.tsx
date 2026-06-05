@@ -184,7 +184,10 @@ function DebtsPage() {
                 <Label className="text-xs font-semibold text-muted-foreground uppercase">
                   {t("sales.payment")}
                 </Label>
-                <Select value={paymentMethod} onValueChange={(v) => setPaymentMethod(v as any)}>
+                <Select
+                  value={paymentMethod}
+                  onValueChange={(v) => setPaymentMethod(v as "Naqd" | "Karta")}
+                >
                   <SelectTrigger className="mt-1">
                     <SelectValue />
                   </SelectTrigger>

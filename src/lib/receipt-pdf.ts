@@ -1,6 +1,6 @@
 import { jsPDF } from "jspdf";
-import type { Sale } from "./mock-data";
-import type { Product, Customer, Employee } from "./mock-data";
+import type { Sale } from "./types";
+import type { Product, Customer, Employee } from "./types";
 import { formatSom } from "./constants";
 
 export type ReceiptLabels = {

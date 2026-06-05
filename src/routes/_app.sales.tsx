@@ -16,6 +16,7 @@ import {
   PaginationBar,
 } from "@/components/ui-kit";
 import { useStore } from "@/lib/store";
+import type { Sale, SaleItem } from "@/lib/types";
 import { formatSom } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -73,7 +74,7 @@ type Mode = "cash" | "credit";
 type Form = {
   vehicle: string;
   discount: number;
-  paymentType: "Naqd" | "Karta" | "Qarz";
+  paymentType: "Naqd" | "Karta" | "Qarz" | "O'tkazma";
   customerId: string; // existing customer id, or "" for new
   paidNow: number; // qarz sotuvda hozir naqd to'lanadigan qism
   // new customer fields (used when credit + no customer selected)
@@ -131,7 +132,7 @@ function SalesPage() {
   const [custComboOpen, setCustComboOpen] = useState(false);
 
   // Selected sale for receipt dialog
-  const [selectedSale, setSelectedSale] = useState<any>(null);
+  const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
 
   // Confirm hook
   const { confirm, confirmNode } = useConfirm();
@@ -249,7 +250,7 @@ function SalesPage() {
     setOpen(true);
   };
 
-  const openEdit = (s: any) => {
+  const openEdit = (s: Sale) => {
     setEditingId(s.id);
     setMode(s.paymentType === "Qarz" ? "credit" : "cash");
     setForm({
@@ -257,12 +258,13 @@ function SalesPage() {
       discount: s.discount || 0,
       paymentType: s.paymentType,
       customerId: s.customerId || "",
+      paidNow: s.paid || 0,
       custName: "",
       custPhone: "",
       custAddress: "",
     });
 
-    const cartItems = s.items.map((item: any) => {
+    const cartItems = s.items.map((item: SaleItem) => {
       const p = products.find((prod) => prod.id === item.productId);
       return {
         productId: item.productId,
@@ -298,7 +300,7 @@ function SalesPage() {
           name: form.custName.trim(),
           phone: form.custPhone.trim(),
           address: form.custAddress.trim(),
-          vehicle: (form.vehicle as any) || vehicleBrands[0] || "",
+          vehicle: form.vehicle || vehicleBrands[0] || "",
           totalPurchases: 0,
           debt: 0,
         });
@@ -725,7 +727,9 @@ function SalesPage() {
                       </Label>
                       <Select
                         value={form.paymentType}
-                        onValueChange={(v) => setForm({ ...form, paymentType: v as any })}
+                        onValueChange={(v) =>
+                          setForm({ ...form, paymentType: v as Form["paymentType"] })
+                        }
                       >
                         <SelectTrigger className="mt-1">
                           <SelectValue />
@@ -1041,7 +1045,7 @@ function SalesPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {selectedSale.items.map((item: any, idx: number) => {
+                  {selectedSale.items.map((item: SaleItem, idx: number) => {
                     const p = products.find((x) => x.id === item.productId);
                     return (
                       <tr key={idx} className="border-b border-dashed border-gray-200">
@@ -1067,7 +1071,7 @@ function SalesPage() {
                   <span>
                     {formatSom(
                       selectedSale.items.reduce(
-                        (acc: number, item: any) => acc + item.qty * item.price,
+                        (acc: number, item: SaleItem) => acc + item.qty * item.price,
                         0,
                       ),
                     )}

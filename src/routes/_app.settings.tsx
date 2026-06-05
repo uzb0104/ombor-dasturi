@@ -31,7 +31,8 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { useStore, type AppUser } from "@/lib/store";
+import { useStore } from "@/lib/store";
+import type { AppUser } from "@/lib/types";
 import { ROLES, PERMISSION_MODULES, ALL_PERMISSIONS } from "@/lib/constants";
 import { toast } from "sonner";
 import {
@@ -345,7 +346,7 @@ function UsersManagement({
       toast.error(t("settings.emailNameRequired"));
       return;
     }
-    if (!editing && !form.password.trim()) {
+    if (!editing && !(form.password || "").trim()) {
       toast.error(t("toast.passwordRequired"));
       return;
     }
@@ -373,7 +374,7 @@ function UsersManagement({
     setForm((f) => ({
       ...f,
       permissions: f.permissions.includes(path)
-        ? f.permissions.filter((p) => p !== path)
+        ? f.permissions.filter((p: string) => p !== path)
         : [...f.permissions, path],
     }));
   };
@@ -438,7 +439,7 @@ function UsersManagement({
                   <Label>{t("common.role")}</Label>
                   <Select
                     value={form.role}
-                    onValueChange={(v) => setForm({ ...form, role: v as any })}
+                    onValueChange={(v) => setForm({ ...form, role: v as UserForm["role"] })}
                   >
                     <SelectTrigger>
                       <SelectValue />

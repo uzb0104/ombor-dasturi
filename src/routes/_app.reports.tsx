@@ -28,6 +28,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { priceHistoryApi } from "@/lib/api";
+import type { PriceHistoryEntry } from "@/lib/types";
 import { Badge } from "@/components/ui/badge";
 
 export const Route = createFileRoute("/_app/reports")({ component: ReportsPage });
@@ -36,7 +37,7 @@ function ReportsPage() {
   const t = useT();
   const { sales, expenses, products, customers } = useStore();
   const [printOpen, setPrintOpen] = useState(false);
-  const [priceHistory, setPriceHistory] = useState<any[]>([]);
+  const [priceHistory, setPriceHistory] = useState<PriceHistoryEntry[]>([]);
 
   useEffect(() => {
     priceHistoryApi

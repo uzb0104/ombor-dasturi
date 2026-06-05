@@ -109,7 +109,11 @@ function BarcodePage() {
                 onChange={(e) => setScanBuffer(e.target.value.toUpperCase())}
                 onKeyDown={handleScanKey}
               />
-              <Button onClick={() => handleScanKey({ key: "Enter" } as any)}>
+              <Button
+                onClick={() =>
+                  handleScanKey({ key: "Enter" } as React.KeyboardEvent<HTMLInputElement>)
+                }
+              >
                 <ScanBarcode className="h-4 w-4 mr-1" />
                 {t("common.check")}
               </Button>
