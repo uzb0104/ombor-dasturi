@@ -39,7 +39,7 @@ import {
   branchesApi,
   auditApi,
 } from "./api";
-import { syncApi } from "./api-sync";
+import { syncApi, formatApiError } from "./api-sync";
 import { toast } from "sonner";
 
 type State = {
@@ -724,7 +724,25 @@ export const useStore = create<State>()(
             return s;
           });
           set({ debtPayments: [p, ...get().debtPayments], customers, suppliers });
-          syncApi(debtPaymentsApi.create(p), { onFail: resync });
+          
+          // Backend'da qarz yangilanganidan keyin, frontend ma'lumotlarini ham yangilash
+          debtPaymentsApi.create(p)
+            .then(() => {
+              // Customers va suppliers'ni backend'dan qayta yuklash
+              Promise.all([
+                customersApi.getAll(),
+                suppliersApi.getAll(),
+              ])
+                .then(([updatedCustomers, updatedSuppliers]) => {
+                  set({ customers: updatedCustomers, suppliers: updatedSuppliers });
+                })
+                .catch(resync);
+            })
+            .catch((err) => {
+              toast.error(formatApiError(err));
+              resync();
+            });
+          
           get().logAudit({
             action: "create",
             entity: "debt_payment",

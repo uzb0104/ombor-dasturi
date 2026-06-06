@@ -380,7 +380,7 @@ function DebtsPage() {
                         <TableCell className="text-right text-success font-bold tabular-nums">
                           {formatSom(p.amount)}
                         </TableCell>
-                        <TableCell className="text-xs text-muted-foreground max-w-[200px] truncate">
+                        <TableCell className="text-xs text-muted-foreground max-w-50 truncate">
                           {p.note || "—"}
                         </TableCell>
                       </TableRow>

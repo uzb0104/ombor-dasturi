@@ -43,10 +43,11 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Plus, Phone, MapPin, Edit, Trash2, Search, Download } from "lucide-react";
+import { Plus, Phone, MapPin, Edit, Trash2, Search, Download, DollarSign } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
+import { paymentLabel } from "@/lib/i18n/helpers";
 
 export const Route = createFileRoute("/_app/customers")({ component: CustomersPage });
 
@@ -59,7 +60,7 @@ const empty = (firstBrand: string): Form => ({
 });
 
 function CustomersPage() {
-  const { customers, vehicleBrands, addCustomer, updateCustomer, deleteCustomer } = useStore();
+  const { customers, vehicleBrands, addCustomer, updateCustomer, deleteCustomer, addDebtPayment } = useStore();
   const t = useT();
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<string | null>(null);
@@ -67,6 +68,14 @@ function CustomersPage() {
   const [search, setSearch] = useState("");
   const { confirm, confirmNode } = useConfirm();
   const sel = useSelection();
+
+  // Payment dialog state
+  const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
+  const [paymentCustomerId, setPaymentCustomerId] = useState("");
+  const [paymentCustomerName, setPaymentCustomerName] = useState("");
+  const [paymentAmount, setPaymentAmount] = useState(0);
+  const [paymentMethod, setPaymentMethod] = useState<"Naqd" | "Karta">("Naqd");
+  const [paymentNote, setPaymentNote] = useState("");
 
   const filtered = useMemo(() => {
     const s = search.toLowerCase();
@@ -148,6 +157,43 @@ function CustomersPage() {
       description: names.slice(0, 5).join(", ") + (names.length > 5 ? "…" : ""),
       action: { label: t("crm.undo"), onClick: () => snapshots.forEach((s) => addCustomer(s)) },
     });
+  };
+
+  const handleOpenPayment = (customerId: string, customerName: string, debt: number) => {
+    setPaymentCustomerId(customerId);
+    setPaymentCustomerName(customerName);
+    setPaymentAmount(debt);
+    setPaymentMethod("Naqd");
+    setPaymentNote("");
+    setPaymentDialogOpen(true);
+  };
+
+  const handleSubmitPayment = () => {
+    if (!paymentAmount || paymentAmount <= 0) {
+      toast.error(t("debts.amountInvalid"));
+      return;
+    }
+    const customer = customers.find((c) => c.id === paymentCustomerId);
+    if (!customer || paymentAmount > customer.debt) {
+      toast.error(t("debts.amountTooMuch"));
+      return;
+    }
+
+    addDebtPayment({
+      id: `pay_${Math.random().toString(36).slice(2, 9)}`,
+      date: new Date().toISOString(),
+      type: "customer",
+      targetId: paymentCustomerId,
+      targetName: paymentCustomerName,
+      amount: paymentAmount,
+      paymentMethod: paymentMethod,
+      note: paymentNote,
+    });
+
+    toast.success(t("debts.paymentRecorded"));
+    setPaymentDialogOpen(false);
+    setPaymentAmount(0);
+    setPaymentNote("");
   };
 
   const exportHeaders = () => [
@@ -391,6 +437,17 @@ function CustomersPage() {
                     )}
                   </TableCell>
                   <TableCell className="text-right whitespace-nowrap pr-4">
+                    {c.debt > 0 && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleOpenPayment(c.id, c.name, c.debt)}
+                        className="h-8 w-8 hover:bg-success/10"
+                        title={t("debts.payDebt")}
+                      >
+                        <DollarSign className="h-4 w-4 text-success" />
+                      </Button>
+                    )}
                     <Button
                       variant="ghost"
                       size="icon"
@@ -415,6 +472,91 @@ function CustomersPage() {
         </div>
         <PaginationBar {...pg} />
       </Card>
+
+      {/* Payment Dialog */}
+      <Dialog open={paymentDialogOpen} onOpenChange={setPaymentDialogOpen}>
+        <DialogContent className="max-w-md bg-card border rounded-2xl shadow-elevated p-6">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <DollarSign className="h-5 w-5 text-success" />
+              Qarz to'lash
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div>
+              <Label className="text-xs font-semibold text-muted-foreground uppercase">
+                Mijoz
+              </Label>
+              <div className="mt-2 p-2 bg-muted/40 rounded-lg text-sm font-medium">
+                {paymentCustomerName}
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label className="text-xs font-semibold text-muted-foreground uppercase">
+                  Qolgan qarz
+                </Label>
+                <div className="mt-1 text-lg font-bold text-destructive">
+                  {formatSom(customers.find((c) => c.id === paymentCustomerId)?.debt || 0)}
+                </div>
+              </div>
+              <div>
+                <Label className="text-xs font-semibold text-muted-foreground uppercase">
+                  To'lov miqdori *
+                </Label>
+                <Input
+                  type="number"
+                  min={0}
+                  max={customers.find((c) => c.id === paymentCustomerId)?.debt}
+                  value={paymentAmount}
+                  onChange={(e) => setPaymentAmount(Math.max(0, +e.target.value))}
+                  className="mt-1"
+                />
+              </div>
+            </div>
+            <div>
+              <Label className="text-xs font-semibold text-muted-foreground uppercase">
+                To'lov usuli
+              </Label>
+              <Select
+                value={paymentMethod}
+                onValueChange={(v) => setPaymentMethod(v as "Naqd" | "Karta")}
+              >
+                <SelectTrigger className="mt-1">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {(["Naqd", "Karta"] as const).map((p) => (
+                    <SelectItem key={p} value={p}>
+                      {paymentLabel(t, p)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label className="text-xs font-semibold text-muted-foreground uppercase">
+                Eslatma
+              </Label>
+              <Input
+                placeholder="Ixtiyoriy"
+                value={paymentNote}
+                onChange={(e) => setPaymentNote(e.target.value)}
+                className="mt-1"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPaymentDialogOpen(false)}>
+              Bekor qilish
+            </Button>
+            <Button onClick={handleSubmitPayment} className="bg-success hover:bg-success/80">
+              <DollarSign className="h-4 w-4 mr-1" />
+              To'lash
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

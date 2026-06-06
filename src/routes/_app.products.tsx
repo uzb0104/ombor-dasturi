@@ -376,24 +376,26 @@ function ProductsPage() {
                       {t("products.form.codeHint")}
                     </p>
                   </div>
-                  <div>
-                    <Label>{t("products.brand")}</Label>
-                    <Select
-                      value={form.vehicle}
-                      onValueChange={(v) => setForm({ ...form, vehicle: v })}
-                    >
-                      <SelectTrigger className="mt-1">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {vehicleBrands.map((b) => (
-                          <SelectItem key={b} value={b}>
-                            {b}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+                  {!(isBattery(form.category) || isTire(form.category)) && (
+                    <div>
+                      <Label>{t("products.brand")}</Label>
+                      <Select
+                        value={form.vehicle}
+                        onValueChange={(v) => setForm({ ...form, vehicle: v })}
+                      >
+                        <SelectTrigger className="mt-1">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {vehicleBrands.map((b) => (
+                            <SelectItem key={b} value={b}>
+                              {b}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
                   <div>
                     <Label>{t("products.category")}</Label>
                     <Select

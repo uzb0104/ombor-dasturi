@@ -449,7 +449,7 @@ function SalesPage() {
 
       {/* Main New/Credit Sale Dialog */}
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-4xl p-6 bg-card border border-border rounded-2xl shadow-elevated">
+        <DialogContent className="max-w-full sm:max-w-md md:max-w-2xl lg:max-w-3xl max-h-[90vh] overflow-y-auto p-4 md:p-6 bg-card border border-border rounded-2xl shadow-elevated">
           <DialogHeader>
             <DialogTitle className="text-xl font-bold flex items-center gap-2">
               <ShoppingCart className="h-5 w-5 text-primary animate-pulse" />
@@ -461,9 +461,9 @@ function SalesPage() {
             </DialogTitle>
           </DialogHeader>
 
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mt-2">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 md:gap-4 lg:gap-6 mt-2">
             {/* Left Side: Add Product Form */}
-            <div className="lg:col-span-5 space-y-4 lg:border-r lg:pr-6 border-border/60">
+            <div className="lg:col-span-5 space-y-3 lg:space-y-4 lg:border-r lg:pr-6 border-border/60">
               <h3 className="text-sm font-bold uppercase tracking-wider text-primary/80">
                 {t("sales.addProduct")}
               </h3>
@@ -512,12 +512,12 @@ function SalesPage() {
                           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                         </Button>
                       </PopoverTrigger>
-                      <PopoverContent className="w-[300px] p-0" align="start">
+                      <PopoverContent className="w-75 p-0" align="start">
                         <Command>
                           <CommandInput placeholder={t("sales.searchProductPh")} />
                           <CommandEmpty>{t("sales.productNotFound")}</CommandEmpty>
                           <CommandGroup>
-                            <CommandList className="max-h-[220px]">
+                            <CommandList className="max-h-55">
                               {productsForVehicle.length === 0 && (
                                 <div className="px-2 py-3 text-sm text-muted-foreground text-center">
                                   {t("sales.noStockProduct")}
@@ -642,7 +642,7 @@ function SalesPage() {
                       <span>{t("sales.cartEmptyHint")}</span>
                     </div>
                   ) : (
-                    <div className="max-h-[160px] overflow-y-auto scrollbar-thin">
+                    <div className="max-h-40 overflow-y-auto scrollbar-thin">
                       <table className="w-full text-sm text-left">
                         <thead>
                           <tr className="border-b text-xs text-muted-foreground bg-muted/10">
@@ -659,7 +659,7 @@ function SalesPage() {
                               key={item.productId}
                               className="border-b last:border-0 hover:bg-muted/10"
                             >
-                              <td className="p-2 pl-4 font-medium max-w-[180px] truncate">
+                              <td className="p-2 pl-4 font-medium max-w-45 truncate">
                                 {item.name}
                               </td>
                               <td className="p-2">
@@ -777,7 +777,7 @@ function SalesPage() {
                               <CommandInput placeholder={t("sales.searchCustomer")} />
                               <CommandEmpty>{t("sales.customerNotFound")}</CommandEmpty>
                               <CommandGroup>
-                                <CommandList className="max-h-[180px]">
+                                <CommandList className="max-h-45">
                                   <CommandItem
                                     onSelect={() => {
                                       setForm({ ...form, customerId: "" });
@@ -1049,7 +1049,7 @@ function SalesPage() {
                     const p = products.find((x) => x.id === item.productId);
                     return (
                       <tr key={idx} className="border-b border-dashed border-gray-200">
-                        <td className="py-1.5 pr-2 max-w-[130px] truncate">
+                        <td className="py-1.5 pr-2 max-w-32.5 truncate">
                           {p?.name || t("sales.unknownProduct")}
                         </td>
                         <td className="text-right py-1.5">{item.qty}</td>
@@ -1173,7 +1173,7 @@ function SalesPage() {
             <p className="text-xs text-muted-foreground">{t("sales.transactionsDesc")}</p>
           </div>
           <Select value={period} onValueChange={setPeriod}>
-            <SelectTrigger className="w-[160px]">
+            <SelectTrigger className="w-40">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -1233,7 +1233,7 @@ function SalesPage() {
                           </span>
                         )}
                       </TableCell>
-                      <TableCell className="max-w-[200px] truncate">
+                      <TableCell className="max-w-50 truncate">
                         <div className="flex flex-col">
                           <span className="font-medium text-foreground">
                             {firstProduct?.name || t("sales.unknownProduct")}

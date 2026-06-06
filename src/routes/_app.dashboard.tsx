@@ -778,7 +778,7 @@ function SaleList({
         const cust = customers.find((c) => c.id === s.customerId);
         return {
           key: s.id,
-          title: cust?.name || t("dashboard.saleRef", { id: s.id.slice(-6).toUpperCase() }),
+          title: cust?.name || t("sales.customer"),
           sub: `${new Date(s.date).toLocaleDateString("uz-UZ")} · ${paymentLabel(t, s.paymentType)} · ${s.items.length} ${t("common.itemsUnit")}`,
           amount: `${sign}${formatSom(s[field])}`,
           tone: "success" as const,

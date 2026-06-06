@@ -403,9 +403,8 @@ function ExpenseDetailDialog({
                 {saleRows.map((s) => (
                   <div key={s.id} className="flex items-center justify-between px-3 py-2">
                     <div>
-                      <div className="font-medium">#{s.id.slice(-6).toUpperCase()}</div>
+                      <div className="font-medium">{new Date(s.date).toLocaleDateString("uz-UZ")}</div>
                       <div className="text-xs text-muted-foreground">
-                        {new Date(s.date).toLocaleDateString("uz-UZ")} ·{" "}
                         {paymentLabel(t, s.paymentType)} · {formatSom(s.total)}
                       </div>
                     </div>
