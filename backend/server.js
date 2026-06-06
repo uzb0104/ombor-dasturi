@@ -32,18 +32,17 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 5001;
 
-// CORS sozlamalari (Faza 1: Xavfsizlik bo'yicha cheklov)
 const allowedOrigins = [
   "http://localhost:5173",
   "http://127.0.0.1:5173",
-  // Kelajakda qo'shimcha production domenlar qo'shilishi mumkin
-];
+  process.env.FRONTEND_URL,
+].filter(Boolean);
 
 app.use(
   cors({
     origin: function (origin, callback) {
-      // Brauzer bo'lmagan so'rovlar (masalan, curl, postman yoki mobil app) yoki ruxsat etilgan origins
-      if (!origin || allowedOrigins.indexOf(origin) !== -1) {
+      // Brauzer bo'lmagan so'rovlar, ruxsat etilgan origins yoki Vercel domenlariga ruxsat
+      if (!origin || allowedOrigins.includes(origin) || origin.endsWith('.vercel.app')) {
         callback(null, true);
       } else {
         callback(new Error("CORS siyosati tomonidan bloklandi"));
