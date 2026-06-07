@@ -34,21 +34,38 @@ function AppLayout() {
   const restoreSession = useStore((s) => s.restoreSession);
   const navigate = useNavigate();
   const [hydrated, setHydrated] = useState(false);
+  const [restoring, setRestoring] = useState(true);
 
   useEffect(() => {
     // Zustand persist hydration + session restore
     setHydrated(true);
     // Sahifa yangilanganda sessiyani backenddan tekshiramiz
-    restoreSession();
+    restoreSession().finally(() => setRestoring(false));
   }, [restoreSession]);
 
   useEffect(() => {
-    if (hydrated && !user) {
+    // Faqat hydration tugagach va restore tugagach, user yo'q bo'lsa login'ga yo'naltiramiz
+    if (hydrated && !restoring && !user) {
       navigate({ to: "/login" });
     }
-  }, [hydrated, user, navigate]);
+  }, [hydrated, restoring, user, navigate]);
 
-  if (!hydrated || !user) {
+  // Hydration kutilmoqda
+  if (!hydrated) {
+    return (
+      <div className="flex h-screen w-full items-center justify-center bg-background">
+        <div className="flex flex-col items-center gap-3">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <span className="text-sm text-muted-foreground">{t("common.loading")}</span>
+        </div>
+      </div>
+    );
+  }
+
+  // Restoring va user mavjud — app'ni ko'rsatamiz (background'da session tekshiriladi)
+  // Restoring va user yo'q — loading ko'rsatamiz
+  // Restore tugagan va user yo'q — login'ga yo'naltiramiz (useEffect orqali)
+  if (!user) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-3">

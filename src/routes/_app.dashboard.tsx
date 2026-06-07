@@ -62,7 +62,7 @@ function Dashboard() {
 
   useEffect(() => {
     // API base URL ni env dan yoki default holatda aniqlaymiz
-    const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:5001";
+    const API_BASE = (import.meta.env.VITE_API_URL || "http://localhost:5001").replace(/\/+$/, "");
     fetch(`${API_BASE}/api/health`)
       .then((res) => res.json())
       .then((data) => setSystemHealth(data))

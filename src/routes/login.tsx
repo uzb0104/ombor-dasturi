@@ -48,8 +48,15 @@ function LoginPage() {
         toast.success(t("login.success"));
         navigate({ to: "/dashboard" });
       } else toast.error(t("login.fail"));
-    } catch {
-      toast.error(t("login.serverError"));
+    } catch (err: any) {
+      // Server cold start yoki tarmoq xatosi
+      if (!err?.status || err?.message?.includes("fetch")) {
+        toast.error("Server yuklanmoqda. Iltimos, 10-15 soniya kutib qayta urinib ko'ring.", {
+          duration: 6000,
+        });
+      } else {
+        toast.error(t("login.serverError"));
+      }
     }
     setLoading(false);
   };

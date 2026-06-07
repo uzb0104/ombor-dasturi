@@ -44,19 +44,39 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
     headers["Authorization"] = `Bearer ${token}`;
   }
 
-  const res = await fetch(`${API_BASE}${path}`, {
-    ...options,
-    headers,
-  });
+  const cleanBase = API_BASE.replace(/\/$/, "");
+  const cleanPath = path.replace(/^\//, "");
+  const url = `${cleanBase}/${cleanPath}`;
 
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({ error: res.statusText }));
-    const error = new Error(body.error || `HTTP ${res.status}`) as any;
-    error.status = res.status;
-    throw error;
+  // Render free tier cold start uchun 30 soniya timeout
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 30000);
+
+  try {
+    const res = await fetch(url, {
+      ...options,
+      headers,
+      signal: controller.signal,
+    });
+
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({ error: res.statusText }));
+      const error = new Error(body.error || `HTTP ${res.status}`) as any;
+      error.status = res.status;
+      throw error;
+    }
+
+    return res.json();
+  } catch (err: any) {
+    if (err.name === "AbortError") {
+      const error = new Error("Server javob bermayapti. Iltimos qayta urinib ko'ring.") as any;
+      error.status = 0;
+      throw error;
+    }
+    throw err;
+  } finally {
+    clearTimeout(timeout);
   }
-
-  return res.json();
 }
 
 // ─── AUTH ───
