@@ -180,10 +180,13 @@ export const useStore = create<State>()(
               data.user.role === "Admin" ? ALL_PERMISSIONS : data.user.permissions || [];
             set({ user: { ...data.user, permissions: perms } });
             await get().loadFromBackend();
-          } catch {
-            // Token yaroqsiz — tozalaymiz
-            apiLogout();
-            set({ user: null });
+          } catch (err: any) {
+            // Faqat token yaroqsiz bo'lgandagina (401 yoki 403) sessiyani tozalaymiz.
+            // Tarmoq xatoligi yoki server vaqtincha javob bermaganda sessiyani saqlab qolamiz.
+            if (err?.status === 401 || err?.status === 403) {
+              apiLogout();
+              set({ user: null });
+            }
           }
         },
 

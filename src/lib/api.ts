@@ -51,7 +51,9 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 
   if (!res.ok) {
     const body = await res.json().catch(() => ({ error: res.statusText }));
-    throw new Error(body.error || `HTTP ${res.status}`);
+    const error = new Error(body.error || `HTTP ${res.status}`) as any;
+    error.status = res.status;
+    throw error;
   }
 
   return res.json();
@@ -69,6 +71,10 @@ export async function apiLogin(email: string, password: string) {
 
 export async function apiGetMe() {
   return request<{ user: SessionUser }>("/api/auth/me");
+}
+
+export async function apiGetPublicStats() {
+  return request<{ products: number; customers: number; vehicleBrands: number }>("/api/auth/public-stats");
 }
 
 export function apiLogout() {

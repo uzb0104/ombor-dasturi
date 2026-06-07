@@ -60,4 +60,37 @@ router.get("/me", authenticateToken, (req, res) => {
   res.json({ user: req.user });
 });
 
+// JAMOATCHILIK (PUBLIC) STATISTIKALARI
+router.get("/public-stats", async (req, res) => {
+  try {
+    let productsCount = 0;
+    let customersCount = 0;
+    let vehicleBrandsCount = 0;
+
+    if (isSupabaseConfigured) {
+      const [prodRes, custRes, brandRes] = await Promise.all([
+        supabaseClient.from("products").select("id", { count: "exact", head: true }),
+        supabaseClient.from("customers").select("id", { count: "exact", head: true }),
+        supabaseClient.from("vehicle_brands").select("name", { count: "exact", head: true })
+      ]);
+      productsCount = prodRes.count || 0;
+      customersCount = custRes.count || 0;
+      vehicleBrandsCount = brandRes.count || 0;
+    } else {
+      const db = readLocalDb();
+      productsCount = (db.products || []).length;
+      customersCount = (db.customers || []).length;
+      vehicleBrandsCount = (db.vehicle_brands || []).length;
+    }
+
+    res.json({
+      products: productsCount,
+      customers: customersCount,
+      vehicleBrands: vehicleBrandsCount
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 export default router;

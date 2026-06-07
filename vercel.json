@@ -3,6 +3,9 @@
   "devCommand": "yarn dev",
   "installCommand": "yarn install",
   "framework": "vite",
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/index.html" }
+  ],
   "regions": ["iad1"],
   "git": {
     "silent": false

@@ -6,9 +6,10 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Card } from "@/components/ui/card";
 import { Car, Loader2 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { useT } from "@/lib/i18n";
+import { apiGetPublicStats } from "@/lib/api";
 
 export const Route = createFileRoute("/login")({ component: LoginPage });
 
@@ -20,6 +21,23 @@ function LoginPage() {
   const [password, setPassword] = useState("");
   const [remember, setRemember] = useState(true);
   const [loading, setLoading] = useState(false);
+  const [stats, setStats] = useState({
+    products: "50+",
+    customers: "15+",
+    vehicleBrands: "11",
+  });
+
+  useEffect(() => {
+    apiGetPublicStats()
+      .then((data) => {
+        setStats({
+          products: String(data.products),
+          customers: String(data.customers),
+          vehicleBrands: String(data.vehicleBrands),
+        });
+      })
+      .catch(() => {});
+  }, []);
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -53,9 +71,9 @@ function LoginPage() {
           <p className="text-sm opacity-80">{t("login.taglineDesc")}</p>
           <div className="grid grid-cols-3 gap-3 pt-4">
             {[
-              ["50+", t("nav.products")],
-              ["15+", t("nav.customers")],
-              ["11", t("nav.vehicleBrand")],
+              [stats.products, t("nav.products")],
+              [stats.customers, t("nav.customers")],
+              [stats.vehicleBrands, t("nav.vehicleBrand")],
             ].map(([n, l]) => (
               <div
                 key={l}
