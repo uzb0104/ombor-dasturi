@@ -155,12 +155,12 @@ function SettingsPage() {
               {t("settings.tab.brands")}
             </TabsTrigger>
           )}
-          {isAdmin && (
+          {/* {isAdmin && (
             <TabsTrigger value="branches">
               <Building2 className="h-4 w-4 mr-1.5" />
               {t("settings.tab.branches")}
             </TabsTrigger>
-          )}
+          )} */}
           <TabsTrigger value="security">
             <Lock className="h-4 w-4 mr-1.5" />
             {t("settings.tab.security")}
@@ -225,7 +225,7 @@ function SettingsPage() {
           </TabsContent>
         )}
 
-        {isAdmin && (
+        {/* {isAdmin && (
           <TabsContent value="branches" className="mt-5">
             <BranchesManagement
               branches={branches}
@@ -234,7 +234,7 @@ function SettingsPage() {
               remove={deleteBranch}
             />
           </TabsContent>
-        )}
+        )} */}
 
         <TabsContent value="security" className="mt-5">
           <Card className="p-6 rounded-2xl space-y-4 max-w-2xl">

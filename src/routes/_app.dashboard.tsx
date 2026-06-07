@@ -264,7 +264,7 @@ function Dashboard() {
         />
       </div>
 
-      {systemHealth && (
+      {/* {systemHealth && (
         <Card className="rounded-2xl bg-card border shadow-sm">
           <CardHeader className="pb-2">
             <CardTitle className="text-xs font-semibold tracking-tight text-muted-foreground uppercase flex items-center gap-2">
@@ -314,7 +314,7 @@ function Dashboard() {
             </div>
           </CardContent>
         </Card>
-      )}
+      )} */}
 
       <DetailDialog
         kind={detail}

@@ -219,7 +219,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               {now.toLocaleString("uz-UZ", { dateStyle: "medium", timeStyle: "short" })}
             </div>
 
-            <Select value={warehouse} onValueChange={(v) => setWarehouse(v)}>
+            {/* <Select value={warehouse} onValueChange={(v) => setWarehouse(v)}>
               <SelectTrigger className="hidden sm:flex h-9 w-[160px]">
                 <SelectValue />
               </SelectTrigger>
@@ -230,7 +230,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   </SelectItem>
                 ))}
               </SelectContent>
-            </Select>
+            </Select> */}
 
             <LangSwitcher />
 
