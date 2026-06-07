@@ -2,9 +2,6 @@
   "buildCommand": "yarn build",
   "devCommand": "yarn dev",
   "installCommand": "yarn install",
-  "env": {
-    "VITE_API_URL": "@vite_api_url"
-  },
   "framework": "vite",
   "regions": ["iad1"],
   "git": {
