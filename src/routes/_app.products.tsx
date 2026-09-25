@@ -20,7 +20,6 @@ import {
   PageHeader,
   StatusBadge,
   useConfirm,
-  usePagination,
   PaginationBar,
   useSelection,
   BulkBar,
@@ -31,8 +30,9 @@ import {
   exportToExcel,
 } from "@/components/ui-kit";
 import { useStore } from "@/lib/store";
+import { productsApi } from "@/lib/api";
 import { formatSom } from "@/lib/constants";
-import { useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Plus, Search, Edit, Trash2, Package, ScanBarcode, Download, History } from "lucide-react";
 import { useT } from "@/lib/i18n";
 import { ProductImportDialog } from "@/components/ProductImportDialog";
@@ -58,7 +58,6 @@ type FormState = {
   barcode: string;
   vehicle: string;
   category: string;
-  supplierId: string;
   buyPrice: number;
   sellPrice: number;
   quantity: number;
@@ -75,7 +74,6 @@ const emptyForm = (firstCategory: string, firstBrand: string): FormState => ({
   barcode: "",
   vehicle: firstBrand,
   category: firstCategory,
-  supplierId: "",
   buyPrice: 0,
   sellPrice: 0,
   quantity: 0,
@@ -94,7 +92,6 @@ function ProductsPage() {
   const t = useT();
   const {
     products,
-    suppliers,
     categories,
     vehicleBrands,
     addProduct,
@@ -114,25 +111,51 @@ function ProductsPage() {
   const { confirm, confirmNode } = useConfirm();
   const sel = useSelection();
 
-  const filtered = useMemo(
-    () =>
-      products.filter((p) => {
-        const s = search.toLowerCase();
-        if (search && !p.name.toLowerCase().includes(s) && !(p.barcode || "").includes(search))
-          return false;
-        if (cat !== "all" && p.category !== cat) return false;
-        const v = veh !== "all" ? veh : vehicleFilter !== "all" ? vehicleFilter : null;
-        if (v && p.vehicle !== v) return false;
-        return true;
-      }),
-    [products, search, cat, veh, vehicleFilter],
-  );
+  const [serverPage, setServerPage] = useState(1);
+  const [serverPages, setServerPages] = useState(1);
+  const [serverTotal, setServerTotal] = useState(0);
+  const [pageItems, setPageItems] = useState<Product[]>([]);
+  const pageSize = 12;
+  const serverVehicle = veh !== "all" ? veh : vehicleFilter !== "all" ? vehicleFilter : "";
+
+  useEffect(() => {
+    let active = true;
+    void productsApi
+      .getPage({
+        page: serverPage,
+        limit: pageSize,
+        search,
+        category: cat === "all" ? "" : cat,
+        vehicle: serverVehicle,
+      })
+      .then((result) => {
+        if (!active) return;
+        setServerPages(result.pages);
+        setServerTotal(result.total);
+        setPageItems(result.items);
+      })
+      .catch(() => undefined);
+    return () => {
+      active = false;
+    };
+  }, [products, serverPage, search, cat, serverVehicle]);
+
+  useEffect(() => {
+    setServerPage(1);
+  }, [search, cat, serverVehicle]);
 
   // Sorting
-  const { items: sortedProducts, sortConfig, requestSort } = useSortableData(filtered);
+  const { items: sortedProducts, sortConfig, requestSort } = useSortableData(pageItems);
 
   // Pagination
-  const pg = usePagination(sortedProducts, 12);
+  const pg = {
+    paged: sortedProducts,
+    page: serverPage,
+    setPage: setServerPage,
+    totalPages: serverPages,
+    totalItems: serverTotal,
+    pageSize,
+  };
   const pageIds = pg.paged.map((p) => p.id);
   const allChecked = pageIds.length > 0 && pageIds.every((id) => sel.has(id));
 
@@ -146,7 +169,6 @@ function ProductsPage() {
       barcode: p.barcode || "",
       vehicle: p.vehicle,
       category: p.category,
-      supplierId: p.supplierId || "",
       buyPrice: p.buyPrice,
       sellPrice: p.sellPrice,
       quantity: p.quantity,
@@ -221,7 +243,9 @@ function ProductsPage() {
       sku: "",
       vehicle,
       category,
-      supplierId: form.supplierId || suppliers[0]?.id || null,
+      supplierId: editing
+        ? products.find((product) => product.id === editing)?.supplierId || null
+        : null,
       buyPrice: form.buyPrice,
       sellPrice: form.sellPrice,
       quantity: form.quantity,
@@ -285,7 +309,11 @@ function ProductsPage() {
   ];
 
   const handleExportCSV = () => {
-    exportToCSV(filtered, exportHeaders(), `tovarlar_${new Date().toISOString().slice(0, 10)}.csv`);
+    exportToCSV(
+      pageItems,
+      exportHeaders(),
+      `tovarlar_${new Date().toISOString().slice(0, 10)}.csv`,
+    );
   };
 
   const handleExportExcel = () => {
@@ -297,7 +325,7 @@ function ProductsPage() {
           : h,
     );
     exportToExcel(
-      filtered,
+      pageItems,
       headers,
       t("products.exportListTitle"),
       `tovarlar_${new Date().toISOString().slice(0, 10)}.xls`,
@@ -409,24 +437,6 @@ function ProductsPage() {
                         {categories.map((c) => (
                           <SelectItem key={c} value={c}>
                             {c}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="sm:col-span-2">
-                    <Label>{t("common.supplier")}</Label>
-                    <Select
-                      value={form.supplierId || suppliers[0]?.id}
-                      onValueChange={(v) => setForm({ ...form, supplierId: v })}
-                    >
-                      <SelectTrigger className="mt-1">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {suppliers.map((s) => (
-                          <SelectItem key={s.id} value={s.id}>
-                            {s.name}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -549,7 +559,7 @@ function ProductsPage() {
 
       <Card className="p-4 rounded-2xl card-elevated border-border/60">
         <div className="flex flex-col sm:flex-row sm:flex-wrap gap-2 sm:gap-3 mb-4">
-          <div className="relative flex-1 min-w-[180px]">
+          <div className="relative flex-1 min-w-45">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder={t("products.search")}
@@ -559,7 +569,7 @@ function ProductsPage() {
             />
           </div>
           <Select value={veh} onValueChange={setVeh}>
-            <SelectTrigger className="sm:w-[180px]">
+            <SelectTrigger className="sm:w-45">
               <SelectValue placeholder={t("products.brand")} />
             </SelectTrigger>
             <SelectContent>
@@ -572,7 +582,7 @@ function ProductsPage() {
             </SelectContent>
           </Select>
           <Select value={cat} onValueChange={setCat}>
-            <SelectTrigger className="sm:w-[180px]">
+            <SelectTrigger className="sm:w-45">
               <SelectValue placeholder={t("products.category")} />
             </SelectTrigger>
             <SelectContent>

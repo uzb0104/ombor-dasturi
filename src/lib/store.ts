@@ -42,6 +42,8 @@ import {
 import { syncApi, formatApiError } from "./api-sync";
 import { toast } from "sonner";
 
+let sessionRestorePromise: Promise<void> | null = null;
+
 type State = {
   user: SessionUser | null;
   appUsers: AppUser[];
@@ -174,19 +176,30 @@ export const useStore = create<State>()(
         restoreSession: async () => {
           const token = getToken();
           if (!token) return;
+          if (!sessionRestorePromise) {
+            sessionRestorePromise = (async () => {
+              try {
+                const data = await apiGetMe();
+                const perms =
+                  data.user.role === "Admin" ? ALL_PERMISSIONS : data.user.permissions || [];
+                set({ user: { ...data.user, permissions: perms } });
+                await get().loadFromBackend();
+              } catch (err: unknown) {
+                const status =
+                  typeof err === "object" && err !== null && "status" in err
+                    ? Number((err as { status?: number }).status)
+                    : undefined;
+                if (status === 401 || status === 403) {
+                  apiLogout();
+                  set({ user: null });
+                }
+              }
+            })();
+          }
           try {
-            const data = await apiGetMe();
-            const perms =
-              data.user.role === "Admin" ? ALL_PERMISSIONS : data.user.permissions || [];
-            set({ user: { ...data.user, permissions: perms } });
-            await get().loadFromBackend();
-          } catch (err: any) {
-            // Faqat token yaroqsiz bo'lgandagina (401 yoki 403) sessiyani tozalaymiz.
-            // Tarmoq xatoligi yoki server vaqtincha javob bermaganda sessiyani saqlab qolamiz.
-            if (err?.status === 401 || err?.status === 403) {
-              apiLogout();
-              set({ user: null });
-            }
+            await sessionRestorePromise;
+          } finally {
+            sessionRestorePromise = null;
           }
         },
 
@@ -210,7 +223,10 @@ export const useStore = create<State>()(
               auditLog,
               appUsers,
             ] = await Promise.all([
-              productsApi.getAll().catch(() => get().products),
+              productsApi
+                .getAll()
+                .then((items) => (Array.isArray(items) ? items : []))
+                .catch(() => (Array.isArray(get().products) ? get().products : [])),
               customersApi.getAll().catch(() => get().customers),
               suppliersApi.getAll().catch(() => get().suppliers),
               employeesApi.getAll().catch(() => get().employees),
@@ -727,15 +743,13 @@ export const useStore = create<State>()(
             return s;
           });
           set({ debtPayments: [p, ...get().debtPayments], customers, suppliers });
-          
+
           // Backend'da qarz yangilanganidan keyin, frontend ma'lumotlarini ham yangilash
-          debtPaymentsApi.create(p)
+          debtPaymentsApi
+            .create(p)
             .then(() => {
               // Customers va suppliers'ni backend'dan qayta yuklash
-              Promise.all([
-                customersApi.getAll(),
-                suppliersApi.getAll(),
-              ])
+              Promise.all([customersApi.getAll(), suppliersApi.getAll()])
                 .then(([updatedCustomers, updatedSuppliers]) => {
                   set({ customers: updatedCustomers, suppliers: updatedSuppliers });
                 })
@@ -745,7 +759,7 @@ export const useStore = create<State>()(
               toast.error(formatApiError(err));
               resync();
             });
-          
+
           get().logAudit({
             action: "create",
             entity: "debt_payment",
@@ -864,7 +878,7 @@ export const useStore = create<State>()(
     },
     {
       name: "autoerp-pro-v2",
-      version: 6,
+      version: 7,
       partialize: (s) => ({
         user: s.user,
         theme: s.theme,
@@ -889,6 +903,11 @@ export const useStore = create<State>()(
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       migrate: (persisted: any) => {
         if (!persisted) return persisted;
+        if (!Array.isArray(persisted.products)) {
+          persisted.products = Array.isArray(persisted.products?.items)
+            ? persisted.products.items
+            : [];
+        }
         if (!persisted.categories) persisted.categories = [...DEFAULT_CATEGORIES];
         if (!persisted.vehicleBrands) persisted.vehicleBrands = [...DEFAULT_VEHICLE_BRANDS];
         if (!persisted.branches) persisted.branches = [...DEFAULT_BRANCHES];

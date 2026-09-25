@@ -48,9 +48,17 @@ function LoginPage() {
         toast.success(t("login.success"));
         navigate({ to: "/dashboard" });
       } else toast.error(t("login.fail"));
-    } catch (err: any) {
-      // Server cold start yoki tarmoq xatosi
-      if (!err?.status || err?.message?.includes("fetch")) {
+    } catch (err: unknown) {
+      const status =
+        typeof err === "object" && err !== null && "status" in err
+          ? Number((err as { status?: number }).status)
+          : undefined;
+      const message =
+        typeof err === "object" && err !== null && "message" in err
+          ? String((err as { message?: string }).message)
+          : "";
+
+      if (!status || message.includes("fetch")) {
         toast.error("Server yuklanmoqda. Iltimos, 10-15 soniya kutib qayta urinib ko'ring.", {
           duration: 6000,
         });

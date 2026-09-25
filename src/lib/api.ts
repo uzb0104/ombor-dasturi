@@ -33,6 +33,8 @@ export function removeToken(): void {
 }
 
 // ─── Umumiy fetch yordamchisi ───
+type ApiError = Error & { status?: number };
+
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const token = getToken();
   const headers: Record<string, string> = {
@@ -48,7 +50,6 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const cleanPath = path.replace(/^\//, "");
   const url = `${cleanBase}/${cleanPath}`;
 
-  // Render free tier cold start uchun 30 soniya timeout
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 30000);
 
@@ -60,16 +61,18 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
     });
 
     if (!res.ok) {
-      const body = await res.json().catch(() => ({ error: res.statusText }));
-      const error = new Error(body.error || `HTTP ${res.status}`) as any;
+      const body = (await res.json().catch(() => ({ error: res.statusText }))) as {
+        error?: string;
+      };
+      const error = new Error(body.error || `HTTP ${res.status}`) as ApiError;
       error.status = res.status;
       throw error;
     }
 
-    return res.json();
-  } catch (err: any) {
-    if (err.name === "AbortError") {
-      const error = new Error("Server javob bermayapti. Iltimos qayta urinib ko'ring.") as any;
+    return res.json() as Promise<T>;
+  } catch (err: unknown) {
+    if (err instanceof Error && err.name === "AbortError") {
+      const error = new Error("Server javob bermayapti. Iltimos qayta urinib ko'ring.") as ApiError;
       error.status = 0;
       throw error;
     }
@@ -94,7 +97,9 @@ export async function apiGetMe() {
 }
 
 export async function apiGetPublicStats() {
-  return request<{ products: number; customers: number; vehicleBrands: number }>("/api/auth/public-stats");
+  return request<{ products: number; customers: number; vehicleBrands: number }>(
+    "/api/auth/public-stats",
+  );
 }
 
 export function apiLogout() {
@@ -125,6 +130,23 @@ function createCrudApi<T>(resource: string) {
 // ─── RESURS API-LARI ───
 export const productsApi = {
   ...createCrudApi<Product>("products"),
+  getPage: (
+    params: {
+      page?: number;
+      limit?: number;
+      search?: string;
+      category?: string;
+      vehicle?: string;
+    } = {},
+  ) => {
+    const query = new URLSearchParams();
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== undefined && value !== "") query.set(key, String(value));
+    });
+    return request<{ items: Product[]; page: number; limit: number; total: number; pages: number }>(
+      `/api/products?${query.toString()}`,
+    );
+  },
   importBulk: (items: unknown[]) =>
     request<{ created: number; failed: number; errors: { name?: string; error: string }[] }>(
       "/api/products/import",

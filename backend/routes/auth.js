@@ -47,7 +47,7 @@ router.post("/login", authLimiter, validate(loginSchema), async (req, res) => {
       permissions: user.permissions || [],
     };
 
-    const token = jwt.sign(payload, JWT_SECRET, { expiresIn: "30d" });
+    const token = jwt.sign(payload, JWT_SECRET, { expiresIn: process.env.JWT_EXPIRES_IN || "8h" });
 
     res.json({ token, user: payload });
   } catch (error) {
@@ -68,15 +68,27 @@ router.get("/public-stats", async (req, res) => {
     let vehicleBrandsCount = 0;
 
     if (isSupabaseConfigured) {
-      const [prodRes, custRes, brandRes] = await Promise.all([
-        supabaseClient.from("products").select("id", { count: "exact", head: true }),
-        supabaseClient.from("customers").select("id", { count: "exact", head: true }),
-        supabaseClient.from("vehicle_brands").select("name", { count: "exact", head: true })
-      ]);
-      productsCount = prodRes.count || 0;
-      customersCount = custRes.count || 0;
-      vehicleBrandsCount = brandRes.count || 0;
-    } else {
+      try {
+        const [prodRes, custRes, brandRes] = await Promise.all([
+          supabaseClient.from("products").select("id", { count: "exact", head: true }),
+          supabaseClient.from("customers").select("id", { count: "exact", head: true }),
+          supabaseClient.from("vehicle_brands").select("name", { count: "exact", head: true }),
+        ]);
+
+        if (!prodRes.error && !custRes.error && !brandRes.error) {
+          productsCount = prodRes.count || 0;
+          customersCount = custRes.count || 0;
+          vehicleBrandsCount = brandRes.count || 0;
+        }
+      } catch (supabaseError) {
+        console.warn(
+          "⚠️ Supabase public-stats xatosi, mahalliy DB ga qaytilmoqda:",
+          supabaseError.message,
+        );
+      }
+    }
+
+    if (productsCount === 0 && customersCount === 0 && vehicleBrandsCount === 0) {
       const db = readLocalDb();
       productsCount = (db.products || []).length;
       customersCount = (db.customers || []).length;
@@ -86,7 +98,7 @@ router.get("/public-stats", async (req, res) => {
     res.json({
       products: productsCount,
       customers: customersCount,
-      vehicleBrands: vehicleBrandsCount
+      vehicleBrands: vehicleBrandsCount,
     });
   } catch (error) {
     res.status(500).json({ error: error.message });

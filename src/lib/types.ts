@@ -42,6 +42,15 @@ export type Supplier = {
   phone: string;
   address: string;
   debt: number;
+  deliveredProduct?: string;
+  deliveredQuantity?: number;
+};
+
+export type EmployeePayment = {
+  id: string;
+  type: "Avans" | "Oylik";
+  amount: number;
+  date: string;
 };
 
 export type Employee = {
@@ -53,6 +62,7 @@ export type Employee = {
   advance: number;
   hireDate: string;
   status: "Faol" | "Nofaol";
+  paymentHistory?: EmployeePayment[];
 };
 
 export type SaleItem = {

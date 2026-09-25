@@ -9,7 +9,7 @@ dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-export const DB_JSON_PATH = path.join(__dirname, "..", "db.json");
+export const DB_JSON_PATH = process.env.DB_JSON_PATH || path.join(__dirname, "..", "db.json");
 
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_KEY;

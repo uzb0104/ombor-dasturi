@@ -43,7 +43,6 @@ import {
   User as UserIcon,
   Lock,
   Sun,
-  AlertTriangle,
   Car,
   Building2,
 } from "lucide-react";
@@ -69,7 +68,6 @@ function SettingsPage() {
     user,
     theme,
     toggleTheme,
-    resetData,
     appUsers,
     addAppUser,
     updateAppUser,
@@ -87,7 +85,7 @@ function SettingsPage() {
     changePassword,
   } = useStore();
   const isAdmin = user?.role === "Admin";
-  const { confirm, confirmNode } = useConfirm();
+  const { confirm } = useConfirm();
 
   const [profileName, setProfileName] = useState(user?.name || "");
   const [passwords, setPasswords] = useState({ current: "", new: "", confirm: "" });
@@ -119,22 +117,8 @@ function SettingsPage() {
     }
   };
 
-  const resetAll = async () => {
-    const ok = await confirm({
-      title: t("settings.demoResetTitle"),
-      description: t("settings.demoResetDesc"),
-      destructive: true,
-      confirmText: t("settings.resetBtn"),
-    });
-    if (ok) {
-      resetData();
-      toast.success(t("settings.resetDone"));
-    }
-  };
-
   return (
     <div className="space-y-5">
-      {confirmNode}
       <PageHeader title={t("settings.title")} subtitle={t("settings.subtitle")} />
 
       <Tabs defaultValue="profile">
@@ -169,12 +153,6 @@ function SettingsPage() {
             <Sun className="h-4 w-4 mr-1.5" />
             {t("settings.tab.appearance")}
           </TabsTrigger>
-          {isAdmin && (
-            <TabsTrigger value="danger" className="text-destructive">
-              <AlertTriangle className="h-4 w-4 mr-1.5" />
-              {t("settings.tab.danger")}
-            </TabsTrigger>
-          )}
         </TabsList>
 
         <TabsContent value="profile" className="mt-5">
@@ -281,18 +259,6 @@ function SettingsPage() {
             </div>
           </Card>
         </TabsContent>
-
-        {isAdmin && (
-          <TabsContent value="danger" className="mt-5">
-            <Card className="p-6 rounded-2xl space-y-3 border-destructive/30 max-w-2xl">
-              <h3 className="font-semibold text-destructive">{t("settings.tab.danger")}</h3>
-              <p className="text-sm text-muted-foreground">{t("settings.dangerDesc")}</p>
-              <Button variant="destructive" onClick={resetAll}>
-                {t("settings.demoReset")}
-              </Button>
-            </Card>
-          </TabsContent>
-        )}
       </Tabs>
     </div>
   );

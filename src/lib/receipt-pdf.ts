@@ -1,4 +1,3 @@
-import { jsPDF } from "jspdf";
 import type { Sale } from "./types";
 import type { Product, Customer, Employee } from "./types";
 import { formatSom } from "./constants";
@@ -41,7 +40,7 @@ const defaultLabels: ReceiptLabels = {
   generalCustomer: "Umumiy mijoz",
 };
 
-export function downloadSaleReceiptPdf(
+export async function downloadSaleReceiptPdf(
   sale: Sale,
   ctx: {
     products: Product[];
@@ -50,6 +49,7 @@ export function downloadSaleReceiptPdf(
     labels?: Partial<ReceiptLabels>;
   },
 ) {
+  const { jsPDF } = await import("jspdf");
   const L = { ...defaultLabels, ...ctx.labels };
   const doc = new jsPDF({ unit: "mm", format: [80, 297] });
   const margin = 5;

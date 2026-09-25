@@ -10,7 +10,7 @@ import {
   clearCached,
 } from "../lib/db.js";
 import { validate, userSchema } from "../lib/validators.js";
-import { authenticateToken } from "../middleware/auth.js";
+import { authenticateToken, requireRole } from "../middleware/auth.js";
 
 const router = express.Router();
 
@@ -37,34 +37,51 @@ router.get("/", authenticateToken, async (req, res) => {
   }
 });
 
-router.post("/", authenticateToken, validate(userSchema), async (req, res) => {
-  const u = req.body;
-  u.password = bcrypt.hashSync(u.password || "user123", 10);
-  try {
-    if (isSupabaseConfigured) {
-      const { data, error } = await supabaseClient
-        .from("app_users")
-        .insert([u])
-        .select("id, name, email, role, permissions, active")
-        .single();
-      if (error) throw error;
-      await clearCached("cache:users");
-      res.json(data);
-    } else {
-      const db = readLocalDb();
-      db.app_users.unshift(u);
-      writeLocalDb(db);
-      const { password, ...safeUser } = u;
-      res.json(safeUser);
+router.post(
+  "/",
+  authenticateToken,
+  requireRole("Admin"),
+  validate(userSchema),
+  async (req, res) => {
+    const u = req.body;
+    if (!u.password) return res.status(400).json({ error: "Yangi foydalanuvchi paroli majburiy" });
+    u.password = bcrypt.hashSync(u.password, 10);
+    try {
+      if (isSupabaseConfigured) {
+        const { data, error } = await supabaseClient
+          .from("app_users")
+          .insert([u])
+          .select("id, name, email, role, permissions, active")
+          .single();
+        if (error) throw error;
+        await clearCached("cache:users");
+        res.json(data);
+      } else {
+        const db = readLocalDb();
+        db.app_users.unshift(u);
+        writeLocalDb(db);
+        const { password, ...safeUser } = u;
+        res.json(safeUser);
+      }
+    } catch (error) {
+      res.status(500).json({ error: error.message });
     }
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
+  },
+);
 
 router.put("/:id", authenticateToken, validate(userSchema.partial()), async (req, res) => {
   const { id } = req.params;
   const updates = { ...req.body };
+
+  if (req.user.role !== "Admin" && req.user.id !== id) {
+    return res.status(403).json({ error: "Faqat o'zingizning profilingizni o'zgartira olasiz" });
+  }
+  if (req.user.role !== "Admin") {
+    delete updates.role;
+    delete updates.permissions;
+    delete updates.active;
+    delete updates.email;
+  }
 
   try {
     // Parolni yangilash xavfsizlik tekshiruvi (Eski parolni so'rash)
@@ -124,7 +141,7 @@ router.put("/:id", authenticateToken, validate(userSchema.partial()), async (req
   }
 });
 
-router.delete("/:id", authenticateToken, async (req, res) => {
+router.delete("/:id", authenticateToken, requireRole("Admin"), async (req, res) => {
   const { id } = req.params;
   try {
     if (isSupabaseConfigured) {

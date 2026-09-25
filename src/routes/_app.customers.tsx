@@ -60,7 +60,8 @@ const empty = (firstBrand: string): Form => ({
 });
 
 function CustomersPage() {
-  const { customers, vehicleBrands, addCustomer, updateCustomer, deleteCustomer, addDebtPayment } = useStore();
+  const { customers, vehicleBrands, addCustomer, updateCustomer, deleteCustomer, addDebtPayment } =
+    useStore();
   const t = useT();
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<string | null>(null);
@@ -484,9 +485,7 @@ function CustomersPage() {
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div>
-              <Label className="text-xs font-semibold text-muted-foreground uppercase">
-                Mijoz
-              </Label>
+              <Label className="text-xs font-semibold text-muted-foreground uppercase">Mijoz</Label>
               <div className="mt-2 p-2 bg-muted/40 rounded-lg text-sm font-medium">
                 {paymentCustomerName}
               </div>

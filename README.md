@@ -1,3 +1,19 @@
+# Canonical project
+
+The root directory is the canonical application. The nested `ombor-dasturi/` git submodule is a legacy copy and must not be used for builds or deployments.
+
+## Docker
+
+Copy `.env.example` to `.env`, set a strong `JWT_SECRET` and `DEFAULT_ADMIN_PASSWORD`, then run:
+
+```bash
+docker compose up --build
+```
+
+The frontend is available at `http://localhost:4173` and the backend health endpoint at `http://localhost:5001/api/health`.
+
+For Supabase mode, set `SUPABASE_URL`, `SUPABASE_KEY`, `FRONTEND_URL`, and `REDIS_URL` in `.env`. Apply `backend/schema.sql` and `backend/rpc_functions.sql` to the database before creating sales or incoming stock.
+
 # AutoERP Pro v2
 
 Zamonaviy biznes uchun ombor va savdo boshqaruvi tizimi. Ushbu loyiha React (Vite + TanStack Router), Zustand, Tailwind CSS hamda Node.js (Express + Supabase/Local JSON) asosida qurilgan.
@@ -5,6 +21,7 @@ Zamonaviy biznes uchun ombor va savdo boshqaruvi tizimi. Ushbu loyiha React (Vit
 ## Asosiy Texnologiyalar
 
 ### Frontend
+
 - **React 19**
 - **Vite** - Tezkor build tool
 - **TanStack Router** - Zamonaviy va type-safe routing
@@ -14,6 +31,7 @@ Zamonaviy biznes uchun ombor va savdo boshqaruvi tizimi. Ushbu loyiha React (Vit
 - **TypeScript** - Qat'iy tiplashtirish
 
 ### Backend
+
 - **Node.js & Express** - API server
 - **Supabase** (yoki local JSON) - Ma'lumotlar bazasi
 - **JWT (JSON Web Token)** - Autentifikatsiya
@@ -21,6 +39,7 @@ Zamonaviy biznes uchun ombor va savdo boshqaruvi tizimi. Ushbu loyiha React (Vit
 ## O'rnatish va Ishga Tushirish
 
 ### 1. Loyihani yuklab olish va paketlarni o'rnatish
+
 ```bash
 git clone <repository_url>
 cd ombor-dasturi
@@ -28,7 +47,9 @@ yarn install
 ```
 
 ### 2. Muhit o'zgaruvchilarini sozlash (Environment Variables)
+
 Root papkada `.env` faylini yarating va quyidagi o'zgaruvchilarni kiriting:
+
 ```env
 # JWT Secret for backend
 JWT_SECRET=your_jwt_secret_key_here
@@ -44,17 +65,27 @@ PORT=3001
 ### 3. Ilovani ishga tushirish
 
 Frontend qismini ishga tushirish:
+
 ```bash
 yarn dev
 ```
 
 Backend qismini ishga tushirish (alohida terminalda):
+
 ```bash
 cd backend
 npm run dev
 ```
 
+Backend integration testini ishga tushirish:
+
+```bash
+cd backend
+npm test
+```
+
 Loyihani build qilish (Frontend):
+
 ```bash
 yarn build
 ```
@@ -62,6 +93,7 @@ yarn build
 ## Testlarni Ishga Tushirish
 
 Loyiha Vitest orqali test qilinadi. Barcha testlarni (frontend va backend) yuritish:
+
 ```bash
 yarn test
 ```
@@ -78,4 +110,5 @@ yarn test
   - `server.js` - Backend serverining asosiy kirish nuqtasi
 
 ## Hujjatlar
+
 Barcha API endpointlar haqida ma'lumot olish uchun [API.md](./API.md) faylini o'qing.

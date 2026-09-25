@@ -10,132 +10,133 @@ import {
 } from "../lib/db.js";
 import { toFeSale, toDbSale } from "../lib/mappers.js";
 import { validate, saleSchema } from "../lib/validators.js";
-import { authenticateToken } from "../middleware/auth.js";
+import { authenticateToken, requirePermission } from "../middleware/auth.js";
 
 const router = express.Router();
 
 // GET ALL SALES
-router.get("/", authenticateToken, async (req, res) => {
+router.get("/", authenticateToken, requirePermission("/sales"), async (req, res) => {
   const cacheKey = "cache:sales";
   try {
     const cached = await getCached(cacheKey);
     if (cached) return res.json(cached);
 
     if (isSupabaseConfigured) {
-      const { data: sales, error: err1 } = await supabaseClient
-        .from("sales")
-        .select("*")
-        .order("created_at", { ascending: false });
-      if (err1) throw err1;
+      try {
+        const { data: sales, error: err1 } = await supabaseClient
+          .from("sales")
+          .select("*")
+          .order("created_at", { ascending: false });
+        if (err1) throw err1;
 
-      const { data: items, error: err2 } = await supabaseClient.from("sale_items").select("*");
-      if (err2) throw err2;
+        const { data: items, error: err2 } = await supabaseClient.from("sale_items").select("*");
+        if (err2) throw err2;
 
-      const fullSales = sales.map((s) => {
-        const matchingItems = items.filter((i) => i.sale_id === s.id);
-        return toFeSale(s, matchingItems);
-      });
+        const itemsBySale = new Map();
+        for (const item of items || []) {
+          const saleItems = itemsBySale.get(item.sale_id) || [];
+          saleItems.push(item);
+          itemsBySale.set(item.sale_id, saleItems);
+        }
+        const fullSales = (sales || []).map((sale) =>
+          toFeSale(sale, itemsBySale.get(sale.id) || []),
+        );
 
-      await setCached(cacheKey, fullSales);
-      res.json(fullSales);
+        await setCached(cacheKey, fullSales);
+        return res.json(fullSales);
+      } catch (supabaseError) {
+        console.warn(
+          "⚠️ Supabase sales xatosi, mahalliy DB ga qaytilmoqda:",
+          supabaseError.message,
+        );
+      }
     } else {
       const db = readLocalDb();
-      res.json(db.sales || []);
+      const localSales = db.sales || [];
+      await setCached(cacheKey, localSales);
+      return res.json(localSales);
     }
+
+    const db = readLocalDb();
+    const localSales = db.sales || [];
+    await setCached(cacheKey, localSales);
+    return res.json(localSales);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
 
 // POST NEW SALE
-router.post("/", authenticateToken, validate(saleSchema), async (req, res) => {
-  const sale = req.body; // { id, date, customerId, sellerId, items: [...], discount, paymentType, total, profit }
-  const { items, ...saleMeta } = sale;
+router.post(
+  "/",
+  authenticateToken,
+  requirePermission("/sales"),
+  validate(saleSchema),
+  async (req, res) => {
+    const sale = req.body; // { id, date, customerId, sellerId, items: [...], discount, paymentType, total, profit }
+    sale.id ||= `sale_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    const { items, ...saleMeta } = sale;
 
-  try {
-    if (isSupabaseConfigured) {
-      const dbSaleMeta = toDbSale(saleMeta);
-      const { data: createdSale, error: err1 } = await supabaseClient
-        .from("sales")
-        .insert([dbSaleMeta])
-        .select()
-        .single();
-      if (err1) throw err1;
-
-      // Tovar nomlarini olish (tarixiy saqlash uchun)
-      const productIds = items.map((i) => i.productId);
-      const { data: productRows } = await supabaseClient
-        .from("products")
-        .select("id, name")
-        .in("id", productIds);
-      const prodNameMap = new Map((productRows || []).map((p) => [p.id, p.name]));
-
-      const itemsToInsert = items.map((i) => ({
-        sale_id: createdSale.id,
-        product_id: i.productId,
-        product_name: prodNameMap.get(i.productId) || null,
-        qty: i.qty,
-        price: i.price,
-        buy_price: i.buyPrice,
-      }));
-      const { error: err2 } = await supabaseClient.from("sale_items").insert(itemsToInsert);
-      if (err2) throw err2;
-
-      // Tovar omborini atomik kamaytirish (race condition himoyasi)
-      for (const i of items) {
-        await supabaseClient.rpc("decrement_product_qty", { p_id: i.productId, p_qty: i.qty });
-      }
-
-      // Mijoz xarid summasi va qarzini atomik yangilash
-      if (sale.customerId) {
-        const debtDelta =
-          sale.paymentType === "Qarz" ? Math.max(0, sale.total - (sale.paid || 0)) : 0;
-        await supabaseClient.rpc("increment_customer_debt", {
-          c_id: sale.customerId,
-          delta_debt: debtDelta,
-          delta_purchases: sale.total,
+    try {
+      if (isSupabaseConfigured) {
+        const dbSaleMeta = toDbSale(saleMeta);
+        const { error: transactionError } = await supabaseClient.rpc("create_sale_atomic", {
+          p_sale: dbSaleMeta,
+          p_items: items,
         });
-      }
+        if (transactionError) throw transactionError;
+        const { data: createdSale, error: saleError } = await supabaseClient
+          .from("sales")
+          .select("*")
+          .eq("id", sale.id)
+          .single();
+        if (saleError) throw saleError;
+        const { data: createdItems, error: itemError } = await supabaseClient
+          .from("sale_items")
+          .select("*")
+          .eq("sale_id", sale.id);
+        if (itemError) throw itemError;
 
-      await Promise.all([
-        clearCached("cache:sales"),
-        clearCached("cache:products"),
-        clearCached("cache:customers"),
-      ]);
+        await Promise.all([
+          clearCached("cache:sales"),
+          clearCached("cache:products"),
+          clearCached("cache:customers"),
+        ]);
 
-      res.json(toFeSale(createdSale, itemsToInsert));
-    } else {
-      const db = readLocalDb();
+        res.json(toFeSale(createdSale, createdItems || []));
+      } else {
+        const db = readLocalDb();
 
-      // Tovar omborini kamaytirish
-      db.products = db.products.map((p) => {
-        const item = items.find((i) => i.productId === p.id);
-        return item ? { ...p, quantity: Math.max(0, (p.quantity || 0) - item.qty) } : p;
-      });
-
-      // Mijoz xarid summasi va qarzini yangilash
-      if (sale.customerId) {
-        db.customers = db.customers.map((c) => {
-          if (c.id !== sale.customerId) return c;
-          const debtDelta =
-            sale.paymentType === "Qarz" ? Math.max(0, sale.total - (sale.paid || 0)) : 0;
-          return {
-            ...c,
-            debt: (c.debt || 0) + debtDelta,
-            totalPurchases: (c.totalPurchases || 0) + sale.total,
-          };
+        // Tovar omborini kamaytirish
+        db.products = db.products.map((p) => {
+          const item = items.find((i) => i.productId === p.id);
+          return item ? { ...p, quantity: Math.max(0, (p.quantity || 0) - item.qty) } : p;
         });
-      }
 
-      if (!db.sales) db.sales = [];
-      db.sales.unshift(sale);
-      writeLocalDb(db);
-      res.json(sale);
+        // Mijoz xarid summasi va qarzini yangilash
+        if (sale.customerId) {
+          db.customers = db.customers.map((c) => {
+            if (c.id !== sale.customerId) return c;
+            const debtDelta =
+              sale.paymentType === "Qarz" ? Math.max(0, sale.total - (sale.paid || 0)) : 0;
+            return {
+              ...c,
+              debt: (c.debt || 0) + debtDelta,
+              totalPurchases: (c.totalPurchases || 0) + sale.total,
+            };
+          });
+        }
+
+        if (!db.sales) db.sales = [];
+        db.sales.unshift(sale);
+        writeLocalDb(db);
+        res.json(sale);
+      }
+    } catch (error) {
+      res.status(500).json({ error: error.message });
     }
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
+  },
+);
 
 // PUT EDIT SALE
 router.put("/:id", authenticateToken, validate(saleSchema.partial()), async (req, res) => {

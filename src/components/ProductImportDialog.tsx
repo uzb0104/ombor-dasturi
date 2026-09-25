@@ -11,11 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Upload, FileSpreadsheet } from "lucide-react";
 import { toast } from "sonner";
 import { useT } from "@/lib/i18n";
-import {
-  parseProductCsv,
-  parseProductSpreadsheet,
-  downloadImportTemplate,
-} from "@/lib/product-import";
+import { downloadImportTemplate, resolveProductImportRows } from "@/lib/product-import";
 import { productsApi } from "@/lib/api";
 import { useStore } from "@/lib/store";
 
@@ -29,10 +25,7 @@ export function ProductImportDialog() {
   const handleFile = async (file: File) => {
     setLoading(true);
     try {
-      const items =
-        file.name.endsWith(".csv") || file.name.endsWith(".txt")
-          ? parseProductCsv(await file.text(), categories, vehicleBrands)
-          : parseProductSpreadsheet(await file.arrayBuffer(), categories, vehicleBrands);
+      const items = await resolveProductImportRows(file, categories, vehicleBrands);
 
       if (!items.length) {
         toast.error(t("products.importNoProducts"));

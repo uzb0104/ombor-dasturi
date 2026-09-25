@@ -32,6 +32,8 @@ CREATE TABLE IF NOT EXISTS suppliers (
     phone VARCHAR(50),
     address TEXT,
     debt NUMERIC(20, 2) DEFAULT 0.00,
+    delivered_product TEXT DEFAULT '',
+    delivered_quantity NUMERIC(15, 2) NOT NULL DEFAULT 0.00,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -74,6 +76,7 @@ CREATE TABLE IF NOT EXISTS employees (
     role VARCHAR(50) NOT NULL CHECK (role IN ('Admin', 'Sotuvchi', 'Omborchi')),
     salary NUMERIC(20, 2) DEFAULT 0.00,
     advance NUMERIC(20, 2) DEFAULT 0.00,
+    payment_history JSONB NOT NULL DEFAULT '[]'::jsonb,
     hire_date VARCHAR(50),
     status VARCHAR(50) NOT NULL CHECK (status IN ('Faol', 'Nofaol')),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
@@ -169,11 +172,21 @@ CREATE TABLE IF NOT EXISTS audit_logs (
 
 -- INDEKSLAR (TEZKOR QIDIRUV VA FILTRLASH UCHUN)
 CREATE INDEX IF NOT EXISTS idx_products_barcode ON products(barcode);
+CREATE INDEX IF NOT EXISTS idx_products_sku ON products(sku);
+CREATE INDEX IF NOT EXISTS idx_products_name_lower ON products(LOWER(name));
 CREATE INDEX IF NOT EXISTS idx_products_vehicle ON products(vehicle);
 CREATE INDEX IF NOT EXISTS idx_products_category ON products(category);
 CREATE INDEX IF NOT EXISTS idx_sales_date ON sales(date);
 CREATE INDEX IF NOT EXISTS idx_incoming_date ON incoming(date);
 CREATE INDEX IF NOT EXISTS idx_audit_logs_ts ON audit_logs(ts);
+
+ALTER TABLE suppliers ADD COLUMN IF NOT EXISTS delivered_product TEXT DEFAULT '';
+ALTER TABLE suppliers ADD COLUMN IF NOT EXISTS delivered_quantity NUMERIC(15, 2) NOT NULL DEFAULT 0.00;
+ALTER TABLE employees ADD COLUMN IF NOT EXISTS payment_history JSONB NOT NULL DEFAULT '[]'::jsonb;
+
+ALTER TABLE sales DROP CONSTRAINT IF EXISTS sales_payment_type_check;
+ALTER TABLE sales ADD CONSTRAINT sales_payment_type_check
+    CHECK (payment_type IN ('Naqd', 'Karta', 'Qarz', 'O''tkazma'));
 
 -- BOSHLANG'ICH MATERIALLARNI SEED QILISH (AGAR BO'SH BO'LSA)
 INSERT INTO categories (name) VALUES 

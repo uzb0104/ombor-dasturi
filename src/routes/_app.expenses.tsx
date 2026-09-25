@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import {
   Table,
   TableBody,
@@ -45,7 +45,6 @@ import { toast } from "sonner";
 import { useT } from "@/lib/i18n";
 import { EXPENSE_CAT_VALUES, expenseCategoryLabel } from "@/lib/i18n/expense-cats";
 import { paymentLabel } from "@/lib/i18n/helpers";
-import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
 
 export const Route = createFileRoute("/_app/expenses")({ component: ExpensesPage });
 
@@ -72,12 +71,6 @@ function ExpensesPage() {
   const pg = usePagination(sortedExpenses, 12);
   const pageIds = pg.paged.map((p) => p.id);
   const allChecked = pageIds.length > 0 && pageIds.every((id) => sel.has(id));
-
-  const byCategory = useMemo(() => {
-    const m = new Map<string, number>();
-    expenses.forEach((e) => m.set(e.category, (m.get(e.category) || 0) + e.amount));
-    return Array.from(m.entries()).map(([name, value]) => ({ name, value }));
-  }, [expenses]);
 
   const startEdit = (id: string) => {
     const e = expenses.find((x) => x.id === id);
@@ -243,34 +236,6 @@ function ExpensesPage() {
         sales={sales}
       />
 
-      <Card className="rounded-2xl">
-        <CardHeader>
-          <CardTitle className="text-base">{t("expenses.byCategory")}</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <ResponsiveContainer width="100%" height={240}>
-            <BarChart data={byCategory}>
-              <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-              <XAxis dataKey="name" stroke="var(--muted-foreground)" fontSize={11} />
-              <YAxis
-                stroke="var(--muted-foreground)"
-                fontSize={11}
-                tickFormatter={(v) => `${(v / 1e6).toFixed(1)}M`}
-              />
-              <Tooltip
-                contentStyle={{
-                  background: "var(--card)",
-                  border: "1px solid var(--border)",
-                  borderRadius: 12,
-                }}
-                formatter={(v: number) => formatSom(v)}
-              />
-              <Bar dataKey="value" fill="var(--chart-4)" radius={[8, 8, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        </CardContent>
-      </Card>
-
       <Card className="rounded-2xl p-3 md:p-4">
         <BulkBar
           count={sel.count}
@@ -403,7 +368,9 @@ function ExpenseDetailDialog({
                 {saleRows.map((s) => (
                   <div key={s.id} className="flex items-center justify-between px-3 py-2">
                     <div>
-                      <div className="font-medium">{new Date(s.date).toLocaleDateString("uz-UZ")}</div>
+                      <div className="font-medium">
+                        {new Date(s.date).toLocaleDateString("uz-UZ")}
+                      </div>
                       <div className="text-xs text-muted-foreground">
                         {paymentLabel(t, s.paymentType)} · {formatSom(s.total)}
                       </div>

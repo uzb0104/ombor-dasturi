@@ -10,12 +10,12 @@ import {
 } from "../lib/db.js";
 import { toFeIncoming, toDbIncoming } from "../lib/mappers.js";
 import { validate, incomingSchema } from "../lib/validators.js";
-import { authenticateToken } from "../middleware/auth.js";
+import { authenticateToken, requirePermission } from "../middleware/auth.js";
 
 const router = express.Router();
 
 // GET ALL INCOMING
-router.get("/", authenticateToken, async (req, res) => {
+router.get("/", authenticateToken, requirePermission("/incoming"), async (req, res) => {
   const cacheKey = "cache:incoming";
   try {
     const cached = await getCached(cacheKey);
@@ -41,59 +41,59 @@ router.get("/", authenticateToken, async (req, res) => {
 });
 
 // POST NEW INCOMING
-router.post("/", authenticateToken, validate(incomingSchema), async (req, res) => {
-  const i = req.body;
-  try {
-    if (isSupabaseConfigured) {
-      const dbObj = toDbIncoming(i);
-      const { data, error } = await supabaseClient
-        .from("incoming")
-        .insert([dbObj])
-        .select()
-        .single();
-      if (error) throw error;
-
-      // 1. Tovar miqdorini atomik oshirish
-      await supabaseClient.rpc("increment_product_qty", { p_id: i.productId, p_qty: i.qty });
-
-      // 2. Supplier qarzini atomik yangilash
-      if (i.supplierId) {
-        await supabaseClient.rpc("adjust_supplier_debt", {
-          s_id: i.supplierId,
-          delta: i.qty * i.buyPrice,
+router.post(
+  "/",
+  authenticateToken,
+  requirePermission("/incoming"),
+  validate(incomingSchema),
+  async (req, res) => {
+    const i = req.body;
+    i.id ||= `inc_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    try {
+      if (isSupabaseConfigured) {
+        const dbObj = toDbIncoming(i);
+        const { error: transactionError } = await supabaseClient.rpc("create_incoming_atomic", {
+          p_incoming: dbObj,
         });
-      }
+        if (transactionError) throw transactionError;
+        const { data, error } = await supabaseClient
+          .from("incoming")
+          .select("*")
+          .eq("id", i.id)
+          .single();
+        if (error) throw error;
 
-      await Promise.all([
-        clearCached("cache:incoming"),
-        clearCached("cache:products"),
-        clearCached("cache:suppliers"),
-      ]);
+        await Promise.all([
+          clearCached("cache:incoming"),
+          clearCached("cache:products"),
+          clearCached("cache:suppliers"),
+        ]);
 
-      res.json(toFeIncoming(data));
-    } else {
-      const db = readLocalDb();
+        res.json(toFeIncoming(data));
+      } else {
+        const db = readLocalDb();
 
-      // 1. Tovar miqdorini yangilash
-      db.products = db.products.map((p) =>
-        p.id === i.productId ? { ...p, quantity: (p.quantity || 0) + i.qty } : p,
-      );
-
-      // 2. Supplier qarzini yangilash
-      if (i.supplierId) {
-        db.suppliers = db.suppliers.map((s) =>
-          s.id === i.supplierId ? { ...s, debt: (s.debt || 0) + i.qty * i.buyPrice } : s,
+        // 1. Tovar miqdorini yangilash
+        db.products = db.products.map((p) =>
+          p.id === i.productId ? { ...p, quantity: (p.quantity || 0) + i.qty } : p,
         );
-      }
 
-      db.incoming.unshift(i);
-      writeLocalDb(db);
-      res.json(i);
+        // 2. Supplier qarzini yangilash
+        if (i.supplierId) {
+          db.suppliers = db.suppliers.map((s) =>
+            s.id === i.supplierId ? { ...s, debt: (s.debt || 0) + i.qty * i.buyPrice } : s,
+          );
+        }
+
+        db.incoming.unshift(i);
+        writeLocalDb(db);
+        res.json(i);
+      }
+    } catch (error) {
+      res.status(500).json({ error: error.message });
     }
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
+  },
+);
 
 // PUT EDIT INCOMING
 router.put("/:id", authenticateToken, validate(incomingSchema.partial()), async (req, res) => {

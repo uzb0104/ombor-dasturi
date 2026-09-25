@@ -56,6 +56,15 @@ export const supplierSchema = z.object({
   phone: z.string().optional().default(""),
   address: z.string().optional().default(""),
   debt: z.number().optional().default(0),
+  deliveredProduct: z.string().optional().default(""),
+  deliveredQuantity: z.number().nonnegative().optional().default(0),
+});
+
+export const employeePaymentSchema = z.object({
+  id: z.string(),
+  type: z.enum(["Avans", "Oylik"]),
+  amount: z.number().positive(),
+  date: z.string(),
 });
 
 export const employeeSchema = z.object({
@@ -65,6 +74,7 @@ export const employeeSchema = z.object({
   role: z.string().min(1, "Rol kiritilishi shart"),
   salary: z.number().nonnegative().default(0),
   advance: z.number().nonnegative().default(0),
+  paymentHistory: z.array(employeePaymentSchema).optional().default([]),
   hireDate: z
     .string()
     .optional()

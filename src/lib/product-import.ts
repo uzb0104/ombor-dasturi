@@ -1,4 +1,3 @@
-import * as XLSX from "xlsx";
 import type { Product } from "./types";
 
 export type ImportRow = Partial<Product> & { name: string };
@@ -71,25 +70,48 @@ function rowToProduct(
   };
 }
 
+export async function resolveProductImportRows(
+  file: File,
+  categories: string[],
+  brands: string[],
+): Promise<ImportRow[]> {
+  const isCsv = file.name.endsWith(".csv") || file.name.endsWith(".txt");
+
+  if (isCsv) {
+    return parseProductCsv(await file.text(), categories, brands);
+  }
+
+  return parseProductSpreadsheet(await file.arrayBuffer(), categories, brands);
+}
+
 export function parseProductSpreadsheet(
   buffer: ArrayBuffer,
   categories: string[],
   brands: string[],
-): ImportRow[] {
-  const wb = XLSX.read(buffer, { type: "array" });
-  const sheet = wb.Sheets[wb.SheetNames[0]];
-  const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: "" });
-  return rows.map((r) => rowToProduct(r, categories, brands)).filter((x): x is ImportRow => !!x);
+): Promise<ImportRow[]> {
+  return import("xlsx").then((XLSX) => {
+    const wb = XLSX.read(buffer, { type: "array" });
+    const sheet = wb.Sheets[wb.SheetNames[0]];
+    const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: "" });
+    return rows.map((r) => rowToProduct(r, categories, brands)).filter((x): x is ImportRow => !!x);
+  });
 }
 
-export function parseProductCsv(text: string, categories: string[], brands: string[]): ImportRow[] {
-  const wb = XLSX.read(text, { type: "string" });
-  const sheet = wb.Sheets[wb.SheetNames[0]];
-  const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: "" });
-  return rows.map((r) => rowToProduct(r, categories, brands)).filter((x): x is ImportRow => !!x);
+export function parseProductCsv(
+  text: string,
+  categories: string[],
+  brands: string[],
+): Promise<ImportRow[]> {
+  return import("xlsx").then((XLSX) => {
+    const wb = XLSX.read(text, { type: "string" });
+    const sheet = wb.Sheets[wb.SheetNames[0]];
+    const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: "" });
+    return rows.map((r) => rowToProduct(r, categories, brands)).filter((x): x is ImportRow => !!x);
+  });
 }
 
-export function downloadImportTemplate() {
+export async function downloadImportTemplate() {
+  const XLSX = await import("xlsx");
   const ws = XLSX.utils.aoa_to_sheet([
     ["nom", "kod", "brend", "kategoriya", "miqdor", "sotib", "sotuv", "min"],
     ["Tormoz kolodkasi", "B7RTC", "Chevrolet", "Tormoz tizimi", 10, 50000, 75000, 5],

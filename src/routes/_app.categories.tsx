@@ -10,7 +10,6 @@ import {
 } from "@/components/ui/table";
 import { PageHeader, useConfirm } from "@/components/ui-kit";
 import { useStore } from "@/lib/store";
-import { VEHICLE_BRANDS } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -39,7 +38,6 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
-import { Badge } from "@/components/ui/badge";
 import { useT } from "@/lib/i18n";
 
 const ICONS: Record<string, React.ElementType> = {
@@ -168,13 +166,6 @@ function CategoriesPage() {
               <div className="font-semibold">{c}</div>
               <div className="text-xs text-muted-foreground mt-0.5">
                 {t("categories.productCount", { n: count })}
-              </div>
-              <div className="flex flex-wrap gap-1 mt-3">
-                {VEHICLE_BRANDS.slice(0, 4).map((b) => (
-                  <Badge key={b} variant="secondary" className="text-[10px]">
-                    {b}
-                  </Badge>
-                ))}
               </div>
               <div className="absolute top-2 right-2 flex opacity-0 group-hover:opacity-100 transition">
                 <Button

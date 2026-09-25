@@ -8,6 +8,7 @@ import {
   setCached,
   clearCached,
 } from "../lib/db.js";
+import { toDbSupplier, toFeSupplier } from "../lib/mappers.js";
 import { validate, supplierSchema } from "../lib/validators.js";
 import { authenticateToken } from "../middleware/auth.js";
 
@@ -26,8 +27,9 @@ router.get("/", authenticateToken, async (req, res) => {
         .order("created_at", { ascending: false });
       if (error) throw error;
 
-      await setCached(cacheKey, data);
-      res.json(data);
+      const mapped = (data || []).map(toFeSupplier);
+      await setCached(cacheKey, mapped);
+      res.json(mapped);
     } else {
       const db = readLocalDb();
       res.json(db.suppliers);
@@ -41,11 +43,15 @@ router.post("/", authenticateToken, validate(supplierSchema), async (req, res) =
   const s = req.body;
   try {
     if (isSupabaseConfigured) {
-      const { data, error } = await supabaseClient.from("suppliers").insert([s]).select().single();
+      const { data, error } = await supabaseClient
+        .from("suppliers")
+        .insert([toDbSupplier(s)])
+        .select()
+        .single();
       if (error) throw error;
 
       await clearCached("cache:suppliers");
-      res.json(data);
+      res.json(toFeSupplier(data));
     } else {
       const db = readLocalDb();
       db.suppliers.unshift(s);
@@ -64,14 +70,14 @@ router.put("/:id", authenticateToken, validate(supplierSchema.partial()), async 
     if (isSupabaseConfigured) {
       const { data, error } = await supabaseClient
         .from("suppliers")
-        .update(updates)
+        .update(toDbSupplier(updates))
         .eq("id", id)
         .select()
         .single();
       if (error) throw error;
 
       await clearCached("cache:suppliers");
-      res.json(data);
+      res.json(toFeSupplier(data));
     } else {
       const db = readLocalDb();
       db.suppliers = db.suppliers.map((x) => (x.id === id ? { ...x, ...updates } : x));

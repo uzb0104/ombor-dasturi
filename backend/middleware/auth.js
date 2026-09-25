@@ -1,9 +1,12 @@
 import jwt from "jsonwebtoken";
+import dotenv from "dotenv";
+
+dotenv.config();
 
 const JWT_SECRET = process.env.JWT_SECRET;
 
 if (!JWT_SECRET) {
-  console.error("❌ JWT_SECRET .env faylda topilmadi! Server to'g'ri ishlamasligi mumkin.");
+  throw new Error("JWT_SECRET .env faylda majburiy");
 }
 
 export function authenticateToken(req, res, next) {
@@ -17,4 +20,22 @@ export function authenticateToken(req, res, next) {
     req.user = user;
     next();
   });
+}
+
+export function requireRole(...roles) {
+  return (req, res, next) => {
+    if (!req.user || !roles.includes(req.user.role)) {
+      return res.status(403).json({ error: "Bu amal uchun ruxsat yetarli emas" });
+    }
+    next();
+  };
+}
+
+export function requirePermission(permission) {
+  return (req, res, next) => {
+    if (req.user?.role === "Admin" || req.user?.permissions?.includes(permission)) {
+      return next();
+    }
+    return res.status(403).json({ error: "Bu amal uchun ruxsat yetarli emas" });
+  };
 }

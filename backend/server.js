@@ -35,14 +35,15 @@ const PORT = process.env.PORT || 5001;
 const allowedOrigins = [
   "http://localhost:5173",
   "http://127.0.0.1:5173",
+  "http://localhost:4173",
+  "http://127.0.0.1:4173",
   process.env.FRONTEND_URL,
 ].filter(Boolean);
 
 app.use(
   cors({
     origin: function (origin, callback) {
-      // Brauzer bo'lmagan so'rovlar, ruxsat etilgan origins yoki Vercel domenlariga ruxsat
-      if (!origin || allowedOrigins.includes(origin) || origin.endsWith('.vercel.app')) {
+      if (!origin || allowedOrigins.includes(origin)) {
         callback(null, true);
       } else {
         callback(new Error("CORS siyosati tomonidan bloklandi"));
@@ -59,8 +60,11 @@ app.use("/api", apiLimiter);
 
 // ─────────────── SEEDING DEFAULT ADMIN ───────────────
 async function ensureDefaultAdmin() {
+  if (process.env.SEED_DEFAULT_ADMIN !== "true") return;
   const defaultEmail = "admin@autoerp.uz";
-  const defaultPasswordHash = bcrypt.hashSync("admin123", 10);
+  const defaultPassword = process.env.DEFAULT_ADMIN_PASSWORD;
+  if (!defaultPassword) throw new Error("DEFAULT_ADMIN_PASSWORD .env faylda majburiy");
+  const defaultPasswordHash = bcrypt.hashSync(defaultPassword, 10);
 
   if (isSupabaseConfigured) {
     try {

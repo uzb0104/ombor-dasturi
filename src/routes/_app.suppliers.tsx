@@ -42,12 +42,24 @@ import { useT } from "@/lib/i18n";
 
 export const Route = createFileRoute("/_app/suppliers")({ component: SuppliersPage });
 
-type Form = { name: string; phone: string; address: string };
-const empty = (): Form => ({ name: "", phone: "", address: "" });
+type Form = {
+  name: string;
+  phone: string;
+  address: string;
+  deliveredProduct: string;
+  deliveredQuantity: number;
+};
+const empty = (): Form => ({
+  name: "",
+  phone: "",
+  address: "",
+  deliveredProduct: "",
+  deliveredQuantity: 0,
+});
 
 function SuppliersPage() {
   const t = useT();
-  const { suppliers, products, addSupplier, updateSupplier, deleteSupplier } = useStore();
+  const { suppliers, addSupplier, updateSupplier, deleteSupplier } = useStore();
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<string | null>(null);
   const [form, setForm] = useState<Form>(empty());
@@ -72,13 +84,23 @@ function SuppliersPage() {
     const s = suppliers.find((x) => x.id === id);
     if (!s) return;
     setEditing(id);
-    setForm({ name: s.name, phone: s.phone, address: s.address });
+    setForm({
+      name: s.name,
+      phone: s.phone,
+      address: s.address,
+      deliveredProduct: s.deliveredProduct || "",
+      deliveredQuantity: s.deliveredQuantity || 0,
+    });
     setOpen(true);
   };
 
   const submit = () => {
     if (!form.name) {
       toast.error(t("suppliers.nameRequired"));
+      return;
+    }
+    if (!form.deliveredProduct.trim() || form.deliveredQuantity <= 0) {
+      toast.error("Yetkazadigan tovar va uning miqdorini kiriting");
       return;
     }
     if (editing) {
@@ -129,6 +151,8 @@ function SuppliersPage() {
     { label: t("common.name"), key: "name" },
     { label: t("common.phone"), key: "phone" },
     { label: t("common.address"), key: "address" },
+    { label: "Yetkazadigan tovar", key: "deliveredProduct" },
+    { label: "Miqdori", key: "deliveredQuantity" },
   ];
 
   const handleExportCSV = () => {
@@ -209,6 +233,27 @@ function SuppliersPage() {
                       className="mt-1"
                     />
                   </div>
+                  <div>
+                    <Label>Yetkazadigan tovar</Label>
+                    <Input
+                      value={form.deliveredProduct}
+                      onChange={(e) => setForm({ ...form, deliveredProduct: e.target.value })}
+                      className="mt-1"
+                      placeholder="Masalan: filtr, moy"
+                    />
+                  </div>
+                  <div>
+                    <Label>Miqdori</Label>
+                    <Input
+                      type="number"
+                      min={1}
+                      value={form.deliveredQuantity || ""}
+                      onChange={(e) =>
+                        setForm({ ...form, deliveredQuantity: Number(e.target.value) })
+                      }
+                      className="mt-1"
+                    />
+                  </div>
                 </div>
                 <DialogFooter>
                   <Button onClick={submit}>{t("common.save")}</Button>
@@ -267,14 +312,15 @@ function SuppliersPage() {
                     onSort={requestSort}
                   />
                 </TableHead>
-                <TableHead className="text-right">{t("common.productCount")}</TableHead>
+                <TableHead className="hidden lg:table-cell">Yetkazadigan tovar</TableHead>
+                <TableHead className="text-right">Miqdori</TableHead>
                 <TableHead className="text-right pr-4">{t("common.actions")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {pg.paged.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-10 text-muted-foreground">
+                  <TableCell colSpan={7} className="text-center py-10 text-muted-foreground">
                     {t("suppliers.notFound")}
                   </TableCell>
                 </TableRow>
@@ -302,8 +348,11 @@ function SuppliersPage() {
                     <MapPin className="h-3 w-3 inline mr-1 opacity-60" />
                     {s.address}
                   </TableCell>
+                  <TableCell className="hidden lg:table-cell text-sm">
+                    {s.deliveredProduct || "—"}
+                  </TableCell>
                   <TableCell className="text-right tabular-nums font-medium">
-                    {products.filter((p) => p.supplierId === s.id).length} {t("common.itemsUnit")}
+                    {s.deliveredQuantity || 0}
                   </TableCell>
                   <TableCell className="text-right whitespace-nowrap pr-4">
                     <Button

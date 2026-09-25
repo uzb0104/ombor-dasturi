@@ -101,8 +101,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [searchOpen, setSearchOpen] = useState(false);
   const [now, setNow] = useState(new Date());
 
-  const lowStock = products.filter((p) => p.quantity > 0 && p.quantity <= p.minQty);
-  const outStock = products.filter((p) => p.quantity === 0);
+  const productList = Array.isArray(products) ? products : [];
+  const lowStock = productList.filter((p) => p.quantity > 0 && p.quantity <= p.minQty);
+  const outStock = productList.filter((p) => p.quantity === 0);
   const totalNotifications = lowStock.length + outStock.length;
 
   useEffect(() => {
@@ -257,7 +258,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                     {t("nav.noNotifications")}
                   </div>
                 ) : (
-                  <div className="max-h-[300px] overflow-y-auto">
+                  <div className="max-h-[75vh] overflow-y-auto">
                     {outStock.slice(0, 5).map((p) => (
                       <DropdownMenuItem
                         key={`out-${p.id}`}
@@ -330,7 +331,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </header>
 
         <main className="flex-1 overflow-y-auto scrollbar-thin">
-          <div className="mx-auto max-w-[1600px] p-4 md:p-6 animate-fade-in">{children}</div>
+          <div className="mx-auto max-w-[1200px] p-4 md:p-6 animate-fade-in">{children}</div>
         </main>
       </div>
       <CommandDialog open={searchOpen} onOpenChange={setSearchOpen}>

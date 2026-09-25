@@ -10,7 +10,7 @@ import {
 } from "../lib/db.js";
 import { toFeProduct, toDbProduct, toFePriceHistory } from "../lib/mappers.js";
 import { validate, productSchema } from "../lib/validators.js";
-import { authenticateToken } from "../middleware/auth.js";
+import { authenticateToken, requirePermission } from "../middleware/auth.js";
 
 const router = express.Router();
 
@@ -64,117 +64,174 @@ async function recordPriceChanges(productId, productName, before, afterDbObj, us
 
 // ─────────────── ROUTES ───────────────
 
-router.get("/", authenticateToken, async (req, res) => {
-  const cacheKey = "cache:products";
+router.get("/", authenticateToken, requirePermission("/products"), async (req, res) => {
+  const page = Math.max(Number(req.query.page) || 1, 1);
+  const limit = Math.min(Math.max(Number(req.query.limit) || 50, 1), 200);
+  const search = String(req.query.search || "").trim();
+  const category = String(req.query.category || "").trim();
+  const vehicle = String(req.query.vehicle || "").trim();
+  const pagedRequest = ["page", "limit", "search", "category", "vehicle"].some(
+    (key) => key in req.query,
+  );
+  const cacheKey = pagedRequest ? null : "cache:products";
   try {
-    const cached = await getCached(cacheKey);
-    if (cached) return res.json(cached);
+    if (cacheKey) {
+      const cached = await getCached(cacheKey);
+      if (cached) return res.json(Array.isArray(cached) ? cached : cached.items || []);
+    }
 
     if (isSupabaseConfigured) {
-      const { data, error } = await supabaseClient
+      let query = supabaseClient
         .from("products")
-        .select("*")
+        .select("*", { count: "exact" })
         .order("created_at", { ascending: false });
+      if (pagedRequest) {
+        const from = (page - 1) * limit;
+        query = query.range(from, from + limit - 1);
+      }
+      if (search)
+        query = query.or(`name.ilike.%${search}%,barcode.ilike.%${search}%,sku.ilike.%${search}%`);
+      if (category) query = query.eq("category", category);
+      if (vehicle) query = query.eq("vehicle", vehicle);
+      const { data, count, error } = await query;
       if (error) throw error;
 
       const mapped = (data || []).map(toFeProduct);
-      await setCached(cacheKey, mapped);
-      res.json(mapped);
+      const result = {
+        items: mapped,
+        page,
+        limit,
+        total: count || 0,
+        pages: Math.ceil((count || 0) / limit),
+      };
+      if (cacheKey) await setCached(cacheKey, mapped);
+      res.json(pagedRequest ? result : mapped);
     } else {
       const db = readLocalDb();
-      res.json(db.products);
+      const filtered = (Array.isArray(db.products) ? db.products : []).filter(
+        (p) =>
+          (!search ||
+            [p.name, p.barcode, p.sku].some((v) =>
+              String(v || "")
+                .toLowerCase()
+                .includes(search.toLowerCase()),
+            )) &&
+          (!category || p.category === category) &&
+          (!vehicle || p.vehicle === vehicle),
+      );
+      const start = (page - 1) * limit;
+      const result = {
+        items: filtered.slice(start, start + limit),
+        page,
+        limit,
+        total: filtered.length,
+        pages: Math.ceil(filtered.length / limit),
+      };
+      res.json(pagedRequest ? result : filtered);
     }
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
 
-router.post("/", authenticateToken, validate(productSchema), async (req, res) => {
-  const p = req.body;
-  try {
-    if (isSupabaseConfigured) {
-      const dbObj = toDbProduct(p);
-      console.log("📦 [Products POST] Ma'lumot:", JSON.stringify(dbObj, null, 2));
-      const { data, error } = await supabaseClient
-        .from("products")
-        .insert([dbObj])
-        .select()
-        .single();
-      if (error) {
-        console.error(
-          "❌ [Products POST] Supabase xatolik:",
-          error.message,
-          error.details,
-          error.hint,
-        );
-        throw error;
+router.post(
+  "/",
+  authenticateToken,
+  requirePermission("/products"),
+  validate(productSchema),
+  async (req, res) => {
+    const p = req.body;
+    try {
+      if (isSupabaseConfigured) {
+        const dbObj = toDbProduct(p);
+        console.log("📦 [Products POST] Ma'lumot:", JSON.stringify(dbObj, null, 2));
+        const { data, error } = await supabaseClient
+          .from("products")
+          .insert([dbObj])
+          .select()
+          .single();
+        if (error) {
+          console.error(
+            "❌ [Products POST] Supabase xatolik:",
+            error.message,
+            error.details,
+            error.hint,
+          );
+          throw error;
+        }
+        await recordPriceChanges(data.id, data.name, null, dbObj, req.user);
+        await clearCached("cache:products");
+        res.json(toFeProduct(data));
+      } else {
+        const db = readLocalDb();
+        db.products.unshift(p);
+        writeLocalDb(db);
+        const dbObj = toDbProduct(p);
+        await recordPriceChanges(p.id, p.name, null, dbObj, req.user);
+        res.json(p);
       }
-      await recordPriceChanges(data.id, data.name, null, dbObj, req.user);
-      await clearCached("cache:products");
-      res.json(toFeProduct(data));
-    } else {
-      const db = readLocalDb();
-      db.products.unshift(p);
-      writeLocalDb(db);
-      const dbObj = toDbProduct(p);
-      await recordPriceChanges(p.id, p.name, null, dbObj, req.user);
-      res.json(p);
+    } catch (error) {
+      console.error("❌ [Products POST] Xatolik:", error.message);
+      res.status(500).json({ error: error.message });
     }
-  } catch (error) {
-    console.error("❌ [Products POST] Xatolik:", error.message);
-    res.status(500).json({ error: error.message });
-  }
-});
+  },
+);
 
-router.put("/:id", authenticateToken, validate(productSchema.partial()), async (req, res) => {
-  const { id } = req.params;
-  const updates = req.body;
-  try {
-    if (isSupabaseConfigured) {
-      const { data: before } = await supabaseClient
-        .from("products")
-        .select("*")
-        .eq("id", id)
-        .single();
-      const dbObj = toDbProduct(updates);
-      delete dbObj.id;
-      console.log(`📦 [Products PUT] ID: ${id}, Ma'lumot:`, JSON.stringify(dbObj, null, 2));
-      const { data, error } = await supabaseClient
-        .from("products")
-        .update(dbObj)
-        .eq("id", id)
-        .select()
-        .single();
-      if (error) {
-        console.error(
-          "❌ [Products PUT] Supabase xatolik:",
-          error.message,
-          error.details,
-          error.hint,
-        );
-        throw error;
+router.put(
+  "/:id",
+  authenticateToken,
+  requirePermission("/products"),
+  validate(productSchema.partial()),
+  async (req, res) => {
+    const { id } = req.params;
+    const updates = req.body;
+    try {
+      if (isSupabaseConfigured) {
+        const { data: before } = await supabaseClient
+          .from("products")
+          .select("*")
+          .eq("id", id)
+          .single();
+        const dbObj = toDbProduct(updates);
+        delete dbObj.id;
+        console.log(`📦 [Products PUT] ID: ${id}, Ma'lumot:`, JSON.stringify(dbObj, null, 2));
+        const { data, error } = await supabaseClient
+          .from("products")
+          .update(dbObj)
+          .eq("id", id)
+          .select()
+          .single();
+        if (error) {
+          console.error(
+            "❌ [Products PUT] Supabase xatolik:",
+            error.message,
+            error.details,
+            error.hint,
+          );
+          throw error;
+        }
+        await recordPriceChanges(id, data.name, before, dbObj, req.user);
+        await clearCached("cache:products");
+        res.json(toFeProduct(data));
+      } else {
+        const db = readLocalDb();
+        const before = db.products.find((x) => x.id === id);
+        const beforeDb = before ? toDbProduct(before) : null;
+        db.products = db.products.map((x) => (x.id === id ? { ...x, ...updates } : x));
+        writeLocalDb(db);
+        const updated = db.products.find((x) => x.id === id);
+        const dbObj = toDbProduct(updates);
+        await recordPriceChanges(id, updated?.name || id, beforeDb, dbObj, req.user);
+        res.json(updated);
       }
-      await recordPriceChanges(id, data.name, before, dbObj, req.user);
-      await clearCached("cache:products");
-      res.json(toFeProduct(data));
-    } else {
-      const db = readLocalDb();
-      const before = db.products.find((x) => x.id === id);
-      const beforeDb = before ? toDbProduct(before) : null;
-      db.products = db.products.map((x) => (x.id === id ? { ...x, ...updates } : x));
-      writeLocalDb(db);
-      const updated = db.products.find((x) => x.id === id);
-      const dbObj = toDbProduct(updates);
-      await recordPriceChanges(id, updated?.name || id, beforeDb, dbObj, req.user);
-      res.json(updated);
+    } catch (error) {
+      console.error("❌ [Products PUT] Xatolik:", error.message);
+      res.status(500).json({ error: error.message });
     }
-  } catch (error) {
-    console.error("❌ [Products PUT] Xatolik:", error.message);
-    res.status(500).json({ error: error.message });
-  }
-});
+  },
+);
 
-router.delete("/:id", authenticateToken, async (req, res) => {
+router.delete("/:id", authenticateToken, requirePermission("/products"), async (req, res) => {
   const { id } = req.params;
   try {
     if (isSupabaseConfigured) {
@@ -244,11 +301,38 @@ router.get("/:id/price-history", authenticateToken, async (req, res) => {
 });
 
 // Tovarlarni ommaviy import qilish
-router.post("/import", authenticateToken, async (req, res) => {
+router.post("/import", authenticateToken, requirePermission("/products"), async (req, res) => {
   const items = Array.isArray(req.body.items) ? req.body.items : [];
   if (!items.length) return res.status(400).json({ error: "Import ro'yxati bo'sh" });
+  if (items.length > 20000) {
+    return res
+      .status(413)
+      .json({ error: "Bir importda ko'pi bilan 20000 ta mahsulot yuborish mumkin" });
+  }
 
   const result = { created: 0, failed: 0, errors: [] };
+
+  if (isSupabaseConfigured) {
+    try {
+      const rows = items.map((raw) => {
+        const product = { ...raw, id: raw.id || `prd_${Math.random().toString(36).slice(2, 9)}` };
+        if (!product.name) throw new Error("Nomi majburiy");
+        return toDbProduct(product);
+      });
+      for (let index = 0; index < rows.length; index += 500) {
+        const { error } = await supabaseClient
+          .from("products")
+          .upsert(rows.slice(index, index + 500), { onConflict: "id" });
+        if (error) throw error;
+      }
+      await clearCached("cache:products");
+      return res.json({ created: rows.length, failed: 0, errors: [] });
+    } catch (error) {
+      return res
+        .status(400)
+        .json({ created: 0, failed: items.length, errors: [{ error: error.message }] });
+    }
+  }
 
   for (const raw of items) {
     try {
@@ -256,29 +340,7 @@ router.post("/import", authenticateToken, async (req, res) => {
       if (!p.id) p.id = `prd_${Math.random().toString(36).slice(2, 9)}`;
       if (!p.name) throw new Error("Nomi majburiy");
 
-      if (isSupabaseConfigured) {
-        const dbObj = toDbProduct(p);
-        const { data: existing } = await supabaseClient
-          .from("products")
-          .select("id")
-          .eq("id", p.id)
-          .maybeSingle();
-        if (existing) {
-          const { data: before } = await supabaseClient
-            .from("products")
-            .select("*")
-            .eq("id", p.id)
-            .single();
-          delete dbObj.id;
-          const { error } = await supabaseClient.from("products").update(dbObj).eq("id", p.id);
-          if (error) throw error;
-          await recordPriceChanges(p.id, p.name, before, dbObj, req.user);
-        } else {
-          const { error } = await supabaseClient.from("products").insert([dbObj]);
-          if (error) throw error;
-          await recordPriceChanges(p.id, p.name, null, dbObj, req.user);
-        }
-      } else {
+      {
         const db = readLocalDb();
         const idx = db.products.findIndex((x) => x.id === p.id);
         if (idx >= 0) {

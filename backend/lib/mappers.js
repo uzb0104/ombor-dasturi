@@ -68,6 +68,33 @@ export function toFeCustomer(c) {
   };
 }
 
+// 2.1 SUPPLIERS
+export function toDbSupplier(s) {
+  if (!s) return null;
+  const dbObj = {};
+  if (s.id !== undefined) dbObj.id = s.id;
+  if (s.name !== undefined) dbObj.name = s.name;
+  if (s.phone !== undefined) dbObj.phone = s.phone;
+  if (s.address !== undefined) dbObj.address = s.address;
+  if (s.debt !== undefined) dbObj.debt = s.debt;
+  if (s.deliveredProduct !== undefined) dbObj.delivered_product = s.deliveredProduct;
+  if (s.deliveredQuantity !== undefined) dbObj.delivered_quantity = s.deliveredQuantity;
+  return dbObj;
+}
+
+export function toFeSupplier(s) {
+  if (!s) return null;
+  return {
+    id: s.id,
+    name: s.name,
+    phone: s.phone,
+    address: s.address,
+    debt: Number(s.debt || 0),
+    deliveredProduct: s.delivered_product || "",
+    deliveredQuantity: Number(s.delivered_quantity || 0),
+  };
+}
+
 // 3. EMPLOYEES
 export function toDbEmployee(e) {
   if (!e) return null;
@@ -78,6 +105,7 @@ export function toDbEmployee(e) {
   if (e.role !== undefined) dbObj.role = e.role;
   if (e.salary !== undefined) dbObj.salary = e.salary;
   if (e.advance !== undefined) dbObj.advance = e.advance;
+  if (e.paymentHistory !== undefined) dbObj.payment_history = e.paymentHistory;
   if (e.hireDate !== undefined) dbObj.hire_date = e.hireDate;
   if (e.status !== undefined) dbObj.status = e.status;
   return dbObj;
@@ -92,6 +120,7 @@ export function toFeEmployee(e) {
     role: e.role,
     salary: Number(e.salary || 0),
     advance: Number(e.advance || 0),
+    paymentHistory: Array.isArray(e.payment_history) ? e.payment_history : [],
     hireDate: e.hire_date,
     status: e.status,
   };

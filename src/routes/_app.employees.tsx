@@ -53,6 +53,7 @@ function EmployeesPage() {
   const [open, setOpen] = useState(false);
   const [advanceFor, setAdvanceFor] = useState<string | null>(null);
   const [advanceAmount, setAdvanceAmount] = useState(0);
+  const [paymentType, setPaymentType] = useState<"Avans" | "Oylik">("Avans");
   const [form, setForm] = useState({
     name: "",
     phone: "",
@@ -69,7 +70,14 @@ function EmployeesPage() {
   const totalSalary = employees
     .filter((e) => e.status === "Faol")
     .reduce((a, e) => a + e.salary, 0);
-  const totalAdvance = employees.reduce((a, e) => a + e.advance, 0);
+  const currentMonth = new Date().toISOString().slice(0, 7);
+  const paymentsThisMonth = (employee: (typeof employees)[number], type: "Avans" | "Oylik") =>
+    (employee.paymentHistory || [])
+      .filter((payment) => payment.type === type && payment.date.startsWith(currentMonth))
+      .reduce((sum, payment) => sum + payment.amount, 0);
+  const advanceThisMonth = (employee: (typeof employees)[number]) =>
+    employee.paymentHistory?.length ? paymentsThisMonth(employee, "Avans") : employee.advance;
+  const totalAdvance = employees.reduce((sum, employee) => sum + advanceThisMonth(employee), 0);
 
   const submit = () => {
     if (!form.name) {
@@ -108,12 +116,25 @@ function EmployeesPage() {
     setOpen(true);
   };
 
-  const giveAdvance = () => {
+  const recordPayment = () => {
     if (!advanceFor) return;
     const emp = employees.find((e) => e.id === advanceFor);
     if (!emp) return;
-    updateEmployee(advanceFor, { advance: emp.advance + advanceAmount });
-    toast.success(`Avans berildi: ${formatSom(advanceAmount)}`);
+    if (advanceAmount <= 0) {
+      toast.error("Summa 0 dan katta bo'lishi kerak");
+      return;
+    }
+    const payment = {
+      id: `epay_${Math.random().toString(36).slice(2, 9)}`,
+      type: paymentType,
+      amount: advanceAmount,
+      date: new Date().toISOString(),
+    };
+    updateEmployee(advanceFor, {
+      advance: emp.advance + (paymentType === "Avans" ? advanceAmount : 0),
+      paymentHistory: [...(emp.paymentHistory || []), payment],
+    });
+    toast.success(`${paymentType} berildi: ${formatSom(advanceAmount)}`);
     setAdvanceFor(null);
     setAdvanceAmount(0);
   };
@@ -290,10 +311,12 @@ function EmployeesPage() {
                   </TableCell>
                   <TableCell className="text-right tabular-nums">{formatSom(e.salary)}</TableCell>
                   <TableCell className="hidden sm:table-cell text-right tabular-nums text-warning-foreground">
-                    {formatSom(e.advance)}
+                    {formatSom(advanceThisMonth(e))}
                   </TableCell>
                   <TableCell className="hidden md:table-cell text-right tabular-nums font-semibold">
-                    {formatSom(e.salary - e.advance)}
+                    {formatSom(
+                      Math.max(0, e.salary - advanceThisMonth(e) - paymentsThisMonth(e, "Oylik")),
+                    )}
                   </TableCell>
                   <TableCell className="hidden sm:table-cell">
                     <Badge variant={e.status === "Faol" ? "default" : "secondary"}>
@@ -307,6 +330,7 @@ function EmployeesPage() {
                       onClick={() => {
                         setAdvanceFor(e.id);
                         setAdvanceAmount(0);
+                        setPaymentType("Avans");
                       }}
                     >
                       <HandCoins className="h-3 w-3 mr-1" />
@@ -327,12 +351,68 @@ function EmployeesPage() {
         <PaginationBar {...pg} />
       </Card>
 
+      <Card className="rounded-2xl p-3 md:p-4">
+        <h3 className="font-semibold mb-3">Oylik va avans to'lovlari</h3>
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Sana va vaqt</TableHead>
+                <TableHead>Xodim</TableHead>
+                <TableHead>To'lov turi</TableHead>
+                <TableHead className="text-right">Summa</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {employees
+                .flatMap((employee) =>
+                  (employee.paymentHistory || []).map((payment) => ({
+                    ...payment,
+                    employeeName: employee.name,
+                  })),
+                )
+                .sort((left, right) => +new Date(right.date) - +new Date(left.date))
+                .map((payment) => (
+                  <TableRow key={payment.id}>
+                    <TableCell>{new Date(payment.date).toLocaleString("uz-UZ")}</TableCell>
+                    <TableCell className="font-medium">{payment.employeeName}</TableCell>
+                    <TableCell>{payment.type}</TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {formatSom(payment.amount)}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              {employees.every((employee) => !employee.paymentHistory?.length) && (
+                <TableRow>
+                  <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
+                    Hozircha to'lovlar yo'q
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </div>
+      </Card>
+
       <Dialog open={!!advanceFor} onOpenChange={(v) => !v && setAdvanceFor(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Avans berish</DialogTitle>
+            <DialogTitle>{paymentType} berish</DialogTitle>
           </DialogHeader>
           <div>
+            <Label>To'lov turi</Label>
+            <Select
+              value={paymentType}
+              onValueChange={(value) => setPaymentType(value as "Avans" | "Oylik")}
+            >
+              <SelectTrigger className="mb-3">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Avans">Avans</SelectItem>
+                <SelectItem value="Oylik">Oylik</SelectItem>
+              </SelectContent>
+            </Select>
             <Label>Summa (so'm)</Label>
             <Input
               type="number"
@@ -341,7 +421,7 @@ function EmployeesPage() {
             />
           </div>
           <DialogFooter>
-            <Button onClick={giveAdvance}>Tasdiqlash</Button>
+            <Button onClick={recordPayment}>Tasdiqlash</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
