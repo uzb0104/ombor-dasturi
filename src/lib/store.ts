@@ -356,7 +356,16 @@ export const useStore = create<State>()(
         // ─── TOVARLAR (OPTIMISTIC + BACKEND) ───
         addProduct: (p) => {
           set({ products: [p, ...get().products] });
-          syncApi(productsApi.create(p), { onFail: resync });
+          syncApi(productsApi.create(p), {
+            onFail: resync,
+            onSuccess: (savedProduct: Product) => {
+              set({
+                products: get().products.map((product) =>
+                  product.id === savedProduct.id ? savedProduct : product,
+                ),
+              });
+            },
+          });
           get().logAudit({
             action: "create",
             entity: "product",

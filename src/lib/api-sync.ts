@@ -20,19 +20,22 @@ export function formatApiError(err: unknown): string {
   return "Server bilan bog'lanishda xatolik";
 }
 
-type SyncOptions = {
+type SyncOptions<T> = {
   /** Xato toast ko'rsatilmasin (masalan, audit log) */
   silent?: boolean;
   /** Xato bo'lganda chaqiriladi (masalan, ma'lumotlarni qayta yuklash) */
   onFail?: () => void;
+  onSuccess?: (value: T) => void;
 };
 
 /** Backendga yozish — xatoda toast va ixtiyoriy resync */
-export function syncApi<T>(promise: Promise<T>, options?: SyncOptions): void {
-  promise.catch((err) => {
-    if (!options?.silent) {
-      toast.error(formatApiError(err));
-    }
-    options?.onFail?.();
-  });
+export function syncApi<T>(promise: Promise<T>, options?: SyncOptions<T>): void {
+  promise
+    .then((value) => options?.onSuccess?.(value))
+    .catch((err) => {
+      if (!options?.silent) {
+        toast.error(formatApiError(err));
+      }
+      options?.onFail?.();
+    });
 }
