@@ -90,20 +90,21 @@ const isTire = (cat: string) => /shina|balon/i.test(cat);
 
 function ProductsPage() {
   const t = useT();
-  const {
-    products,
-    categories,
-    vehicleBrands,
-    addProduct,
-    updateProduct,
-    deleteProduct,
-    vehicleFilter,
-  } = useStore();
+  const { products, categories, vehicleBrands, addProduct, updateProduct, deleteProduct } =
+    useStore();
   const [search, setSearch] = useState("");
   const [historyProduct, setHistoryProduct] = useState<Product | null>(null);
   const [cat, setCat] = useState<string>("all");
   const [veh, setVeh] = useState<string>("all");
   const [open, setOpen] = useState(false);
+  const [addModeOpen, setAddModeOpen] = useState(false);
+  const [barcodeOpen, setBarcodeOpen] = useState(false);
+  const [barcodeValue, setBarcodeValue] = useState("");
+  const [barcodeLookupLoading, setBarcodeLookupLoading] = useState(false);
+  const [barcodeProduct, setBarcodeProduct] = useState<Product | null>(null);
+  const [restockQuantity, setRestockQuantity] = useState("1");
+  const [restockBuyPrice, setRestockBuyPrice] = useState("");
+  const [restockSellPrice, setRestockSellPrice] = useState("");
   const [editing, setEditing] = useState<string | null>(null);
   const [form, setForm] = useState<FormState>(
     emptyForm(categories[0] || "", vehicleBrands[0] || ""),
@@ -116,7 +117,7 @@ function ProductsPage() {
   const [serverTotal, setServerTotal] = useState(0);
   const [pageItems, setPageItems] = useState<Product[]>([]);
   const pageSize = 12;
-  const serverVehicle = veh !== "all" ? veh : vehicleFilter !== "all" ? vehicleFilter : "";
+  const serverVehicle = veh === "all" ? "" : veh;
 
   useEffect(() => {
     let active = true;
@@ -196,6 +197,66 @@ function ProductsPage() {
     toast.success(t("products.codeGenerated"));
   };
 
+  const lookupBarcode = async () => {
+    const code = barcodeValue.trim().toUpperCase();
+    if (!code) {
+      toast.error(t("products.barcodeRequired"));
+      return;
+    }
+
+    setBarcodeLookupLoading(true);
+    setBarcodeProduct(null);
+    try {
+      const allProducts = await productsApi.getAll();
+      const match = allProducts.find((product) => product.barcode?.trim().toUpperCase() === code);
+      if (!match) {
+        toast.error(t("products.barcodeNotFound"));
+        return;
+      }
+      setBarcodeProduct(match);
+      setRestockQuantity("1");
+      setRestockBuyPrice(String(match.buyPrice));
+      setRestockSellPrice(String(match.sellPrice));
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : t("products.barcodeLookupFailed"));
+    } finally {
+      setBarcodeLookupLoading(false);
+    }
+  };
+
+  const saveBarcodeUpdate = () => {
+    if (!barcodeProduct) return;
+    const quantity = Number(restockQuantity);
+    const buyPrice = Number(restockBuyPrice);
+    const sellPrice = Number(restockSellPrice);
+    if (!Number.isInteger(quantity) || quantity < 1) {
+      toast.error(t("products.invalidQuantity"));
+      return;
+    }
+    if (
+      !restockBuyPrice.trim() ||
+      !restockSellPrice.trim() ||
+      !Number.isFinite(buyPrice) ||
+      !Number.isFinite(sellPrice) ||
+      buyPrice < 0 ||
+      sellPrice < 0
+    ) {
+      toast.error(t("products.invalidPrice"));
+      return;
+    }
+
+    updateProduct(barcodeProduct.id, {
+      quantity: barcodeProduct.quantity + quantity,
+      buyPrice,
+      sellPrice,
+    });
+    setServerPage(1);
+    toast.success(t("products.stockUpdated", { name: barcodeProduct.name, quantity }));
+    setBarcodeOpen(false);
+    setBarcodeProduct(null);
+    setBarcodeValue("");
+  };
+
   const submit = () => {
     if (!form.name.trim()) {
       toast.error(t("products.nameRequired"));
@@ -257,6 +318,7 @@ function ProductsPage() {
       toast.success(t("products.updated"));
     } else {
       addProduct({ id: `prd_${Math.random().toString(36).slice(2, 9)}`, ...payload });
+      setServerPage(1);
       toast.success(t("products.created"));
     }
     setOpen(false);
@@ -354,6 +416,148 @@ function ProductsPage() {
               <Download className="h-4 w-4 mr-1" />
               Excel
             </Button>
+            <Dialog open={addModeOpen} onOpenChange={setAddModeOpen}>
+              <DialogTrigger asChild>
+                <Button size="sm">
+                  <Plus className="h-4 w-4 mr-1" />
+                  {t("products.new")}
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-lg bg-card border rounded-2xl shadow-elevated">
+                <DialogHeader>
+                  <DialogTitle>{t("products.addMethod")}</DialogTitle>
+                </DialogHeader>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="h-24 flex-col gap-2"
+                    onClick={() => {
+                      setAddModeOpen(false);
+                      setBarcodeValue("");
+                      setBarcodeProduct(null);
+                      setBarcodeOpen(true);
+                    }}
+                  >
+                    <ScanBarcode className="h-6 w-6" />
+                    {t("products.addByBarcode")}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="h-24 flex-col gap-2"
+                    onClick={() => {
+                      setAddModeOpen(false);
+                      setEditing(null);
+                      setForm(emptyForm(categories[0] || "", vehicleBrands[0] || ""));
+                      setOpen(true);
+                    }}
+                  >
+                    <Plus className="h-6 w-6" />
+                    {t("products.addNewProduct")}
+                  </Button>
+                </div>
+              </DialogContent>
+            </Dialog>
+
+            <Dialog
+              open={barcodeOpen}
+              onOpenChange={(value) => {
+                setBarcodeOpen(value);
+                if (!value) setBarcodeProduct(null);
+              }}
+            >
+              <DialogContent className="max-w-lg bg-card border rounded-2xl shadow-elevated">
+                <DialogHeader>
+                  <DialogTitle>{t("products.addByBarcode")}</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <div>
+                    <Label>{t("products.form.codeLabel")}</Label>
+                    <div className="mt-1 flex gap-2">
+                      <Input
+                        value={barcodeValue}
+                        onChange={(event) => {
+                          setBarcodeValue(event.target.value);
+                          setBarcodeProduct(null);
+                        }}
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter") {
+                            event.preventDefault();
+                            void lookupBarcode();
+                          }
+                        }}
+                        placeholder={t("products.form.codePh")}
+                        className="font-mono uppercase"
+                        autoFocus
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => void lookupBarcode()}
+                        disabled={barcodeLookupLoading}
+                      >
+                        <Search className="mr-1 h-4 w-4" />
+                        {barcodeLookupLoading ? t("common.loading") : t("products.findBarcode")}
+                      </Button>
+                    </div>
+                  </div>
+
+                  {barcodeProduct && (
+                    <>
+                      <div className="rounded-lg border bg-muted/30 p-3">
+                        <div className="font-semibold">{barcodeProduct.name}</div>
+                        <div className="mt-1 text-sm text-muted-foreground">
+                          {barcodeProduct.vehicle} · {barcodeProduct.category}
+                        </div>
+                        <div className="mt-2 text-sm">
+                          {t("products.currentStock", { quantity: barcodeProduct.quantity })}
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                          <Label>{t("products.stockToAdd")}</Label>
+                          <Input
+                            type="number"
+                            min="1"
+                            step="1"
+                            value={restockQuantity}
+                            onChange={(event) => setRestockQuantity(event.target.value)}
+                            className="mt-1"
+                          />
+                        </div>
+                        <div>
+                          <Label>{t("products.buyPrice")}</Label>
+                          <Input
+                            type="number"
+                            min="0"
+                            value={restockBuyPrice}
+                            onChange={(event) => setRestockBuyPrice(event.target.value)}
+                            className="mt-1"
+                          />
+                        </div>
+                        <div className="sm:col-span-2">
+                          <Label>{t("products.sellPrice")}</Label>
+                          <Input
+                            type="number"
+                            min="0"
+                            value={restockSellPrice}
+                            onChange={(event) => setRestockSellPrice(event.target.value)}
+                            className="mt-1"
+                          />
+                        </div>
+                      </div>
+                      <DialogFooter>
+                        <Button type="button" onClick={saveBarcodeUpdate}>
+                          {t("common.save")}
+                        </Button>
+                      </DialogFooter>
+                    </>
+                  )}
+                </div>
+              </DialogContent>
+            </Dialog>
+
             <Dialog
               open={open}
               onOpenChange={(v) => {
@@ -364,12 +568,6 @@ function ProductsPage() {
                 }
               }}
             >
-              <DialogTrigger asChild>
-                <Button size="sm">
-                  <Plus className="h-4 w-4 mr-1" />
-                  {t("products.new")}
-                </Button>
-              </DialogTrigger>
               <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto bg-card border rounded-2xl shadow-elevated">
                 <DialogHeader>
                   <DialogTitle>{editing ? t("products.edit") : t("products.new")}</DialogTitle>
@@ -673,10 +871,26 @@ function ProductsPage() {
                 <TableHead className="hidden sm:table-cell text-center">
                   {t("common.status")}
                 </TableHead>
-                <TableHead className="text-right pr-4">{t("common.actions")}</TableHead>
+                <TableHead className="sticky right-0 z-20 bg-muted/30 text-right pr-4">
+                  {t("common.actions")}
+                </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
+              <TableRow>
+                <TableCell colSpan={10} className="py-2">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="w-full justify-start text-muted-foreground"
+                    onClick={() => setAddModeOpen(true)}
+                  >
+                    <Plus className="mr-2 h-4 w-4" />
+                    {t("products.new")}
+                  </Button>
+                </TableCell>
+              </TableRow>
               {pg.paged.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={10} className="text-center py-10 text-muted-foreground">
@@ -687,7 +901,7 @@ function ProductsPage() {
               {pg.paged.map((p) => (
                 <TableRow
                   key={p.id}
-                  className="hover:bg-muted/40 transition-colors"
+                  className="group/row hover:bg-muted/40 transition-colors"
                   data-state={sel.has(p.id) ? "selected" : undefined}
                 >
                   <TableCell>
@@ -747,7 +961,7 @@ function ProductsPage() {
                   <TableCell className="hidden sm:table-cell text-center">
                     <StatusBadge qty={p.quantity} min={p.minQty} />
                   </TableCell>
-                  <TableCell className="text-right whitespace-nowrap pr-4">
+                  <TableCell className="sticky right-0 z-10 whitespace-nowrap bg-background text-right pr-4 group-hover/row:bg-muted/40">
                     <Button
                       variant="ghost"
                       size="icon"
@@ -760,6 +974,7 @@ function ProductsPage() {
                     <Button
                       variant="ghost"
                       size="icon"
+                      title={t("common.edit")}
                       onClick={() => startEdit(p.id)}
                       className="h-8 w-8"
                     >
@@ -768,6 +983,7 @@ function ProductsPage() {
                     <Button
                       variant="ghost"
                       size="icon"
+                      title={t("common.delete")}
                       onClick={() => removeOne(p.id, p.name)}
                       className="h-8 w-8 hover:bg-destructive/10"
                     >
