@@ -4,6 +4,13 @@ import { useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatCard, PageHeader } from "@/components/ui-kit";
 import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { formatSom } from "@/lib/constants";
 import {
@@ -23,7 +30,17 @@ export const Route = createFileRoute("/_app/dashboard")({ component: Dashboard }
 
 function Dashboard() {
   const t = useT();
-  const { products, sales, expenses, employees, customers, suppliers, vehicleFilter } = useStore();
+  const {
+    products,
+    sales,
+    expenses,
+    employees,
+    customers,
+    suppliers,
+    vehicleFilter,
+    setVehicleFilter,
+    vehicleBrands,
+  } = useStore();
   const [detail, setDetail] = useState<
     | null
     | "warehouse"
@@ -84,6 +101,21 @@ function Dashboard() {
           vehicleFilter === "all"
             ? t("dashboard.subtitleAll")
             : t("dashboard.subtitleFilter", { brand: vehicleFilter })
+        }
+        actions={
+          <Select value={vehicleFilter} onValueChange={setVehicleFilter}>
+            <SelectTrigger className="w-48">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">{t("nav.all")}</SelectItem>
+              {vehicleBrands.map((brand) => (
+                <SelectItem key={brand} value={brand}>
+                  {brand}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         }
       />
 

@@ -2,6 +2,10 @@
 -- Bu funksiyalar atomik (xavfsiz) quantity/debt yangilash uchun ishlatiladi.
 -- Supabase SQL Editor'da ishga tushiring.
 
+-- Eski bazalarda qisman to'lov ustuni bo'lmasligi mumkin.
+ALTER TABLE public.sales
+  ADD COLUMN IF NOT EXISTS paid NUMERIC(20, 2) NOT NULL DEFAULT 0;
+
 -- 1. Tovar miqdorini atomik kamaytirish (sotuv uchun)
 CREATE OR REPLACE FUNCTION decrement_product_qty(p_id VARCHAR, p_qty NUMERIC)
 RETURNS VOID AS $$

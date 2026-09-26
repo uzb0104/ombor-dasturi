@@ -48,7 +48,15 @@ export function SalesPage() {
     useStore();
   const { confirm, confirmNode } = useConfirm();
   const [period, setPeriod] = useState("all");
+  const [paymentFilter, setPaymentFilter] = useState<"all" | "Naqd" | "Karta" | "Qarz">("all");
   const [open, setOpen] = useState(false);
+  const [debtOpen, setDebtOpen] = useState(false);
+  const [debtCustomerName, setDebtCustomerName] = useState("");
+  const [debtCustomerAddress, setDebtCustomerAddress] = useState("");
+  const [debtCustomerPhone, setDebtCustomerPhone] = useState("");
+  const [debtProductId, setDebtProductId] = useState("");
+  const [debtQuantity, setDebtQuantity] = useState(1);
+  const [debtPaidNow, setDebtPaidNow] = useState(0);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [category, setCategory] = useState(categories[0] || "");
   const [productId, setProductId] = useState("");
@@ -64,16 +72,18 @@ export function SalesPage() {
   );
 
   const filtered = useMemo(() => {
-    if (period === "all") return sales;
+    const paymentSales =
+      paymentFilter === "all" ? sales : sales.filter((sale) => sale.paymentType === paymentFilter);
+    if (period === "all") return paymentSales;
     const now = new Date();
     now.setHours(0, 0, 0, 0);
     const daysMap: Record<string, number> = { today: 0, week: 7, month: 30 };
     const days = daysMap[period];
-    if (days === undefined) return sales;
+    if (days === undefined) return paymentSales;
     const from = new Date(now);
     if (period !== "today") from.setDate(from.getDate() - days);
-    return sales.filter((sale) => new Date(sale.date) >= from);
-  }, [period, sales]);
+    return paymentSales.filter((sale) => new Date(sale.date) >= from);
+  }, [period, paymentFilter, sales]);
 
   const { paged, page, setPage, totalPages, totalItems, pageSize } = usePagination(filtered, 10);
   const total = filtered.reduce((sum, sale) => sum + sale.total, 0);
@@ -164,6 +174,98 @@ export function SalesPage() {
     resetForm();
   };
 
+  const submitDebt = async () => {
+    const name = debtCustomerName.trim();
+    const address = debtCustomerAddress.trim();
+    const phone = debtCustomerPhone.trim();
+    const product = products.find((item) => item.id === debtProductId);
+    if (!name || !address || !phone || !product) {
+      toast.error(t("sales.debtRequiredFields"));
+      return;
+    }
+    if (!Number.isInteger(debtQuantity) || debtQuantity < 1) {
+      toast.error(t("toast.qtyMin"));
+      return;
+    }
+    const total = product.sellPrice * debtQuantity;
+    if (!Number.isFinite(debtPaidNow) || debtPaidNow < 0 || debtPaidNow > total) {
+      toast.error(t("sales.paidAmountInvalid"));
+      return;
+    }
+
+    const phoneDigits = phone.replace(/\D/g, "");
+    const existingCustomer = customers.find(
+      (customer) => customer.phone.replace(/\D/g, "") === phoneDigits,
+    );
+    let customerId: string;
+    try {
+      if (existingCustomer) {
+        customerId = existingCustomer.id;
+        if (
+          existingCustomer.name !== name ||
+          existingCustomer.phone !== phone ||
+          existingCustomer.address !== address
+        ) {
+          const updatedCustomer = await customersApi.update(existingCustomer.id, {
+            name,
+            phone,
+            address,
+          });
+          useStore.setState((state) => ({
+            customers: state.customers.map((customer) =>
+              customer.id === existingCustomer.id ? updatedCustomer : customer,
+            ),
+          }));
+        }
+      } else {
+        const newCustomer = await customersApi.create({
+          id: `cus_${Math.random().toString(36).slice(2, 9)}`,
+          name,
+          phone,
+          address,
+          vehicle: product.vehicle,
+          totalPurchases: 0,
+          debt: 0,
+        });
+        customerId = newCustomer.id;
+        useStore.setState((state) => ({ customers: [newCustomer, ...state.customers] }));
+      }
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : t("sales.customerSaveFailed"));
+      return;
+    }
+
+    const debtSale: Sale = {
+      id: `sale_${Math.random().toString(36).slice(2, 9)}`,
+      date: new Date().toISOString(),
+      customerId,
+      sellerId: employees.find((item) => item.role === "Sotuvchi")?.id || employees[0]?.id || "",
+      items: [
+        {
+          productId: product.id,
+          productName: product.name,
+          qty: debtQuantity,
+          price: product.sellPrice,
+          buyPrice: product.buyPrice,
+        },
+      ],
+      discount: 0,
+      paymentType: "Qarz",
+      total,
+      profit: (product.sellPrice - product.buyPrice) * debtQuantity,
+      paid: debtPaidNow,
+    };
+    addSale(debtSale);
+    toast.success(t("sales.creditAdded"));
+    setDebtOpen(false);
+    setDebtCustomerName("");
+    setDebtCustomerAddress("");
+    setDebtCustomerPhone("");
+    setDebtProductId("");
+    setDebtQuantity(1);
+    setDebtPaidNow(0);
+  };
+
   const resetForm = () => {
     setOpen(false);
     setEditingId(null);
@@ -238,6 +340,10 @@ export function SalesPage() {
               <Download className="h-4 w-4 mr-1" />
               CSV
             </Button>
+            <Button variant="outline" onClick={() => setDebtOpen(true)}>
+              <CreditCard className="h-4 w-4 mr-1" />
+              {t("sales.addDebt")}
+            </Button>
             <Button onClick={() => setOpen(true)}>
               <Plus className="h-4 w-4 mr-1" />
               {t("sales.new")}
@@ -273,17 +379,35 @@ export function SalesPage() {
             <h3 className="font-semibold text-lg">{t("sales.transactions")}</h3>
             <p className="text-xs text-muted-foreground">{t("sales.transactionsDesc")}</p>
           </div>
-          <Select value={period} onValueChange={setPeriod}>
-            <SelectTrigger className="w-40">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">{t("common.all")}</SelectItem>
-              <SelectItem value="today">{t("common.today")}</SelectItem>
-              <SelectItem value="week">{t("common.week")}</SelectItem>
-              <SelectItem value="month">{t("common.month")}</SelectItem>
-            </SelectContent>
-          </Select>
+          <div className="flex flex-wrap gap-2">
+            <Select value={period} onValueChange={setPeriod}>
+              <SelectTrigger className="w-40">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{t("common.all")}</SelectItem>
+                <SelectItem value="today">{t("common.today")}</SelectItem>
+                <SelectItem value="week">{t("common.week")}</SelectItem>
+                <SelectItem value="month">{t("common.month")}</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select
+              value={paymentFilter}
+              onValueChange={(value) =>
+                setPaymentFilter(value as "all" | "Naqd" | "Karta" | "Qarz")
+              }
+            >
+              <SelectTrigger className="w-40">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{t("sales.allPaymentTypes")}</SelectItem>
+                <SelectItem value="Naqd">{paymentLabel(t, "Naqd")}</SelectItem>
+                <SelectItem value="Karta">{paymentLabel(t, "Karta")}</SelectItem>
+                <SelectItem value="Qarz">{paymentLabel(t, "Qarz")}</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
 
         <div className="overflow-x-auto rounded-xl border border-border/60">
@@ -293,7 +417,12 @@ export function SalesPage() {
                 <TableHead>{t("common.date")}</TableHead>
                 <TableHead>{t("sales.customer")}</TableHead>
                 <TableHead>{t("common.product")}</TableHead>
+                <TableHead className="text-right">{t("products.qty")}</TableHead>
+                <TableHead className="text-right">{t("sales.price")}</TableHead>
+                <TableHead className="text-right">{t("sales.discount")}</TableHead>
                 <TableHead className="text-right">{t("common.total")}</TableHead>
+                <TableHead className="text-right">{t("sales.paidTotal")}</TableHead>
+                <TableHead className="text-right">{t("sales.remainingDebt")}</TableHead>
                 <TableHead>{t("sales.payment")}</TableHead>
                 <TableHead className="text-right pr-4">{t("common.actions")}</TableHead>
               </TableRow>
@@ -301,7 +430,7 @@ export function SalesPage() {
             <TableBody>
               {paged.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-10 text-muted-foreground">
+                  <TableCell colSpan={11} className="text-center py-10 text-muted-foreground">
                     {t("sales.notFound")}
                   </TableCell>
                 </TableRow>
@@ -325,14 +454,46 @@ export function SalesPage() {
                       })()}
                     </TableCell>
                     <TableCell>
-                      {sale.items
-                        .map(
-                          (item) =>
-                            products.find((product) => product.id === item.productId)?.name || "",
-                        )
-                        .join(", ")}
+                      <div className="flex min-w-40 flex-col gap-1">
+                        {sale.items.map((item, index) => (
+                          <span key={`${sale.id}-${item.productId}-${index}`}>
+                            {products.find((product) => product.id === item.productId)?.name ||
+                              item.productName ||
+                              t("sales.unknownProduct")}
+                          </span>
+                        ))}
+                      </div>
                     </TableCell>
-                    <TableCell className="text-right font-bold">{formatSom(sale.total)}</TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      <div className="flex flex-col gap-1">
+                        {sale.items.map((item, index) => (
+                          <span key={`${sale.id}-qty-${index}`}>{item.qty}</span>
+                        ))}
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      <div className="flex flex-col gap-1">
+                        {sale.items.map((item, index) => (
+                          <span key={`${sale.id}-price-${index}`}>{formatSom(item.price)}</span>
+                        ))}
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {formatSom(sale.discount)}
+                    </TableCell>
+                    <TableCell className="text-right font-bold tabular-nums">
+                      {formatSom(sale.total)}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {formatSom(sale.paymentType === "Qarz" ? sale.paid || 0 : sale.total)}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {formatSom(
+                        sale.paymentType === "Qarz"
+                          ? Math.max(0, sale.total - (sale.paid || 0))
+                          : 0,
+                      )}
+                    </TableCell>
                     <TableCell>
                       <Badge variant={sale.paymentType === "Qarz" ? "destructive" : "secondary"}>
                         {paymentLabel(t, sale.paymentType)}
@@ -480,7 +641,9 @@ export function SalesPage() {
                 <SelectContent>
                   <SelectItem value="Naqd">{paymentLabel(t, "Naqd")}</SelectItem>
                   <SelectItem value="Karta">{paymentLabel(t, "Karta")}</SelectItem>
-                  <SelectItem value="Qarz">{paymentLabel(t, "Qarz")}</SelectItem>
+                  {editingId && paymentType === "Qarz" && (
+                    <SelectItem value="Qarz">{paymentLabel(t, "Qarz")}</SelectItem>
+                  )}
                 </SelectContent>
               </Select>
             </div>
@@ -511,6 +674,116 @@ export function SalesPage() {
               {t("common.back")}
             </Button>
             <Button onClick={submit}>{editingId ? "Saqlash" : t("sales.saveSale")}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={debtOpen} onOpenChange={setDebtOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>{t("sales.addDebt")}</DialogTitle>
+          </DialogHeader>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <Label>{t("common.nameStar")}</Label>
+              <Input
+                value={debtCustomerName}
+                onChange={(event) => setDebtCustomerName(event.target.value)}
+                placeholder={t("sales.customerFullName")}
+              />
+            </div>
+            <div>
+              <Label>{t("common.phone")}</Label>
+              <Input
+                type="tel"
+                value={debtCustomerPhone}
+                onChange={(event) => setDebtCustomerPhone(event.target.value)}
+                placeholder="+998 ..."
+              />
+            </div>
+            <div className="sm:col-span-2">
+              <Label>{t("common.address")}</Label>
+              <Input
+                value={debtCustomerAddress}
+                onChange={(event) => setDebtCustomerAddress(event.target.value)}
+                placeholder={t("sales.customerAddress")}
+              />
+            </div>
+            <div className="sm:col-span-2">
+              <Label>{t("common.product")}</Label>
+              <Select value={debtProductId} onValueChange={setDebtProductId}>
+                <SelectTrigger className="mt-1">
+                  <SelectValue placeholder={t("sales.searchProduct")} />
+                </SelectTrigger>
+                <SelectContent>
+                  {products.map((product) => (
+                    <SelectItem key={product.id} value={product.id}>
+                      {product.name} · {product.quantity} {t("products.qty").toLowerCase()}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>{t("products.qty")}</Label>
+              <Input
+                type="number"
+                min={1}
+                step={1}
+                value={debtQuantity}
+                onChange={(event) => setDebtQuantity(Number(event.target.value))}
+              />
+            </div>
+            {debtProductId && (
+              <div className="flex flex-col justify-center text-sm text-muted-foreground">
+                <span className="flex gap-1">
+                  <span>{t("sales.unitPrice")}:</span>
+                  <span>
+                    {formatSom(products.find((p) => p.id === debtProductId)?.sellPrice || 0)}
+                  </span>
+                </span>
+                <span className="flex gap-1">
+                  <span>{t("common.total")}:</span>
+                  <span>
+                    {formatSom(
+                      (products.find((p) => p.id === debtProductId)?.sellPrice || 0) * debtQuantity,
+                    )}
+                  </span>
+                </span>
+              </div>
+            )}
+            {debtProductId && (
+              <div className="sm:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <Label>{t("sales.paidNow")}</Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    value={debtPaidNow}
+                    onChange={(event) => setDebtPaidNow(Number(event.target.value))}
+                  />
+                </div>
+                <div className="flex flex-col justify-center text-sm">
+                  <span className="text-muted-foreground">{t("sales.remainingDebt")}</span>
+                  <span className="font-semibold">
+                    {formatSom(
+                      Math.max(
+                        0,
+                        (products.find((p) => p.id === debtProductId)?.sellPrice || 0) *
+                          debtQuantity -
+                          debtPaidNow,
+                      ),
+                    )}
+                  </span>
+                </div>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDebtOpen(false)}>
+              {t("common.back")}
+            </Button>
+            <Button onClick={submitDebt}>{t("sales.saveDebt")}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

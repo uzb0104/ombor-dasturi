@@ -89,9 +89,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     toggleTheme,
     warehouse,
     setWarehouse,
-    vehicleFilter,
-    setVehicleFilter,
-    vehicleBrands,
     branches,
     products,
     customers,
@@ -165,24 +162,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </Link>
           );
         })}
-        <div className="mt-6 px-2 pb-2 text-[10px] font-semibold uppercase tracking-wider opacity-50">
-          {t("nav.vehicleBrand")}
-        </div>
-        <div className="px-2">
-          <Select value={vehicleFilter} onValueChange={(v) => setVehicleFilter(v)}>
-            <SelectTrigger className="w-full bg-sidebar-accent/30 border-sidebar-border text-sidebar-foreground">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">{t("nav.all")}</SelectItem>
-              {vehicleBrands.map((b: string) => (
-                <SelectItem key={b} value={b}>
-                  {b}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
       </nav>
       <div className="border-t border-sidebar-border p-3 text-xs opacity-70">
         © {new Date().getFullYear()} AutoERP Pro
