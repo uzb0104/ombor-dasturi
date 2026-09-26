@@ -1,13 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Card } from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { PageHeader, useConfirm } from "@/components/ui-kit";
 import { useStore } from "@/lib/store";
 import { Button } from "@/components/ui/button";
@@ -151,17 +143,17 @@ function CategoriesPage() {
         }
       />
 
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
         {categories.map((c) => {
           const Icon = ICONS[c] || Tags;
           const count = products.filter((p) => p.category === c).length;
           return (
             <Card
               key={c}
-              className="p-5 rounded-2xl hover:shadow-elevated transition group relative"
+              className="p-4 rounded-2xl hover:shadow-elevated transition group relative"
             >
-              <div className="grid h-11 w-11 place-items-center rounded-xl bg-primary/10 text-primary mb-3">
-                <Icon className="h-5 w-5" />
+              <div className="grid h-10 w-10 place-items-center rounded-xl bg-primary/10 text-primary mb-2">
+                <Icon className="h-4 w-4" />
               </div>
               <div className="font-semibold">{c}</div>
               <div className="text-xs text-muted-foreground mt-0.5">
@@ -188,46 +180,6 @@ function CategoriesPage() {
           );
         })}
       </div>
-
-      <Card className="rounded-2xl">
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>{t("common.name")}</TableHead>
-                <TableHead className="text-right">{t("common.productCount")}</TableHead>
-                <TableHead className="text-right">{t("common.actions")}</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {categories.map((c) => (
-                <TableRow key={c} className="hover:bg-muted/40">
-                  <TableCell className="font-medium">{c}</TableCell>
-                  <TableCell className="text-right tabular-nums">
-                    {products.filter((p) => p.category === c).length}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => {
-                        setEditing(c);
-                        setName(c);
-                        setOpen(true);
-                      }}
-                    >
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    <Button variant="ghost" size="icon" onClick={() => remove(c)}>
-                      <Trash2 className="h-4 w-4 text-destructive" />
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-      </Card>
     </div>
   );
 }

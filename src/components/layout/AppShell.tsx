@@ -331,7 +331,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </header>
 
         <main className="flex-1 overflow-y-auto scrollbar-thin">
-          <div className="mx-auto max-w-[1200px] p-4 md:p-6 animate-fade-in">{children}</div>
+          <div className="mx-auto max-w-300 p-4 md:p-6 animate-fade-in">{children}</div>
         </main>
       </div>
       <CommandDialog open={searchOpen} onOpenChange={setSearchOpen}>
