@@ -22,14 +22,15 @@ $$ LANGUAGE plpgsql;
 CREATE OR REPLACE FUNCTION create_sale_atomic(p_sale JSONB, p_items JSONB)
 RETURNS VOID AS $$
 DECLARE
-  item JSONB;
+  sale_item JSONB;
   product_id_value VARCHAR;
   qty_value NUMERIC;
 BEGIN
-  FOR item IN SELECT * FROM jsonb_array_elements(p_items)
+  FOR sale_item IN
+    SELECT item_json FROM jsonb_array_elements(p_items) AS input_items(item_json)
   LOOP
-    product_id_value := item->>'productId';
-    qty_value := (item->>'qty')::NUMERIC;
+    product_id_value := sale_item->>'productId';
+    qty_value := (sale_item->>'qty')::NUMERIC;
     UPDATE products SET quantity = quantity - qty_value
     WHERE id = product_id_value AND quantity >= qty_value;
     IF NOT FOUND THEN
@@ -46,10 +47,12 @@ BEGIN
   );
 
   INSERT INTO sale_items (sale_id, product_id, product_name, qty, price, buy_price)
-  SELECT p_sale->>'id', item->>'productId', products.name,
-         (item->>'qty')::NUMERIC, (item->>'price')::NUMERIC, (item->>'buyPrice')::NUMERIC
-  FROM jsonb_array_elements(p_items) item
-  JOIN products ON products.id = item->>'productId';
+    SELECT p_sale->>'id', input_items.item_json->>'productId', product.name,
+      (input_items.item_json->>'qty')::NUMERIC,
+      (input_items.item_json->>'price')::NUMERIC,
+      (input_items.item_json->>'buyPrice')::NUMERIC
+    FROM jsonb_array_elements(p_items) AS input_items(item_json)
+    JOIN products AS product ON product.id = input_items.item_json->>'productId';
 
   IF p_sale->>'customer_id' IS NOT NULL AND p_sale->>'customer_id' <> '' THEN
     UPDATE customers SET

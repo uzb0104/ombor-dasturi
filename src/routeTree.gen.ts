@@ -27,6 +27,7 @@ import { Route as AppCustomersRouteImport } from './routes/_app.customers'
 import { Route as AppCategoriesRouteImport } from './routes/_app.categories'
 import { Route as AppBarcodeRouteImport } from './routes/_app.barcode'
 import { Route as AppAuditRouteImport } from './routes/_app.audit'
+import { Route as AppReportDayDateRouteImport } from './routes/_app.report-day.$date'
 
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
@@ -117,6 +118,11 @@ const AppAuditRoute = AppAuditRouteImport.update({
   path: '/audit',
   getParentRoute: () => AppRoute,
 } as any)
+const AppReportDayDateRoute = AppReportDayDateRouteImport.update({
+  id: '/report-day/$date',
+  path: '/report-day/$date',
+  getParentRoute: () => AppRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -136,6 +142,7 @@ export interface FileRoutesByFullPath {
   '/sales': typeof AppSalesRoute
   '/settings': typeof AppSettingsRoute
   '/suppliers': typeof AppSuppliersRoute
+  '/report-day/$date': typeof AppReportDayDateRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -155,6 +162,7 @@ export interface FileRoutesByTo {
   '/sales': typeof AppSalesRoute
   '/settings': typeof AppSettingsRoute
   '/suppliers': typeof AppSuppliersRoute
+  '/report-day/$date': typeof AppReportDayDateRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -176,6 +184,7 @@ export interface FileRoutesById {
   '/_app/sales': typeof AppSalesRoute
   '/_app/settings': typeof AppSettingsRoute
   '/_app/suppliers': typeof AppSuppliersRoute
+  '/_app/report-day/$date': typeof AppReportDayDateRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -197,6 +206,7 @@ export interface FileRouteTypes {
     | '/sales'
     | '/settings'
     | '/suppliers'
+    | '/report-day/$date'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -216,6 +226,7 @@ export interface FileRouteTypes {
     | '/sales'
     | '/settings'
     | '/suppliers'
+    | '/report-day/$date'
   id:
     | '__root__'
     | '/'
@@ -236,6 +247,7 @@ export interface FileRouteTypes {
     | '/_app/sales'
     | '/_app/settings'
     | '/_app/suppliers'
+    | '/_app/report-day/$date'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -372,6 +384,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppAuditRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/report-day/$date': {
+      id: '/_app/report-day/$date'
+      path: '/report-day/$date'
+      fullPath: '/report-day/$date'
+      preLoaderRoute: typeof AppReportDayDateRouteImport
+      parentRoute: typeof AppRoute
+    }
   }
 }
 
@@ -391,6 +410,7 @@ interface AppRouteChildren {
   AppSalesRoute: typeof AppSalesRoute
   AppSettingsRoute: typeof AppSettingsRoute
   AppSuppliersRoute: typeof AppSuppliersRoute
+  AppReportDayDateRoute: typeof AppReportDayDateRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
@@ -409,6 +429,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppSalesRoute: AppSalesRoute,
   AppSettingsRoute: AppSettingsRoute,
   AppSuppliersRoute: AppSuppliersRoute,
+  AppReportDayDateRoute: AppReportDayDateRoute,
 }
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)

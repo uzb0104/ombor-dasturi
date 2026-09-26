@@ -1,4 +1,4 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { ReportsPage } from "@/components/reports/ReportsPage";
+import { ReportsCalendarPage } from "@/components/reports/ReportsCalendarPage";
 
-export const Route = createFileRoute("/_app/reports")({ component: ReportsPage });
+export const Route = createFileRoute("/_app/reports")({ component: ReportsCalendarPage });
