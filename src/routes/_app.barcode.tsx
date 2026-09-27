@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { useStore } from "@/lib/store";
 import { formatSom } from "@/lib/constants";
-import { ScanBarcode, Search, Plus, Package } from "lucide-react";
+import { ScanBarcode, Search, Plus, Package, CheckCircle2, AlertCircle } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -17,19 +17,40 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useT } from "@/lib/i18n";
+import type { Product } from "@/lib/types";
 
 export const Route = createFileRoute("/_app/barcode")({ component: BarcodePage });
 
 function BarcodePage() {
   const t = useT();
-  const { products, updateProduct } = useStore();
+  const { products, categories, vehicleBrands, addProduct, updateProduct } = useStore();
   const [code, setCode] = useState("");
   const [scanBuffer, setScanBuffer] = useState("");
   const [lastScan, setLastScan] = useState<string | null>(null);
   const [assignFor, setAssignFor] = useState<string | null>(null);
   const [newBarcode, setNewBarcode] = useState("");
   const scanRef = useRef<HTMLInputElement>(null);
+
+  // Yangi tovar yaratish modal holatlari
+  const [quickCreateOpen, setQuickCreateOpen] = useState(false);
+  const [createForm, setCreateForm] = useState({
+    name: "",
+    barcode: "",
+    category: categories[0] || "Umumiy",
+    vehicle: vehicleBrands[0] || "Barchasi",
+    buyPrice: 0,
+    sellPrice: 0,
+    quantity: 1,
+    minQty: 5,
+  });
 
   const found = useMemo(
     () =>
@@ -52,10 +73,60 @@ function BarcodePage() {
       if (!val) return;
       setLastScan(val);
       const hit = products.find((p) => p.barcode === val);
-      if (hit) toast.success(t("barcode.found", { name: hit.name }));
-      else toast.error(t("barcode.notFound"));
+      if (hit) {
+        toast.success(t("barcode.found", { name: hit.name }));
+      } else {
+        toast.error(`Shtrix-kod (${val}) bazadan topilmadi. Yangi tovar qo'shishingiz mumkin!`);
+      }
       setScanBuffer("");
     }
+  };
+
+  const openQuickCreate = (barcodeToUse: string) => {
+    setCreateForm({
+      name: "",
+      barcode: barcodeToUse,
+      category: categories[0] || "Umumiy",
+      vehicle: vehicleBrands[0] || "Barchasi",
+      buyPrice: 0,
+      sellPrice: 0,
+      quantity: 1,
+      minQty: 5,
+    });
+    setQuickCreateOpen(true);
+  };
+
+  const handleSaveQuickProduct = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!createForm.name.trim()) {
+      toast.error("Mahsulot nomini kiriting!");
+      return;
+    }
+
+    const newProd: Product = {
+      id: `prod_${Math.random().toString(36).slice(2, 9)}`,
+      name: createForm.name.trim(),
+      barcode: createForm.barcode.trim().toUpperCase() || undefined,
+      category: createForm.category,
+      vehicle: createForm.vehicle,
+      buyPrice: Number(createForm.buyPrice) || 0,
+      sellPrice: Number(createForm.sellPrice) || 0,
+      quantity: Number(createForm.quantity) || 0,
+      minQty: Number(createForm.minQty) || 5,
+    };
+
+    addProduct(newProd);
+    toast.success(`"${newProd.name}" avtomatik Supabase bazasiga saqlandi!`);
+    setQuickCreateOpen(false);
+    if (lastScan === createForm.barcode) {
+      setLastScan(createForm.barcode);
+    }
+  };
+
+  const handleIncrementStock = (hit: Product) => {
+    const nextQty = hit.quantity + 1;
+    updateProduct(hit.id, { quantity: nextQty });
+    toast.success(`"${hit.name}" zaxirasi +1 ga oshirildi (Jami: ${nextQty})`);
   };
 
   const generateBarcode = () => {
@@ -119,28 +190,64 @@ function BarcodePage() {
               </Button>
             </div>
             {lastScan && (
-              <div className="mt-5 p-4 rounded-xl border bg-muted/40">
+              <div className="mt-5 p-5 rounded-2xl border bg-card">
                 <div className="text-xs text-muted-foreground">
-                  {t("barcode.lastScan")} <span className="font-mono">{lastScan}</span>
+                  {t("barcode.lastScan")} <span className="font-mono font-bold text-foreground">{lastScan}</span>
                 </div>
                 {(() => {
                   const hit = products.find((p) => p.barcode === lastScan);
                   if (!hit)
                     return (
-                      <div className="mt-2 text-destructive font-medium">
-                        {t("barcode.notFoundShort")}
+                      <div className="mt-3 p-4 rounded-xl bg-destructive/10 border border-destructive/20 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                        <div className="flex items-center gap-2 text-destructive">
+                          <AlertCircle className="h-5 w-5 shrink-0" />
+                          <div>
+                            <div className="font-semibold">Mahsulot topilmadi</div>
+                            <div className="text-xs text-destructive/80">
+                              Ushbu shtrix-kod ({lastScan}) bazada mavjud emas.
+                            </div>
+                          </div>
+                        </div>
+                        <Button
+                          size="sm"
+                          onClick={() => openQuickCreate(lastScan)}
+                          className="w-full sm:w-auto"
+                        >
+                          <Plus className="h-4 w-4 mr-1" />
+                          Bazaga tovar qo'shish
+                        </Button>
                       </div>
                     );
                   return (
-                    <div className="mt-2">
-                      <div className="font-semibold">{hit.name}</div>
-                      <div className="text-sm text-muted-foreground">
-                        {hit.vehicle} · {hit.category} ·{" "}
-                        {t("barcode.stockLeft", { n: hit.quantity })}
-                      </div>
-                      <div className="text-sm mt-1">
-                        {t("products.sellPrice")}:{" "}
-                        <span className="font-semibold">{formatSom(hit.sellPrice)}</span>
+                    <div className="mt-3 p-4 rounded-xl border bg-emerald-500/5 border-emerald-500/20">
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <CheckCircle2 className="h-5 w-5 text-emerald-600" />
+                            <span className="font-bold text-lg">{hit.name}</span>
+                          </div>
+                          <div className="text-sm text-muted-foreground mt-1">
+                            {hit.vehicle} · {hit.category} ·{" "}
+                            {t("barcode.stockLeft", { n: hit.quantity })}
+                          </div>
+                          <div className="text-sm mt-2 flex gap-4">
+                            <div>
+                              Sotuv narxi: <span className="font-semibold text-primary">{formatSom(hit.sellPrice)}</span>
+                            </div>
+                            <div>
+                              Kirim narxi: <span className="font-medium text-muted-foreground">{formatSom(hit.buyPrice)}</span>
+                            </div>
+                          </div>
+                        </div>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleIncrementStock(hit)}
+                          className="shrink-0"
+                        >
+                          <Plus className="h-4 w-4 mr-1" />
+                          +1 zaxira qo'shish
+                        </Button>
                       </div>
                     </div>
                   );
@@ -166,9 +273,21 @@ function BarcodePage() {
             </div>
             {code && found && (
               <div className="mt-5 p-5 rounded-xl border bg-muted/40 animate-fade-in">
-                <div className="text-xl font-bold">{found.name}</div>
-                <div className="text-sm text-muted-foreground mt-1">
-                  {found.vehicle} · {found.category}
+                <div className="flex items-start justify-between">
+                  <div>
+                    <div className="text-xl font-bold">{found.name}</div>
+                    <div className="text-sm text-muted-foreground mt-1">
+                      {found.vehicle} · {found.category}
+                    </div>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => handleIncrementStock(found)}
+                  >
+                    <Plus className="h-4 w-4 mr-1" />
+                    +1 zaxira
+                  </Button>
                 </div>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4">
                   <div>
@@ -191,8 +310,12 @@ function BarcodePage() {
               </div>
             )}
             {code && !found && (
-              <div className="mt-4 text-sm text-muted-foreground">
-                {t("barcode.notFoundShort")}.
+              <div className="mt-5 p-4 rounded-xl bg-destructive/10 border border-destructive/20 flex items-center justify-between">
+                <span className="text-sm text-destructive">{t("barcode.notFoundShort")}.</span>
+                <Button size="sm" onClick={() => openQuickCreate(code.toUpperCase())}>
+                  <Plus className="h-4 w-4 mr-1" />
+                  Yangi tovar yaratish
+                </Button>
               </div>
             )}
           </Card>
@@ -236,6 +359,7 @@ function BarcodePage() {
         </TabsContent>
       </Tabs>
 
+      {/* Shtrix-kodga biriktirish modali */}
       <Dialog open={!!assignFor} onOpenChange={(v) => !v && setAssignFor(null)}>
         <DialogContent>
           <DialogHeader>
@@ -259,6 +383,145 @@ function BarcodePage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Skaner qilingan shtrix-kod bilan avtomatik yangi mahsulot yaratish modali */}
+      <Dialog open={quickCreateOpen} onOpenChange={setQuickCreateOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <ScanBarcode className="h-5 w-5 text-primary" />
+              Yangi tovar qo'shish (Bazaga)
+            </DialogTitle>
+          </DialogHeader>
+
+          <form onSubmit={handleSaveQuickProduct} className="space-y-4">
+            <div>
+              <Label>Shtrix-kod</Label>
+              <Input
+                value={createForm.barcode}
+                readOnly
+                className="font-mono bg-muted text-foreground uppercase tracking-wider"
+              />
+            </div>
+
+            <div>
+              <Label>Mahsulot nomi *</Label>
+              <Input
+                required
+                autoFocus
+                placeholder="Masalan: Akkumulyator 60Ah"
+                value={createForm.name}
+                onChange={(e) => setCreateForm({ ...createForm, name: e.target.value })}
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label>Kategoriya</Label>
+                <Select
+                  value={createForm.category}
+                  onValueChange={(v) => setCreateForm({ ...createForm, category: v })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {categories.map((c) => (
+                      <SelectItem key={c} value={c}>
+                        {c}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label>Avto model</Label>
+                <Select
+                  value={createForm.vehicle}
+                  onValueChange={(v) => setCreateForm({ ...createForm, vehicle: v })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {vehicleBrands.map((b) => (
+                      <SelectItem key={b} value={b}>
+                        {b}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label>Kirim narxi (so'm)</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  value={createForm.buyPrice || ""}
+                  onChange={(e) =>
+                    setCreateForm({ ...createForm, buyPrice: Number(e.target.value) })
+                  }
+                  placeholder="0"
+                />
+              </div>
+
+              <div>
+                <Label>Sotuv narxi (so'm)</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  value={createForm.sellPrice || ""}
+                  onChange={(e) =>
+                    setCreateForm({ ...createForm, sellPrice: Number(e.target.value) })
+                  }
+                  placeholder="0"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label>Boshlang'ich miqdor</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  value={createForm.quantity}
+                  onChange={(e) =>
+                    setCreateForm({ ...createForm, quantity: Number(e.target.value) })
+                  }
+                />
+              </div>
+
+              <div>
+                <Label>Minimal ogohlantirish soni</Label>
+                <Input
+                  type="number"
+                  min="1"
+                  value={createForm.minQty}
+                  onChange={(e) =>
+                    setCreateForm({ ...createForm, minQty: Number(e.target.value) })
+                  }
+                />
+              </div>
+            </div>
+
+            <DialogFooter className="pt-2">
+              <Button type="button" variant="outline" onClick={() => setQuickCreateOpen(false)}>
+                Bekor qilish
+              </Button>
+              <Button type="submit">
+                <Plus className="h-4 w-4 mr-1" />
+                Bazaga saqlash
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
+

@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ChevronLeft, ChevronRight, Trash2 } from "lucide-react";
+import { ArrowLeft, ChevronLeft, ChevronRight, Trash2 } from "lucide-react";
 import { useT } from "@/lib/i18n";
 
 export function StatCard({
@@ -72,16 +72,41 @@ export function PageHeader({
   title,
   subtitle,
   actions,
+  showBack = true,
+  onBack,
 }: {
   title: string;
   subtitle?: string;
   actions?: React.ReactNode;
+  showBack?: boolean;
+  onBack?: () => void;
 }) {
+  const handleBack = () => {
+    if (onBack) {
+      onBack();
+    } else if (typeof window !== "undefined") {
+      window.history.back();
+    }
+  };
+
   return (
     <div className="flex items-end justify-between flex-wrap gap-3 mb-5">
-      <div>
-        <h1 className="text-2xl md:text-3xl font-bold tracking-tight">{title}</h1>
-        {subtitle && <p className="text-sm text-muted-foreground mt-0.5">{subtitle}</p>}
+      <div className="flex items-center gap-3">
+        {showBack && (
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={handleBack}
+            className="h-10 w-10 rounded-xl shrink-0 hover:bg-accent hover:text-primary transition shadow-sm"
+            title="Orqaga"
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+        )}
+        <div>
+          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">{title}</h1>
+          {subtitle && <p className="text-sm text-muted-foreground mt-0.5">{subtitle}</p>}
+        </div>
       </div>
       {actions && <div className="flex items-center gap-2 flex-wrap">{actions}</div>}
     </div>

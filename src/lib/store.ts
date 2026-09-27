@@ -350,7 +350,7 @@ export const useStore = create<State>()(
         expenses: [],
         incoming: [],
         categories: [...DEFAULT_CATEGORIES],
-        vehicleBrands: [...DEFAULT_VEHICLE_BRANDS],
+        vehicleBrands: [],
         debtPayments: [],
 
         // ─── TOVARLAR (OPTIMISTIC + BACKEND) ───
@@ -877,7 +877,7 @@ export const useStore = create<State>()(
             expenses: [],
             incoming: [],
             categories: [...DEFAULT_CATEGORIES],
-            vehicleBrands: [...DEFAULT_VEHICLE_BRANDS],
+            vehicleBrands: [],
             branches: [...DEFAULT_BRANCHES],
             auditLog: [],
             debtPayments: [],
@@ -887,41 +887,21 @@ export const useStore = create<State>()(
     },
     {
       name: "autoerp-pro-v2",
-      version: 7,
+      // Version 8: Biznes ma'lumotlari localStorage keshdan olib tashlandi.
+      // Faqat UI sozlamalari va sessiya saqlanadi.
+      // Barcha biznes ma'lumotlari har doim Supabase backendidan yuklanadi.
+      version: 8,
       partialize: (s) => ({
+        // Faqat UI sozlamalari va autentifikatsiya sessiyasi
         user: s.user,
         theme: s.theme,
         warehouse: s.warehouse,
         vehicleFilter: s.vehicleFilter,
         sidebarOpen: s.sidebarOpen,
-        // Ma'lumotlar backenddan yuklanadi, faqat kesh sifatida saqlaymiz
-        products: s.products,
-        customers: s.customers,
-        suppliers: s.suppliers,
-        employees: s.employees,
-        sales: s.sales,
-        expenses: s.expenses,
-        incoming: s.incoming,
-        categories: s.categories,
-        vehicleBrands: s.vehicleBrands,
-        branches: s.branches,
-        auditLog: s.auditLog,
-        debtPayments: s.debtPayments,
-        appUsers: s.appUsers,
       }),
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       migrate: (persisted: any) => {
         if (!persisted) return persisted;
-        if (!Array.isArray(persisted.products)) {
-          persisted.products = Array.isArray(persisted.products?.items)
-            ? persisted.products.items
-            : [];
-        }
-        if (!persisted.categories) persisted.categories = [...DEFAULT_CATEGORIES];
-        if (!persisted.vehicleBrands) persisted.vehicleBrands = [...DEFAULT_VEHICLE_BRANDS];
-        if (!persisted.branches) persisted.branches = [...DEFAULT_BRANCHES];
-        if (!persisted.auditLog) persisted.auditLog = [];
-        if (!persisted.debtPayments) persisted.debtPayments = [];
         if (persisted.user) {
           if (!persisted.user.permissions || persisted.user.permissions.length === 0) {
             persisted.user.permissions = ALL_PERMISSIONS;

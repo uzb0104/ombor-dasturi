@@ -97,6 +97,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [now, setNow] = useState(new Date());
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({
+    "/inventory": true,
+  });
 
   const productList = Array.isArray(products) ? products : [];
   const lowStock = productList.filter((p) => p.quantity > 0 && p.quantity <= p.minQty);
@@ -145,7 +148,79 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </div>
         {NAV.map((item) => {
           const Icon = ICONS[item.icon as keyof typeof ICONS];
-          const active = path === item.to || (item.to !== "/dashboard" && path.startsWith(item.to));
+          const hasChildren = "children" in item && Array.isArray((item as unknown as { children: unknown[] }).children);
+          const children = hasChildren ? (item as unknown as { children: { to: string; labelKey: string; icon: string }[] }).children : [];
+
+          const isChildActive = children.some(
+            (c) => path === c.to || (c.to !== "/dashboard" && path.startsWith(c.to)),
+          );
+          const isParentActive = path === item.to || (item.to !== "/dashboard" && path.startsWith(item.to));
+          const active = isParentActive || isChildActive;
+
+          if (hasChildren) {
+            const isOpen = openGroups[item.to] !== false || active;
+            return (
+              <div key={item.to} className="my-0.5 space-y-1">
+                <div
+                  className={`flex items-center justify-between rounded-lg px-3 py-2 text-sm transition ${
+                    active
+                      ? "bg-sidebar-accent text-sidebar-accent-foreground font-semibold"
+                      : "hover:bg-sidebar-accent/40"
+                  }`}
+                >
+                  <Link
+                    to={item.to}
+                    onClick={() => setMobileOpen(false)}
+                    className="flex items-center gap-3 flex-1 min-w-0"
+                  >
+                    <Icon className="h-4 w-4 shrink-0" />
+                    <span className="truncate">{t(item.labelKey)}</span>
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setOpenGroups((prev) => ({ ...prev, [item.to]: !isOpen }));
+                    }}
+                    className="p-1 rounded hover:bg-sidebar-accent/50 text-sidebar-foreground/70"
+                    title="Bo'limlarni ko'rsatish/yashirish"
+                  >
+                    <ChevronDown
+                      className={`h-4 w-4 transition-transform duration-200 ${
+                        isOpen ? "rotate-0" : "-rotate-90"
+                      }`}
+                    />
+                  </button>
+                </div>
+
+                {isOpen && (
+                  <div className="pl-4 space-y-0.5 ml-3 border-l-2 border-sidebar-border/60">
+                    {children.map((child) => {
+                      const ChildIcon = ICONS[child.icon as keyof typeof ICONS];
+                      const childActive =
+                        path === child.to || (child.to !== "/dashboard" && path.startsWith(child.to));
+                      return (
+                        <Link
+                          key={child.to}
+                          to={child.to}
+                          onClick={() => setMobileOpen(false)}
+                          className={`flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-xs transition ${
+                            childActive
+                              ? "bg-primary text-primary-foreground font-semibold shadow-sm"
+                              : "text-sidebar-foreground/80 hover:bg-sidebar-accent/40 hover:text-sidebar-foreground"
+                          }`}
+                        >
+                          <ChildIcon className="h-3.5 w-3.5 shrink-0" />
+                          <span>{t(child.labelKey)}</span>
+                        </Link>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            );
+          }
+
           return (
             <Link
               key={item.to}
@@ -157,7 +232,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   : "hover:bg-sidebar-accent/40"
               } ${String(item.to) === "/pos" ? "ring-1 ring-primary/40" : ""}`}
             >
-              <Icon className="h-4 w-4" />
+              <Icon className="h-4 w-4 shrink-0" />
               <span>{t(item.labelKey)}</span>
             </Link>
           );

@@ -30,11 +30,19 @@ import {
   Search,
   Edit,
   Trash2,
+  Plus,
+  Settings,
 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { useT } from "@/lib/i18n";
 
@@ -42,11 +50,24 @@ export const Route = createFileRoute("/_app/inventory")({ component: InventoryPa
 
 function InventoryPage() {
   const t = useT();
-  const { products, vehicleBrands, deleteProduct } = useStore();
+  const {
+    products,
+    vehicleBrands,
+    deleteProduct,
+    addVehicleBrand,
+    updateVehicleBrand,
+    deleteVehicleBrand,
+  } = useStore();
   const [selected, setSelected] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const { confirm, confirmNode } = useConfirm();
   const sel = useSelection();
+
+  // Avto brendlarni boshqarish modal holatlari
+  const [manageBrandsOpen, setManageBrandsOpen] = useState(false);
+  const [newBrandName, setNewBrandName] = useState("");
+  const [editingBrand, setEditingBrand] = useState<string | null>(null);
+  const [editBrandValue, setEditBrandValue] = useState("");
 
   const total = products.reduce((a, p) => a + p.buyPrice * p.quantity, 0);
   const low = products.filter((p) => p.quantity <= p.minQty).length;
@@ -104,6 +125,50 @@ function InventoryPage() {
     sel.selected.forEach((id) => deleteProduct(id));
     sel.clear();
     toast.success(t("toast.deletedMany", { n }));
+  };
+
+  const handleAddBrand = () => {
+    const name = newBrandName.trim();
+    if (!name) {
+      toast.error("Avto model nomini kiriting!");
+      return;
+    }
+    if (vehicleBrands.includes(name)) {
+      toast.error("Ushbu avto model allaqachon mavjud!");
+      return;
+    }
+    addVehicleBrand(name);
+    setNewBrandName("");
+    toast.success(`"${name}" omborxona modellari ro'yxatiga qo'shildi!`);
+  };
+
+  const handleSaveEditBrand = (oldName: string) => {
+    const name = editBrandValue.trim();
+    if (!name) return;
+    if (name !== oldName && vehicleBrands.includes(name)) {
+      toast.error("Ushbu avto model allaqachon mavjud!");
+      return;
+    }
+    updateVehicleBrand(oldName, name);
+    setEditingBrand(null);
+    toast.success("Avto model nomi yangilandi");
+  };
+
+  const handleRemoveBrand = async (brandName: string) => {
+    const count = products.filter((p) => p.vehicle === brandName).length;
+    const desc =
+      count > 0
+        ? `"${brandName}" avto modeliga ${count} ta tovar biriktirilgan. Rostdan ham o'chirilsinmi?`
+        : `"${brandName}" rostdan ham o'chirilsinmi?`;
+    const ok = await confirm({
+      title: "Avto modelni o'chirish",
+      description: desc,
+      destructive: true,
+      confirmText: t("common.delete"),
+    });
+    if (!ok) return;
+    deleteVehicleBrand(brandName);
+    toast.success("Avto model o'chirildi");
   };
 
   if (selected) {
@@ -225,7 +290,17 @@ function InventoryPage() {
 
   return (
     <div className="space-y-5">
-      <PageHeader title={t("inventory.title")} subtitle={t("inventory.subtitle")} />
+      {confirmNode}
+      <PageHeader
+        title={t("inventory.title")}
+        subtitle={t("inventory.subtitle")}
+        actions={
+          <Button variant="outline" onClick={() => setManageBrandsOpen(true)}>
+            <Car className="h-4 w-4 mr-1.5 text-primary" />
+            Avto modellarni boshqarish
+          </Button>
+        }
+      />
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <StatCard
           label={t("dashboard.warehouseValue")}
@@ -277,6 +352,98 @@ function InventoryPage() {
           </button>
         ))}
       </div>
+
+      {/* Avto modellarni boshqarish modali */}
+      <Dialog open={manageBrandsOpen} onOpenChange={setManageBrandsOpen}>
+        <DialogContent className="max-w-xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Car className="h-5 w-5 text-primary" />
+              Avto modellarni boshqarish
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4 pt-2">
+            <div className="flex gap-2">
+              <Input
+                placeholder="Yangi avto model kiritish (Masalan: Shineray T30)..."
+                value={newBrandName}
+                onChange={(e) => setNewBrandName(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleAddBrand()}
+              />
+              <Button onClick={handleAddBrand} className="shrink-0">
+                <Plus className="h-4 w-4 mr-1" />
+                Qo'shish
+              </Button>
+            </div>
+
+            <div className="max-h-[350px] overflow-y-auto space-y-2 pr-1">
+              {vehicleBrands.map((b) => {
+                const count = products.filter((p) => p.vehicle === b).length;
+                const isEditing = editingBrand === b;
+                return (
+                  <div
+                    key={b}
+                    className="flex items-center justify-between p-3 rounded-xl border bg-card hover:bg-muted/30 transition"
+                  >
+                    {isEditing ? (
+                      <div className="flex items-center gap-2 flex-1 mr-2">
+                        <Input
+                          autoFocus
+                          value={editBrandValue}
+                          onChange={(e) => setEditBrandValue(e.target.value)}
+                          onKeyDown={(e) => e.key === "Enter" && handleSaveEditBrand(b)}
+                          className="h-9"
+                        />
+                        <Button size="sm" onClick={() => handleSaveEditBrand(b)}>
+                          Saqlash
+                        </Button>
+                        <Button size="sm" variant="ghost" onClick={() => setEditingBrand(null)}>
+                          Bekor qilish
+                        </Button>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="flex items-center gap-3">
+                          <div className="h-9 w-9 rounded-lg bg-primary/10 text-primary grid place-items-center font-bold">
+                            <Car className="h-4 w-4" />
+                          </div>
+                          <div>
+                            <div className="font-semibold text-sm">{b}</div>
+                            <div className="text-xs text-muted-foreground">
+                              {count} ta tovar biriktirilgan
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => {
+                              setEditingBrand(b);
+                              setEditBrandValue(b);
+                            }}
+                          >
+                            <Edit className="h-4 w-4 text-muted-foreground" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleRemoveBrand(b)}
+                          >
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
+

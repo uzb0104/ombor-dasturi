@@ -21,6 +21,23 @@ import { toast } from "sonner";
 const dayKey = (date: Date) =>
   `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 
+const MONTH_NAMES_UZ = [
+  "Yanvar",
+  "Fevral",
+  "Mart",
+  "Aprel",
+  "May",
+  "Iyun",
+  "Iyul",
+  "Avgust",
+  "Sentyabr",
+  "Oktyabr",
+  "Noyabr",
+  "Dekabr",
+];
+
+const WEEKDAYS_UZ = ["Du", "Se", "Ch", "Pa", "Ju", "Sh", "Yak"];
+
 export function ReportsCalendarPage() {
   const t = useT();
   const navigate = useNavigate();
@@ -54,20 +71,17 @@ export function ReportsCalendarPage() {
     });
     return map;
   }, [monthSales]);
-  const allYears = sales.map((sale) => new Date(sale.date).getFullYear()).filter(Number.isFinite);
-  const firstYear = Math.min(new Date().getFullYear() - 5, year, ...allYears);
-  const lastYear = Math.max(new Date().getFullYear() + 1, year);
-  const years = Array.from({ length: lastYear - firstYear + 1 }, (_, index) => firstYear + index);
+
+  // Year select from 2026 to 2035
+  const years = Array.from({ length: 2035 - 2026 + 1 }, (_, index) => 2026 + index);
   const monthDays = new Date(year, month + 1, 0).getDate();
   const firstWeekday = (new Date(year, month, 1).getDay() + 6) % 7;
   const days: (number | null)[] = [
     ...Array.from({ length: firstWeekday }, () => null),
     ...Array.from({ length: monthDays }, (_, index) => index + 1),
   ];
-  const weekdays = Array.from({ length: 7 }, (_, index) =>
-    new Intl.DateTimeFormat("uz-UZ", { weekday: "short" }).format(new Date(2024, 0, index + 1)),
-  );
-  const monthLabel = monthDate.toLocaleDateString("uz-UZ", { month: "long", year: "numeric" });
+  const weekdays = WEEKDAYS_UZ;
+  const monthLabel = MONTH_NAMES_UZ[month];
   const exportReport = (rows: Sale[], title: string, filename: string) => {
     const data = rows.flatMap((sale) => {
       const customer = customers.find((item) => item.id === sale.customerId);

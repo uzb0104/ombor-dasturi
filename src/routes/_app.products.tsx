@@ -49,7 +49,7 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/_app/products")({ component: ProductsPage });
 
@@ -90,6 +90,7 @@ const isTire = (cat: string) => /shina|balon/i.test(cat);
 
 function ProductsPage() {
   const t = useT();
+  const navigate = useNavigate();
   const { products, categories, vehicleBrands, addProduct, updateProduct, deleteProduct } =
     useStore();
   const [search, setSearch] = useState("");
@@ -415,6 +416,15 @@ function ProductsPage() {
             <Button variant="outline" size="sm" onClick={handleExportExcel}>
               <Download className="h-4 w-4 mr-1" />
               Excel
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => navigate({ to: "/barcode" })}
+              className="gap-1.5"
+            >
+              <ScanBarcode className="h-4 w-4 text-primary" />
+              <span>Shtrix-kod skaner</span>
             </Button>
             <Dialog open={addModeOpen} onOpenChange={setAddModeOpen}>
               <DialogTrigger asChild>

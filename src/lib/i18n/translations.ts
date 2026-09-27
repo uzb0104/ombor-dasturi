@@ -312,6 +312,8 @@ const uz: Dict = {
   "reports.subtitle": "Sotuv, foyda va inventarizatsiya tahlili",
   "reports.calendarSubtitle": "Kunlik, oylik va yillik sotuvlarni ko'rish va yuklab olish",
   "reports.date": "Sana",
+  "reports.time": "Vaqt",
+  "reports.dayTitle": "{date} hisoboti",
   "reports.noSales": "Sotuvlar mavjud emas",
   "reports.saleCount": "{count} ta sotuv",
   "reports.exportMonth": "Oyni Excel'ga",

@@ -38,26 +38,50 @@ export type Role = (typeof ROLES)[number];
 
 export const NAV = [
   { to: "/dashboard", labelKey: "nav.dashboard", icon: "LayoutDashboard" },
-  { to: "/inventory", labelKey: "nav.inventory", icon: "Warehouse" },
-  { to: "/products", labelKey: "nav.products", icon: "Package" },
-  { to: "/categories", labelKey: "nav.categories", icon: "Tags" },
+  {
+    to: "/inventory",
+    labelKey: "nav.inventory",
+    icon: "Warehouse",
+    children: [
+      { to: "/products", labelKey: "nav.products", icon: "Package" },
+      { to: "/categories", labelKey: "nav.categories", icon: "Tags" },
+      { to: "/suppliers", labelKey: "nav.suppliers", icon: "Truck" },
+    ],
+  },
   { to: "/sales", labelKey: "nav.sales", icon: "ShoppingCart" },
   { to: "/incoming", labelKey: "nav.incoming", icon: "PackagePlus" },
   { to: "/customers", labelKey: "nav.customers", icon: "Users" },
-  { to: "/suppliers", labelKey: "nav.suppliers", icon: "Truck" },
   { to: "/debts", labelKey: "nav.debts", icon: "Wallet" },
   { to: "/employees", labelKey: "nav.employees", icon: "UserCog" },
   { to: "/expenses", labelKey: "nav.expenses", icon: "Receipt" },
   { to: "/reports", labelKey: "nav.reports", icon: "BarChart3" },
   { to: "/audit", labelKey: "nav.audit", icon: "FileClock" },
-  { to: "/barcode", labelKey: "nav.barcode", icon: "ScanBarcode" },
   { to: "/settings", labelKey: "nav.settings", icon: "Settings" },
 ] as const;
 
-export const PERMISSION_MODULES = NAV.filter((n) => n.to !== "/settings").map((n) => ({
-  path: n.to,
-  labelKey: n.labelKey,
-}));
+type NavItem = {
+  to: string;
+  labelKey: string;
+  icon: string;
+  children?: readonly { to: string; labelKey: string; icon: string }[];
+};
+
+const flatNavItems: { to: string; labelKey: string }[] = [];
+(NAV as readonly NavItem[]).forEach((item) => {
+  flatNavItems.push({ to: item.to, labelKey: item.labelKey });
+  if (item.children) {
+    item.children.forEach((child) => {
+      flatNavItems.push({ to: child.to, labelKey: child.labelKey });
+    });
+  }
+});
+
+export const PERMISSION_MODULES = flatNavItems
+  .filter((n) => n.to !== "/settings")
+  .map((n) => ({
+    path: n.to,
+    labelKey: n.labelKey,
+  }));
 export const ALL_PERMISSIONS = PERMISSION_MODULES.map((m) => m.path);
 
 export const formatSom = (n: number) =>

@@ -133,12 +133,6 @@ function SettingsPage() {
               {t("settings.tab.users")}
             </TabsTrigger>
           )}
-          {isAdmin && (
-            <TabsTrigger value="brands">
-              <Car className="h-4 w-4 mr-1.5" />
-              {t("settings.tab.brands")}
-            </TabsTrigger>
-          )}
           {/* {isAdmin && (
             <TabsTrigger value="branches">
               <Building2 className="h-4 w-4 mr-1.5" />
@@ -187,18 +181,6 @@ function SettingsPage() {
               add={addAppUser}
               update={updateAppUser}
               remove={deleteAppUser}
-            />
-          </TabsContent>
-        )}
-
-        {isAdmin && (
-          <TabsContent value="brands" className="mt-5">
-            <BrandsManagement
-              brands={vehicleBrands}
-              products={products}
-              add={addVehicleBrand}
-              update={updateVehicleBrand}
-              remove={deleteVehicleBrand}
             />
           </TabsContent>
         )}
