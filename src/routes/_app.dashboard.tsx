@@ -96,6 +96,7 @@ function Dashboard() {
   return (
     <div className="space-y-6">
       <PageHeader
+        showBack={false}
         title={t("dashboard.title")}
         subtitle={
           vehicleFilter === "all"
@@ -210,7 +211,7 @@ function Dashboard() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      {/* <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <Card className="rounded-2xl">
           <CardHeader className="pb-2">
             <CardTitle className="text-base">{t("dashboard.lowStockCard")}</CardTitle>
@@ -294,7 +295,7 @@ function Dashboard() {
             ))}
           </CardContent>
         </Card>
-      </div>
+      </div> */}
     </div>
   );
 }

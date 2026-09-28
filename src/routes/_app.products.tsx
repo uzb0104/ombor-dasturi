@@ -53,6 +53,8 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/_app/products")({ component: ProductsPage });
 
+const VOLTAGE_OPTIONS = ["6V", "12V", "24V", "36V", "48V", "60V", "72V"];
+
 type FormState = {
   name: string;
   barcode: string;
@@ -65,6 +67,7 @@ type FormState = {
   unitBrand: string;
   amperage: string;
   voltage: string;
+  customVoltage: string;
   tireSize: string;
   tireSeason: string;
 };
@@ -81,6 +84,7 @@ const emptyForm = (firstCategory: string, firstBrand: string): FormState => ({
   unitBrand: "",
   amperage: "",
   voltage: "12V",
+  customVoltage: "",
   tireSize: "",
   tireSeason: "Universal",
 });
@@ -166,6 +170,8 @@ function ProductsPage() {
     if (!p) return;
     setEditing(id);
     const a = p.attributes || {};
+    const v = a.voltage || "12V";
+    const isPreset = VOLTAGE_OPTIONS.includes(v);
     setForm({
       name: p.name,
       barcode: p.barcode || "",
@@ -177,7 +183,8 @@ function ProductsPage() {
       minQty: p.minQty,
       unitBrand: a.unitBrand || "",
       amperage: a.amperage || "",
-      voltage: a.voltage || "12V",
+      voltage: isPreset ? v : "custom",
+      customVoltage: isPreset ? "" : v,
       tireSize: a.tireSize || "",
       tireSeason: a.tireSeason || "Universal",
     });
@@ -289,7 +296,11 @@ function ProductsPage() {
         return;
       }
       attributes.amperage = form.amperage.trim();
-      attributes.voltage = form.voltage.trim() || "12V";
+      const finalVoltage =
+        form.voltage === "custom"
+          ? form.customVoltage.trim() || "Boshqa"
+          : form.voltage.trim() || "12V";
+      attributes.voltage = finalVoltage;
     }
     if (isTire(category)) {
       if (!form.tireSize.trim()) {
@@ -680,11 +691,24 @@ function ProductsPage() {
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="6V">6V</SelectItem>
-                            <SelectItem value="12V">12V</SelectItem>
-                            <SelectItem value="24V">24V</SelectItem>
+                            {VOLTAGE_OPTIONS.map((opt) => (
+                              <SelectItem key={opt} value={opt}>
+                                {opt}
+                              </SelectItem>
+                            ))}
+                            <SelectItem value="custom">Boshqa (Erkin qiymat)</SelectItem>
                           </SelectContent>
                         </Select>
+                        {form.voltage === "custom" && (
+                          <Input
+                            value={form.customVoltage}
+                            onChange={(e) =>
+                              setForm({ ...form, customVoltage: e.target.value })
+                            }
+                            placeholder="Masalan: 96V, 100V, Yig'ma batareya..."
+                            className="mt-2"
+                          />
+                        )}
                       </div>
                     </>
                   )}

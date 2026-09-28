@@ -1,8 +1,9 @@
 {
-  "name": "tanstack_start_ts",
+  "name": "ombor-dasturi",
   "private": true,
   "sideEffects": false,
   "type": "module",
+  "main": "electron/main.cjs",
   "scripts": {
     "dev": "vite dev",
     "build": "vite build",
@@ -11,7 +12,9 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "electron:start": "electron .",
+    "build:exe": "npm run build && electron-builder"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",

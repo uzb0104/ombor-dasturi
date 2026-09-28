@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { useStore } from "@/lib/store";
 import { formatSom } from "@/lib/constants";
-import { ScanBarcode, Search, Plus, Package, CheckCircle2, AlertCircle } from "lucide-react";
+import { ScanBarcode, Search, Plus, Package, CheckCircle2, AlertCircle, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -51,6 +51,12 @@ function BarcodePage() {
     quantity: 1,
     minQty: 5,
   });
+
+  const clearScanResult = () => {
+    setLastScan(null);
+    setScanBuffer("");
+    scanRef.current?.focus();
+  };
 
   const found = useMemo(
     () =>
@@ -118,6 +124,16 @@ function BarcodePage() {
     addProduct(newProd);
     toast.success(`"${newProd.name}" avtomatik Supabase bazasiga saqlandi!`);
     setQuickCreateOpen(false);
+    setCreateForm({
+      name: "",
+      barcode: "",
+      category: categories[0] || "Umumiy",
+      vehicle: vehicleBrands[0] || "Barchasi",
+      buyPrice: 0,
+      sellPrice: 0,
+      quantity: 1,
+      minQty: 5,
+    });
     if (lastScan === createForm.barcode) {
       setLastScan(createForm.barcode);
     }
@@ -191,8 +207,20 @@ function BarcodePage() {
             </div>
             {lastScan && (
               <div className="mt-5 p-5 rounded-2xl border bg-card">
-                <div className="text-xs text-muted-foreground">
-                  {t("barcode.lastScan")} <span className="font-mono font-bold text-foreground">{lastScan}</span>
+                <div className="flex items-center justify-between text-xs text-muted-foreground">
+                  <div>
+                    {t("barcode.lastScan")} <span className="font-mono font-bold text-foreground">{lastScan}</span>
+                  </div>
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="ghost"
+                    onClick={clearScanResult}
+                    className="h-6 w-6 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground"
+                    title="O'chirish"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
                 </div>
                 {(() => {
                   const hit = products.find((p) => p.barcode === lastScan);
@@ -208,14 +236,26 @@ function BarcodePage() {
                             </div>
                           </div>
                         </div>
-                        <Button
-                          size="sm"
-                          onClick={() => openQuickCreate(lastScan)}
-                          className="w-full sm:w-auto"
-                        >
-                          <Plus className="h-4 w-4 mr-1" />
-                          Bazaga tovar qo'shish
-                        </Button>
+                        <div className="flex items-center gap-2 w-full sm:w-auto">
+                          <Button
+                            size="sm"
+                            onClick={() => openQuickCreate(lastScan)}
+                            className="w-full sm:w-auto"
+                          >
+                            <Plus className="h-4 w-4 mr-1" />
+                            Bazaga tovar qo'shish
+                          </Button>
+                          <Button
+                            type="button"
+                            size="icon"
+                            variant="outline"
+                            onClick={clearScanResult}
+                            className="h-9 w-9 shrink-0 border-destructive/30 text-destructive hover:bg-destructive hover:text-white transition-colors"
+                            title="O'chirish"
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </div>
                     );
                   return (
@@ -239,15 +279,27 @@ function BarcodePage() {
                             </div>
                           </div>
                         </div>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleIncrementStock(hit)}
-                          className="shrink-0"
-                        >
-                          <Plus className="h-4 w-4 mr-1" />
-                          +1 zaxira qo'shish
-                        </Button>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleIncrementStock(hit)}
+                            className="shrink-0"
+                          >
+                            <Plus className="h-4 w-4 mr-1" />
+                            +1 zaxira qo'shish
+                          </Button>
+                          <Button
+                            type="button"
+                            size="icon"
+                            variant="outline"
+                            onClick={clearScanResult}
+                            className="h-9 w-9 shrink-0 border-emerald-500/30 text-emerald-700 hover:bg-emerald-600 hover:text-white transition-colors dark:text-emerald-400"
+                            title="O'chirish"
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </div>
                     </div>
                   );

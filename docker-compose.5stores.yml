@@ -1,0 +1,235 @@
+# 5 ta alohida mijoz (do'kon) uchun tayyor Docker Compose konfiguratsiyasi
+# Har bir mijoz o'zining alohida porti, ma'lumotlar bazasi va xotirasiga ega bo'ladi (100% mustaqil)
+
+services:
+  # ==========================================
+  # 1-MIJOZ (Do'kon 1)
+  # ==========================================
+  store1-backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    environment:
+      PORT: 5101
+      REDIS_URL: redis://store1-redis:6379
+      DB_JSON_PATH: /data/db.json
+    ports:
+      - "5101:5101"
+    depends_on:
+      store1-redis:
+        condition: service_healthy
+    restart: unless-stopped
+    volumes:
+      - store1-data:/data
+
+  store1-frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: ${STORE1_API_URL:-http://localhost:5101}
+    ports:
+      - "4101:4173"
+    depends_on:
+      - store1-backend
+    restart: unless-stopped
+
+  store1-redis:
+    image: redis:7-alpine
+    command: redis-server --appendonly yes
+    volumes:
+      - store1-redis-data:/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # ==========================================
+  # 2-MIJOZ (Do'kon 2)
+  # ==========================================
+  store2-backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    environment:
+      PORT: 5102
+      REDIS_URL: redis://store2-redis:6379
+      DB_JSON_PATH: /data/db.json
+    ports:
+      - "5102:5102"
+    depends_on:
+      store2-redis:
+        condition: service_healthy
+    restart: unless-stopped
+    volumes:
+      - store2-data:/data
+
+  store2-frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: ${STORE2_API_URL:-http://localhost:5102}
+    ports:
+      - "4102:4173"
+    depends_on:
+      - store2-backend
+    restart: unless-stopped
+
+  store2-redis:
+    image: redis:7-alpine
+    command: redis-server --appendonly yes
+    volumes:
+      - store2-redis-data:/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # ==========================================
+  # 3-MIJOZ (Do'kon 3)
+  # ==========================================
+  store3-backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    environment:
+      PORT: 5103
+      REDIS_URL: redis://store3-redis:6379
+      DB_JSON_PATH: /data/db.json
+    ports:
+      - "5103:5103"
+    depends_on:
+      store3-redis:
+        condition: service_healthy
+    restart: unless-stopped
+    volumes:
+      - store3-data:/data
+
+  store3-frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: ${STORE3_API_URL:-http://localhost:5103}
+    ports:
+      - "4103:4173"
+    depends_on:
+      - store3-backend
+    restart: unless-stopped
+
+  store3-redis:
+    image: redis:7-alpine
+    command: redis-server --appendonly yes
+    volumes:
+      - store3-redis-data:/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # ==========================================
+  # 4-MIJOZ (Do'kon 4)
+  # ==========================================
+  store4-backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    environment:
+      PORT: 5104
+      REDIS_URL: redis://store4-redis:6379
+      DB_JSON_PATH: /data/db.json
+    ports:
+      - "5104:5104"
+    depends_on:
+      store4-redis:
+        condition: service_healthy
+    restart: unless-stopped
+    volumes:
+      - store4-data:/data
+
+  store4-frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: ${STORE4_API_URL:-http://localhost:5104}
+    ports:
+      - "4104:4173"
+    depends_on:
+      - store4-backend
+    restart: unless-stopped
+
+  store4-redis:
+    image: redis:7-alpine
+    command: redis-server --appendonly yes
+    volumes:
+      - store4-redis-data:/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # ==========================================
+  # 5-MIJOZ (Do'kon 5)
+  # ==========================================
+  store5-backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    environment:
+      PORT: 5105
+      REDIS_URL: redis://store5-redis:6379
+      DB_JSON_PATH: /data/db.json
+    ports:
+      - "5105:5105"
+    depends_on:
+      store5-redis:
+        condition: service_healthy
+    restart: unless-stopped
+    volumes:
+      - store5-data:/data
+
+  store5-frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: ${STORE5_API_URL:-http://localhost:5105}
+    ports:
+      - "4105:4173"
+    depends_on:
+      - store5-backend
+    restart: unless-stopped
+
+  store5-redis:
+    image: redis:7-alpine
+    command: redis-server --appendonly yes
+    volumes:
+      - store5-redis-data:/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+volumes:
+  store1-data:
+  store1-redis-data:
+  store2-data:
+  store2-redis-data:
+  store3-data:
+  store3-redis-data:
+  store4-data:
+  store4-redis-data:
+  store5-data:
+  store5-redis-data:
