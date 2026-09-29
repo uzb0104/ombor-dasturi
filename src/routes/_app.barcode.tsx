@@ -209,7 +209,8 @@ function BarcodePage() {
               <div className="mt-5 p-5 rounded-2xl border bg-card">
                 <div className="flex items-center justify-between text-xs text-muted-foreground">
                   <div>
-                    {t("barcode.lastScan")} <span className="font-mono font-bold text-foreground">{lastScan}</span>
+                    {t("barcode.lastScan")}{" "}
+                    <span className="font-mono font-bold text-foreground">{lastScan}</span>
                   </div>
                   <Button
                     type="button"
@@ -272,10 +273,16 @@ function BarcodePage() {
                           </div>
                           <div className="text-sm mt-2 flex gap-4">
                             <div>
-                              Sotuv narxi: <span className="font-semibold text-primary">{formatSom(hit.sellPrice)}</span>
+                              Sotuv narxi:{" "}
+                              <span className="font-semibold text-primary">
+                                {formatSom(hit.sellPrice)}
+                              </span>
                             </div>
                             <div>
-                              Kirim narxi: <span className="font-medium text-muted-foreground">{formatSom(hit.buyPrice)}</span>
+                              Kirim narxi:{" "}
+                              <span className="font-medium text-muted-foreground">
+                                {formatSom(hit.buyPrice)}
+                              </span>
                             </div>
                           </div>
                         </div>
@@ -332,11 +339,7 @@ function BarcodePage() {
                       {found.vehicle} · {found.category}
                     </div>
                   </div>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => handleIncrementStock(found)}
-                  >
+                  <Button size="sm" variant="outline" onClick={() => handleIncrementStock(found)}>
                     <Plus className="h-4 w-4 mr-1" />
                     +1 zaxira
                   </Button>
@@ -554,9 +557,7 @@ function BarcodePage() {
                   type="number"
                   min="1"
                   value={createForm.minQty}
-                  onChange={(e) =>
-                    setCreateForm({ ...createForm, minQty: Number(e.target.value) })
-                  }
+                  onChange={(e) => setCreateForm({ ...createForm, minQty: Number(e.target.value) })}
                 />
               </div>
             </div>
@@ -576,4 +577,3 @@ function BarcodePage() {
     </div>
   );
 }
-

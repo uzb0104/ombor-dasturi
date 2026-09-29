@@ -25,6 +25,7 @@ import {
   Car,
   X,
   Smartphone,
+  BatteryCharging,
 } from "lucide-react";
 import { useT } from "@/lib/i18n";
 import { NAV } from "@/lib/constants";
@@ -77,6 +78,7 @@ const ICONS = {
   Settings,
   FileClock,
   Smartphone,
+  BatteryCharging,
 } as const;
 
 export function AppShell({ children }: { children: React.ReactNode }) {
@@ -99,6 +101,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [now, setNow] = useState(new Date());
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({
     "/inventory": true,
+    "/sales": true,
   });
 
   const productList = Array.isArray(products) ? products : [];
@@ -148,13 +151,19 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </div>
         {NAV.map((item) => {
           const Icon = ICONS[item.icon as keyof typeof ICONS];
-          const hasChildren = "children" in item && Array.isArray((item as unknown as { children: unknown[] }).children);
-          const children = hasChildren ? (item as unknown as { children: { to: string; labelKey: string; icon: string }[] }).children : [];
+          const hasChildren =
+            "children" in item &&
+            Array.isArray((item as unknown as { children: unknown[] }).children);
+          const children = hasChildren
+            ? (item as unknown as { children: { to: string; labelKey: string; icon: string }[] })
+                .children
+            : [];
 
           const isChildActive = children.some(
             (c) => path === c.to || (c.to !== "/dashboard" && path.startsWith(c.to)),
           );
-          const isParentActive = path === item.to || (item.to !== "/dashboard" && path.startsWith(item.to));
+          const isParentActive =
+            path === item.to || (item.to !== "/dashboard" && path.startsWith(item.to));
           const active = isParentActive || isChildActive;
 
           if (hasChildren) {
@@ -198,7 +207,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                     {children.map((child) => {
                       const ChildIcon = ICONS[child.icon as keyof typeof ICONS];
                       const childActive =
-                        path === child.to || (child.to !== "/dashboard" && path.startsWith(child.to));
+                        path === child.to ||
+                        (child.to !== "/dashboard" && path.startsWith(child.to));
                       return (
                         <Link
                           key={child.to}

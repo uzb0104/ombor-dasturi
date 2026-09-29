@@ -702,9 +702,7 @@ function ProductsPage() {
                         {form.voltage === "custom" && (
                           <Input
                             value={form.customVoltage}
-                            onChange={(e) =>
-                              setForm({ ...form, customVoltage: e.target.value })
-                            }
+                            onChange={(e) => setForm({ ...form, customVoltage: e.target.value })}
                             placeholder="Masalan: 96V, 100V, Yig'ma batareya..."
                             className="mt-2"
                           />

@@ -15,17 +15,7 @@ export const DEFAULT_VEHICLE_BRANDS = [
 export const VEHICLE_BRANDS = DEFAULT_VEHICLE_BRANDS; // backward compat
 export type VehicleBrand = string;
 
-export const DEFAULT_CATEGORIES = [
-  "Dvigatel",
-  "Tormoz tizimi",
-  "Elektr",
-  "Shinalar (Balon)",
-  "Akkumulyator",
-  "Filtrlar",
-  "Moy",
-  "Kuzov qismlari",
-  "Podveska",
-] as const;
+export const DEFAULT_CATEGORIES = ["Dvigatel", "Shinalar (Balon)", "Akkumulyator"] as const;
 export const CATEGORIES = DEFAULT_CATEGORIES;
 export type Category = string;
 
@@ -45,13 +35,17 @@ export const NAV = [
     children: [
       { to: "/products", labelKey: "nav.products", icon: "Package" },
       { to: "/categories", labelKey: "nav.categories", icon: "Tags" },
-      { to: "/suppliers", labelKey: "nav.suppliers", icon: "Truck" },
+      { to: "/incoming", labelKey: "nav.incoming", icon: "PackagePlus" },
+      { to: "/used-batteries", labelKey: "nav.usedBatteries", icon: "BatteryCharging" },
     ],
   },
-  { to: "/sales", labelKey: "nav.sales", icon: "ShoppingCart" },
-  { to: "/incoming", labelKey: "nav.incoming", icon: "PackagePlus" },
+  {
+    to: "/sales",
+    labelKey: "nav.sales",
+    icon: "ShoppingCart",
+    children: [{ to: "/debts", labelKey: "nav.debts", icon: "Wallet" }],
+  },
   { to: "/customers", labelKey: "nav.customers", icon: "Users" },
-  { to: "/debts", labelKey: "nav.debts", icon: "Wallet" },
   { to: "/employees", labelKey: "nav.employees", icon: "UserCog" },
   { to: "/expenses", labelKey: "nav.expenses", icon: "Receipt" },
   { to: "/reports", labelKey: "nav.reports", icon: "BarChart3" },

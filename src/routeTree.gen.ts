@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AppUsedBatteriesRouteImport } from './routes/_app.used-batteries'
 import { Route as AppSuppliersRouteImport } from './routes/_app.suppliers'
 import { Route as AppSettingsRouteImport } from './routes/_app.settings'
 import { Route as AppSalesRouteImport } from './routes/_app.sales'
@@ -28,6 +29,7 @@ import { Route as AppCategoriesRouteImport } from './routes/_app.categories'
 import { Route as AppBarcodeRouteImport } from './routes/_app.barcode'
 import { Route as AppAuditRouteImport } from './routes/_app.audit'
 import { Route as AppReportDayDateRouteImport } from './routes/_app.report-day.$date'
+import { Route as AppEmployeesIdRouteImport } from './routes/_app.employees_.$id'
 
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
@@ -42,6 +44,11 @@ const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AppUsedBatteriesRoute = AppUsedBatteriesRouteImport.update({
+  id: '/used-batteries',
+  path: '/used-batteries',
+  getParentRoute: () => AppRoute,
 } as any)
 const AppSuppliersRoute = AppSuppliersRouteImport.update({
   id: '/suppliers',
@@ -123,6 +130,11 @@ const AppReportDayDateRoute = AppReportDayDateRouteImport.update({
   path: '/report-day/$date',
   getParentRoute: () => AppRoute,
 } as any)
+const AppEmployeesIdRoute = AppEmployeesIdRouteImport.update({
+  id: '/employees_/$id',
+  path: '/employees/$id',
+  getParentRoute: () => AppRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -142,6 +154,8 @@ export interface FileRoutesByFullPath {
   '/sales': typeof AppSalesRoute
   '/settings': typeof AppSettingsRoute
   '/suppliers': typeof AppSuppliersRoute
+  '/used-batteries': typeof AppUsedBatteriesRoute
+  '/employees/$id': typeof AppEmployeesIdRoute
   '/report-day/$date': typeof AppReportDayDateRoute
 }
 export interface FileRoutesByTo {
@@ -162,6 +176,8 @@ export interface FileRoutesByTo {
   '/sales': typeof AppSalesRoute
   '/settings': typeof AppSettingsRoute
   '/suppliers': typeof AppSuppliersRoute
+  '/used-batteries': typeof AppUsedBatteriesRoute
+  '/employees/$id': typeof AppEmployeesIdRoute
   '/report-day/$date': typeof AppReportDayDateRoute
 }
 export interface FileRoutesById {
@@ -184,6 +200,8 @@ export interface FileRoutesById {
   '/_app/sales': typeof AppSalesRoute
   '/_app/settings': typeof AppSettingsRoute
   '/_app/suppliers': typeof AppSuppliersRoute
+  '/_app/used-batteries': typeof AppUsedBatteriesRoute
+  '/_app/employees_/$id': typeof AppEmployeesIdRoute
   '/_app/report-day/$date': typeof AppReportDayDateRoute
 }
 export interface FileRouteTypes {
@@ -206,6 +224,8 @@ export interface FileRouteTypes {
     | '/sales'
     | '/settings'
     | '/suppliers'
+    | '/used-batteries'
+    | '/employees/$id'
     | '/report-day/$date'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -226,6 +246,8 @@ export interface FileRouteTypes {
     | '/sales'
     | '/settings'
     | '/suppliers'
+    | '/used-batteries'
+    | '/employees/$id'
     | '/report-day/$date'
   id:
     | '__root__'
@@ -247,6 +269,8 @@ export interface FileRouteTypes {
     | '/_app/sales'
     | '/_app/settings'
     | '/_app/suppliers'
+    | '/_app/used-batteries'
+    | '/_app/employees_/$id'
     | '/_app/report-day/$date'
   fileRoutesById: FileRoutesById
 }
@@ -278,6 +302,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_app/used-batteries': {
+      id: '/_app/used-batteries'
+      path: '/used-batteries'
+      fullPath: '/used-batteries'
+      preLoaderRoute: typeof AppUsedBatteriesRouteImport
+      parentRoute: typeof AppRoute
     }
     '/_app/suppliers': {
       id: '/_app/suppliers'
@@ -391,6 +422,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppReportDayDateRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/employees_/$id': {
+      id: '/_app/employees_/$id'
+      path: '/employees/$id'
+      fullPath: '/employees/$id'
+      preLoaderRoute: typeof AppEmployeesIdRouteImport
+      parentRoute: typeof AppRoute
+    }
   }
 }
 
@@ -410,6 +448,8 @@ interface AppRouteChildren {
   AppSalesRoute: typeof AppSalesRoute
   AppSettingsRoute: typeof AppSettingsRoute
   AppSuppliersRoute: typeof AppSuppliersRoute
+  AppUsedBatteriesRoute: typeof AppUsedBatteriesRoute
+  AppEmployeesIdRoute: typeof AppEmployeesIdRoute
   AppReportDayDateRoute: typeof AppReportDayDateRoute
 }
 
@@ -429,6 +469,8 @@ const AppRouteChildren: AppRouteChildren = {
   AppSalesRoute: AppSalesRoute,
   AppSettingsRoute: AppSettingsRoute,
   AppSuppliersRoute: AppSuppliersRoute,
+  AppUsedBatteriesRoute: AppUsedBatteriesRoute,
+  AppEmployeesIdRoute: AppEmployeesIdRoute,
   AppReportDayDateRoute: AppReportDayDateRoute,
 }
 

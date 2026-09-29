@@ -26,6 +26,7 @@ import auditRouter from "./routes/audit.js";
 import constantsRouter from "./routes/constants.js";
 import incomingRouter from "./routes/incoming.js";
 import salesRouter from "./routes/sales.js";
+import usedBatteriesRouter from "./routes/usedBatteries.js";
 
 dotenv.config();
 
@@ -153,6 +154,7 @@ app.use("/api/audit-logs", auditRouter);
 app.use("/api", constantsRouter); // mount constant endpoints under root /api
 app.use("/api/incoming", incomingRouter);
 app.use("/api/sales", salesRouter);
+app.use("/api/used-batteries", usedBatteriesRouter);
 
 // Serverni ishga tushirish (test rejimida port tinglanmaydi, faqat app eksport qilinadi)
 if (process.env.NODE_ENV !== "test") {

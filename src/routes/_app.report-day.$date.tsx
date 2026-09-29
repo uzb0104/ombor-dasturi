@@ -61,7 +61,7 @@ function ReportDayPage() {
       entry.total += sale.total;
       map.set(sale.paymentType, entry);
       return map;
-    }, new Map<string, { count: number; total: number }>())
+    }, new Map<string, { count: number; total: number }>()),
   ).map(([type, data]) => ({ type, ...data }));
 
   const monthName = UZ_MONTHS[month - 1] || monthStr;
@@ -100,7 +100,7 @@ function ReportDayPage() {
         { label: t("sales.payment"), key: "payment" },
       ],
       `Kunlik Hisobot - ${dayLabel}`,
-      `kunlik_${date}.xls`
+      `kunlik_${date}.xls`,
     );
     toast.success(t("reports.excelDownloaded"));
   };
@@ -122,9 +122,24 @@ function ReportDayPage() {
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <StatCard label="Kunlik sotuv" value={formatSom(total)} icon={Wallet} accent="primary" />
-        <StatCard label="Sof foyda" value={formatSom(totalProfit)} icon={TrendingUp} accent="success" />
-        <StatCard label="Chegirmalar" value={formatSom(totalDiscount)} icon={Percent} accent="warning" />
-        <StatCard label="Tranzaksiyalar" value={`${txCount} ta`} icon={ShoppingCart} accent="info" />
+        <StatCard
+          label="Sof foyda"
+          value={formatSom(totalProfit)}
+          icon={TrendingUp}
+          accent="success"
+        />
+        <StatCard
+          label="Chegirmalar"
+          value={formatSom(totalDiscount)}
+          icon={Percent}
+          accent="warning"
+        />
+        <StatCard
+          label="Tranzaksiyalar"
+          value={`${txCount} ta`}
+          icon={ShoppingCart}
+          accent="info"
+        />
       </div>
 
       {paymentBreakdown.length > 0 && (
@@ -176,7 +191,10 @@ function ReportDayPage() {
                   daySales.map((sale) => {
                     const customer = customers.find((item) => item.id === sale.customerId);
                     return sale.items.map((item, index) => (
-                      <tr key={`${sale.id}-${item.productId}-${index}`} className="border-t border-border/60 hover:bg-muted/30">
+                      <tr
+                        key={`${sale.id}-${item.productId}-${index}`}
+                        className="border-t border-border/60 hover:bg-muted/30"
+                      >
                         <td className="whitespace-nowrap p-3">
                           {new Date(sale.date).toLocaleTimeString("uz-UZ", {
                             hour: "2-digit",
@@ -185,7 +203,9 @@ function ReportDayPage() {
                         </td>
                         <td className="p-3">
                           <div>{customer?.name || t("sales.generalCustomer")}</div>
-                          {customer?.phone && <div className="text-xs text-muted-foreground">{customer.phone}</div>}
+                          {customer?.phone && (
+                            <div className="text-xs text-muted-foreground">{customer.phone}</div>
+                          )}
                         </td>
                         <td className="p-3 font-medium">
                           {products.find((product) => product.id === item.productId)?.name ||
@@ -193,12 +213,20 @@ function ReportDayPage() {
                             t("sales.unknownProduct")}
                         </td>
                         <td className="p-3 text-right tabular-nums font-semibold">{item.qty}</td>
-                        <td className="whitespace-nowrap p-3 text-right tabular-nums">{formatSom(item.price)}</td>
-                        <td className="whitespace-nowrap p-3 text-right tabular-nums">{index === 0 ? formatSom(sale.discount) : "—"}</td>
-                        <td className="whitespace-nowrap p-3 text-right font-semibold tabular-nums">{index === 0 ? formatSom(sale.total) : "—"}</td>
+                        <td className="whitespace-nowrap p-3 text-right tabular-nums">
+                          {formatSom(item.price)}
+                        </td>
+                        <td className="whitespace-nowrap p-3 text-right tabular-nums">
+                          {index === 0 ? formatSom(sale.discount) : "—"}
+                        </td>
+                        <td className="whitespace-nowrap p-3 text-right font-semibold tabular-nums">
+                          {index === 0 ? formatSom(sale.total) : "—"}
+                        </td>
                         <td className="p-3">
                           {index === 0 && (
-                            <Badge variant={sale.paymentType === "Qarz" ? "destructive" : "secondary"}>
+                            <Badge
+                              variant={sale.paymentType === "Qarz" ? "destructive" : "secondary"}
+                            >
                               {paymentLabel(t, sale.paymentType)}
                             </Badge>
                           )}

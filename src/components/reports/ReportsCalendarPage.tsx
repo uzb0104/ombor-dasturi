@@ -1,8 +1,8 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { ChevronLeft, ChevronRight, Download } from "lucide-react";
+import { ChevronLeft, ChevronRight, ChevronDown, Download, FileSpreadsheet } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import {
   Select,
   SelectContent,
@@ -10,6 +10,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { exportToExcel, PageHeader } from "@/components/ui-kit";
 import { formatSom } from "@/lib/constants";
 import { paymentLabel } from "@/lib/i18n/helpers";
@@ -43,12 +44,17 @@ export function ReportsCalendarPage() {
   const navigate = useNavigate();
   const { sales, products, customers } = useStore();
   const today = new Date();
+
   const [monthDate, setMonthDate] = useState(
     () => new Date(today.getFullYear(), today.getMonth(), 1),
   );
   const [selectedDate, setSelectedDate] = useState(() => dayKey(today));
+  const [monthPickerOpen, setMonthPickerOpen] = useState(false);
+
   const year = monthDate.getFullYear();
   const month = monthDate.getMonth();
+  const [pickerYear, setPickerYear] = useState<number>(year);
+
   const monthSales = useMemo(
     () =>
       sales
@@ -59,10 +65,12 @@ export function ReportsCalendarPage() {
         .sort((a, b) => +new Date(b.date) - +new Date(a.date)),
     [month, sales, year],
   );
+
   const yearSales = useMemo(
     () => sales.filter((sale) => new Date(sale.date).getFullYear() === year),
     [sales, year],
   );
+
   const salesByDay = useMemo(() => {
     const map = new Map<string, Sale[]>();
     monthSales.forEach((sale) => {
@@ -72,8 +80,8 @@ export function ReportsCalendarPage() {
     return map;
   }, [monthSales]);
 
-  // Year select from 2026 to 2035
-  const years = Array.from({ length: 2035 - 2026 + 1 }, (_, index) => 2026 + index);
+  // Year range from 2024 to 2035
+  const years = Array.from({ length: 2035 - 2024 + 1 }, (_, index) => 2024 + index);
   const monthDays = new Date(year, month + 1, 0).getDate();
   const firstWeekday = (new Date(year, month, 1).getDay() + 6) % 7;
   const days: (number | null)[] = [
@@ -82,6 +90,7 @@ export function ReportsCalendarPage() {
   ];
   const weekdays = WEEKDAYS_UZ;
   const monthLabel = MONTH_NAMES_UZ[month];
+
   const exportReport = (rows: Sale[], title: string, filename: string) => {
     const data = rows.flatMap((sale) => {
       const customer = customers.find((item) => item.id === sale.customerId);
@@ -118,9 +127,15 @@ export function ReportsCalendarPage() {
     );
     toast.success(t("reports.excelDownloaded"));
   };
+
   const exportMonth = () =>
-    exportReport(monthSales, monthLabel, `oylik_${year}-${String(month + 1).padStart(2, "0")}.xls`);
+    exportReport(
+      monthSales,
+      `${monthLabel} ${year}`,
+      `oylik_${year}-${String(month + 1).padStart(2, "0")}.xls`,
+    );
   const exportYear = () => exportReport(yearSales, String(year), `yillik_${year}.xls`);
+
   const moveMonth = (delta: number) => {
     const next = new Date(year, month + delta, 1);
     setMonthDate(next);
@@ -133,21 +148,31 @@ export function ReportsCalendarPage() {
         title={t("reports.title")}
         subtitle={t("reports.calendarSubtitle")}
         actions={
-          <>
-            <Button variant="outline" onClick={exportMonth} disabled={!monthSales.length}>
-              <Download className="mr-1 h-4 w-4" />
-              {t("reports.exportMonth")}
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              className="bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 border-emerald-500/30 font-medium text-xs h-9"
+              onClick={exportMonth}
+              disabled={!monthSales.length}
+            >
+              <FileSpreadsheet className="mr-1.5 h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+              Oylik Excel hisobot ({monthLabel})
             </Button>
-            <Button variant="outline" onClick={exportYear} disabled={!yearSales.length}>
-              <Download className="mr-1 h-4 w-4" />
-              {t("reports.exportYear")}
+            <Button
+              variant="outline"
+              className="bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 border-emerald-500/30 font-medium text-xs h-9"
+              onClick={exportYear}
+              disabled={!yearSales.length}
+            >
+              <FileSpreadsheet className="mr-1.5 h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+              Yillik Excel hisobot ({year})
             </Button>
-          </>
+          </div>
         }
       />
       <div>
         <Card className="rounded-2xl card-elevated border-border/60">
-          <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-3">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
             <div className="flex items-center gap-2">
               <Button
                 variant="outline"
@@ -157,9 +182,81 @@ export function ReportsCalendarPage() {
               >
                 <ChevronLeft className="h-4 w-4" />
               </Button>
-              <CardTitle className="min-w-36 text-center text-base capitalize">
-                {monthLabel}
-              </CardTitle>
+
+              {/* Month Picker Popover Grid */}
+              <Popover
+                open={monthPickerOpen}
+                onOpenChange={(v) => {
+                  setMonthPickerOpen(v);
+                  if (v) setPickerYear(year);
+                }}
+              >
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className="font-bold text-base px-4 h-9 flex items-center gap-2 hover:bg-accent cursor-pointer min-w-44 justify-center"
+                  >
+                    <span>
+                      {monthLabel} {year}
+                    </span>
+                    <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform duration-200" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-80 p-4 space-y-4" align="start">
+                  <div className="flex items-center justify-between border-b pb-3">
+                    <span className="font-semibold text-sm">Oyni tanlang</span>
+                    <Select
+                      value={String(pickerYear)}
+                      onValueChange={(value) => setPickerYear(Number(value))}
+                    >
+                      <SelectTrigger className="w-24 h-8 text-xs font-semibold">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {years.map((item) => (
+                          <SelectItem key={item} value={String(item)}>
+                            {item}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* 3 Columns Grid for 12 months */}
+                  <div className="grid grid-cols-3 gap-2">
+                    {MONTH_NAMES_UZ.map((name, idx) => {
+                      const isSelected = year === pickerYear && month === idx;
+                      const isCurrent =
+                        today.getFullYear() === pickerYear && today.getMonth() === idx;
+
+                      return (
+                        <Button
+                          key={name}
+                          type="button"
+                          variant={isSelected ? "default" : "outline"}
+                          size="sm"
+                          className={`h-10 text-xs font-medium transition-all ${
+                            isSelected ? "font-bold shadow-xs" : ""
+                          } ${
+                            isCurrent && !isSelected
+                              ? "border-primary text-primary font-semibold"
+                              : ""
+                          }`}
+                          onClick={() => {
+                            const next = new Date(pickerYear, idx, 1);
+                            setMonthDate(next);
+                            setSelectedDate(dayKey(next));
+                            setMonthPickerOpen(false);
+                          }}
+                        >
+                          {name}
+                        </Button>
+                      );
+                    })}
+                  </div>
+                </PopoverContent>
+              </Popover>
+
               <Button
                 variant="outline"
                 size="icon"
@@ -169,30 +266,14 @@ export function ReportsCalendarPage() {
                 <ChevronRight className="h-4 w-4" />
               </Button>
             </div>
-            <Select
-              value={String(year)}
-              onValueChange={(value) => {
-                const next = new Date(Number(value), month, 1);
-                setMonthDate(next);
-                setSelectedDate(dayKey(next));
-              }}
-            >
-              <SelectTrigger className="w-28">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {years.map((item) => (
-                  <SelectItem key={item} value={String(item)}>
-                    {item}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-7 gap-1.5">
               {weekdays.map((weekday) => (
-                <div key={weekday} className="py-2 text-center text-xs text-muted-foreground">
+                <div
+                  key={weekday}
+                  className="py-2 text-center text-xs text-muted-foreground font-semibold"
+                >
                   {weekday}
                 </div>
               ))}
@@ -206,7 +287,7 @@ export function ReportsCalendarPage() {
                     key={key}
                     type="button"
                     onClick={() => navigate({ to: "/report-day/$date", params: { date: key } })}
-                    className={`flex min-h-20 min-w-0 flex-col rounded-lg border p-2 text-left hover:border-primary/60 ${selectedDate === key ? "border-primary bg-primary/10" : "border-border/60"}`}
+                    className={`flex min-h-20 min-w-0 flex-col rounded-lg border p-2 text-left hover:border-primary/60 transition-all ${selectedDate === key ? "border-primary bg-primary/10" : "border-border/60"}`}
                   >
                     <span className="text-sm font-semibold">{day}</span>
                     {rows.length > 0 && (

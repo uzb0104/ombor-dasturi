@@ -39,12 +39,12 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Plus, Receipt, TrendingUp, TrendingDown, Edit, Trash2 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Plus, Receipt, Edit, Trash2, Calendar, CalendarDays, Search, X } from "lucide-react";
+import { useCallback, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { useT } from "@/lib/i18n";
 import { EXPENSE_CAT_VALUES, expenseCategoryLabel } from "@/lib/i18n/expense-cats";
-import { paymentLabel } from "@/lib/i18n/helpers";
 
 export const Route = createFileRoute("/_app/expenses")({ component: ExpensesPage });
 
@@ -53,22 +53,68 @@ const empty = (): Form => ({ category: EXPENSE_CAT_VALUES[0]!, amount: 0, note: 
 
 function ExpensesPage() {
   const t = useT();
-  const { expenses, addExpense, updateExpense, deleteExpense, sales } = useStore();
+  const { expenses, addExpense, updateExpense, deleteExpense } = useStore();
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<string | null>(null);
   const [form, setForm] = useState<Form>(empty());
-  const [detail, setDetail] = useState<"expenses" | "profit" | "net" | null>(null);
   const { confirm, confirmNode } = useConfirm();
   const sel = useSelection();
 
-  const total = expenses.reduce((a, e) => a + e.amount, 0);
-  const profit = sales.reduce((a, s) => a + s.profit, 0);
+  // Search and Filters
+  const [search, setSearch] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState<string>("ALL");
 
-  const sortedExpenses = useMemo(
-    () => [...expenses].sort((a, b) => +new Date(b.date) - +new Date(a.date)),
-    [expenses],
+  // Date Filter States
+  const [dateMode, setDateMode] = useState<"ALL" | "DAY" | "MONTH" | "YEAR">("ALL");
+  const [selectedDay, setSelectedDay] = useState(new Date().toISOString().slice(0, 10));
+  const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().slice(0, 7));
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear().toString());
+  const [datePopoverOpen, setDatePopoverOpen] = useState(false);
+
+  const matchesDate = useCallback(
+    (expenseDateIso: string) => {
+      if (dateMode === "ALL") return true;
+      const dateObj = new Date(expenseDateIso);
+      const pDateStr = dateObj.toISOString().slice(0, 10);
+      const pMonthStr = dateObj.toISOString().slice(0, 7);
+      const pYearStr = dateObj.getFullYear().toString();
+
+      if (dateMode === "DAY") return pDateStr === selectedDay;
+      if (dateMode === "MONTH") return pMonthStr === selectedMonth;
+      if (dateMode === "YEAR") return pYearStr === selectedYear;
+      return true;
+    },
+    [dateMode, selectedDay, selectedMonth, selectedYear],
   );
-  const pg = usePagination(sortedExpenses, 12);
+
+  const getDateFilterLabel = () => {
+    if (dateMode === "ALL") return "Sana bo'yicha";
+    if (dateMode === "DAY") return `Kun: ${selectedDay}`;
+    if (dateMode === "MONTH") return `Oy: ${selectedMonth}`;
+    if (dateMode === "YEAR") return `Yil: ${selectedYear}`;
+    return "Sana";
+  };
+
+  const filteredExpenses = useMemo(() => {
+    return expenses
+      .filter((e) => {
+        const matchesCat = categoryFilter === "ALL" || e.category === categoryFilter;
+        const noteStr = e.note || "";
+        const catLabel = expenseCategoryLabel(t, e.category);
+        const matchesSearch =
+          noteStr.toLowerCase().includes(search.toLowerCase()) ||
+          catLabel.toLowerCase().includes(search.toLowerCase()) ||
+          e.amount.toString().includes(search);
+        const matchesD = matchesDate(e.date);
+        return matchesCat && matchesSearch && matchesD;
+      })
+      .sort((a, b) => +new Date(b.date) - +new Date(a.date));
+  }, [expenses, categoryFilter, search, matchesDate, t]);
+
+  const totalFiltered = filteredExpenses.reduce((a, e) => a + e.amount, 0);
+  const overallTotal = expenses.reduce((a, e) => a + e.amount, 0);
+
+  const pg = usePagination(filteredExpenses, 12);
   const pageIds = pg.paged.map((p) => p.id);
   const allChecked = pageIds.length > 0 && pageIds.every((id) => sel.has(id));
 
@@ -134,6 +180,8 @@ function ExpensesPage() {
       action: { label: t("common.undo"), onClick: () => snaps.forEach((e) => addExpense(e)) },
     });
   };
+
+  const isFilterActive = dateMode !== "ALL" || categoryFilter !== "ALL" || search !== "";
 
   return (
     <div className="space-y-5">
@@ -205,38 +253,237 @@ function ExpensesPage() {
         }
       />
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <StatCard
-          label={t("expenses.total")}
-          value={formatSom(total)}
+          label={isFilterActive ? "Filtrlangan xarajatlar" : t("expenses.total")}
+          value={formatSom(totalFiltered)}
           icon={Receipt}
           accent="warning"
-          onClick={() => setDetail("expenses")}
         />
-        <StatCard
-          label={t("expenses.grossProfit")}
-          value={formatSom(profit)}
-          icon={TrendingUp}
-          accent="success"
-          onClick={() => setDetail("profit")}
-        />
-        <StatCard
-          label={t("expenses.netProfit")}
-          value={formatSom(profit - total)}
-          icon={TrendingDown}
-          accent={profit - total > 0 ? "success" : "destructive"}
-          onClick={() => setDetail("net")}
-        />
+        {isFilterActive && (
+          <StatCard
+            label="Jami barcha xarajatlar"
+            value={formatSom(overallTotal)}
+            icon={Receipt}
+            accent="primary"
+          />
+        )}
       </div>
 
-      <ExpenseDetailDialog
-        open={detail}
-        onClose={() => setDetail(null)}
-        expenses={sortedExpenses}
-        sales={sales}
-      />
-
       <Card className="rounded-2xl p-3 md:p-4">
+        {/* Search and Filter Toolbar */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 pb-3 border-b border-border/50">
+          <div className="relative w-full sm:w-64">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Xarajatlarni qidirish..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-8 h-9 text-xs"
+            />
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Category Filter Select */}
+            <Select value={categoryFilter} onValueChange={(v) => setCategoryFilter(v)}>
+              <SelectTrigger className="h-9 w-[150px] text-xs">
+                <SelectValue placeholder="Kategoriya" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ALL">Barcha turlar</SelectItem>
+                {EXPENSE_CAT_VALUES.map((c) => (
+                  <SelectItem key={c} value={c}>
+                    {expenseCategoryLabel(t, c)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            {/* Calendar Date Filter Popover */}
+            <Popover open={datePopoverOpen} onOpenChange={setDatePopoverOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant={dateMode !== "ALL" ? "default" : "outline"}
+                  size="sm"
+                  className="h-9 text-xs flex items-center gap-1.5"
+                >
+                  <Calendar className="h-4 w-4" />
+                  <span>{getDateFilterLabel()}</span>
+                  {dateMode !== "ALL" && (
+                    <span
+                      className="ml-1 hover:text-destructive p-0.5 rounded-xs"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setDateMode("ALL");
+                      }}
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </span>
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-80 p-4 space-y-4" align="end">
+                <div className="font-semibold text-sm flex items-center justify-between">
+                  <span className="flex items-center gap-1.5">
+                    <CalendarDays className="h-4 w-4 text-primary" />
+                    Sana bo'yicha saralash
+                  </span>
+                  {dateMode !== "ALL" && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 text-xs text-muted-foreground hover:text-destructive p-1"
+                      onClick={() => setDateMode("ALL")}
+                    >
+                      Tozalash
+                    </Button>
+                  )}
+                </div>
+
+                {/* Filter Mode Selector */}
+                <div className="grid grid-cols-4 gap-1 p-1 bg-muted rounded-lg text-xs">
+                  <button
+                    type="button"
+                    className={`py-1 px-1 rounded-md text-center transition-all ${
+                      dateMode === "ALL"
+                        ? "bg-background font-semibold shadow-xs text-primary"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
+                    onClick={() => setDateMode("ALL")}
+                  >
+                    Barchasi
+                  </button>
+                  <button
+                    type="button"
+                    className={`py-1 px-1 rounded-md text-center transition-all ${
+                      dateMode === "DAY"
+                        ? "bg-background font-semibold shadow-xs text-primary"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
+                    onClick={() => setDateMode("DAY")}
+                  >
+                    Kunlik
+                  </button>
+                  <button
+                    type="button"
+                    className={`py-1 px-1 rounded-md text-center transition-all ${
+                      dateMode === "MONTH"
+                        ? "bg-background font-semibold shadow-xs text-primary"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
+                    onClick={() => setDateMode("MONTH")}
+                  >
+                    Oylik
+                  </button>
+                  <button
+                    type="button"
+                    className={`py-1 px-1 rounded-md text-center transition-all ${
+                      dateMode === "YEAR"
+                        ? "bg-background font-semibold shadow-xs text-primary"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
+                    onClick={() => setDateMode("YEAR")}
+                  >
+                    Yillik
+                  </button>
+                </div>
+
+                {/* Dynamic Inputs based on mode */}
+                {dateMode === "DAY" && (
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Kungi sanani tanlang:</Label>
+                    <Input
+                      type="date"
+                      value={selectedDay}
+                      onChange={(e) => setSelectedDay(e.target.value)}
+                      className="h-9 text-xs"
+                    />
+                  </div>
+                )}
+
+                {dateMode === "MONTH" && (
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Oyni tanlang:</Label>
+                    <Input
+                      type="month"
+                      value={selectedMonth}
+                      onChange={(e) => setSelectedMonth(e.target.value)}
+                      className="h-9 text-xs"
+                    />
+                  </div>
+                )}
+
+                {dateMode === "YEAR" && (
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Yilni tanlang:</Label>
+                    <Input
+                      type="number"
+                      min="2020"
+                      max="2035"
+                      value={selectedYear}
+                      onChange={(e) => setSelectedYear(e.target.value)}
+                      placeholder="2026"
+                      className="h-9 text-xs"
+                    />
+                  </div>
+                )}
+
+                {/* Preset Buttons */}
+                <div className="pt-3 border-t border-border/60 flex items-center justify-between gap-1 text-xs">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-7 text-[11px] px-2.5"
+                    onClick={() => {
+                      setDateMode("DAY");
+                      setSelectedDay(new Date().toISOString().slice(0, 10));
+                    }}
+                  >
+                    Bugun
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-7 text-[11px] px-2.5"
+                    onClick={() => {
+                      setDateMode("MONTH");
+                      setSelectedMonth(new Date().toISOString().slice(0, 7));
+                    }}
+                  >
+                    Shu oy
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-7 text-[11px] px-2.5"
+                    onClick={() => {
+                      setDateMode("YEAR");
+                      setSelectedYear(new Date().getFullYear().toString());
+                    }}
+                  >
+                    Shu yil
+                  </Button>
+                </div>
+              </PopoverContent>
+            </Popover>
+
+            {isFilterActive && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-9 text-xs text-muted-foreground hover:text-foreground"
+                onClick={() => {
+                  setSearch("");
+                  setCategoryFilter("ALL");
+                  setDateMode("ALL");
+                }}
+              >
+                Filtrni tozash
+              </Button>
+            )}
+          </div>
+        </div>
+
         <BulkBar
           count={sel.count}
           onDelete={removeBulk}
@@ -261,135 +508,52 @@ function ExpensesPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {pg.paged.map((e) => (
-                <TableRow
-                  key={e.id}
-                  className="hover:bg-muted/40"
-                  data-state={sel.has(e.id) ? "selected" : undefined}
-                >
-                  <TableCell>
-                    <SelectCell checked={sel.has(e.id)} onChange={() => sel.toggle(e.id)} />
-                  </TableCell>
-                  <TableCell className="text-sm">
-                    {new Date(e.date).toLocaleDateString("uz-UZ")}
-                  </TableCell>
-                  <TableCell>
-                    <span className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-xs">
-                      {expenseCategoryLabel(t, e.category)}
-                    </span>
-                  </TableCell>
-                  <TableCell className="hidden sm:table-cell text-sm text-muted-foreground">
-                    {e.note}
-                  </TableCell>
-                  <TableCell className="text-right tabular-nums font-semibold">
-                    {formatSom(e.amount)}
-                  </TableCell>
-                  <TableCell className="text-right whitespace-nowrap">
-                    <Button variant="ghost" size="icon" onClick={() => startEdit(e.id)}>
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    <Button variant="ghost" size="icon" onClick={() => removeOne(e.id)}>
-                      <Trash2 className="h-4 w-4 text-destructive" />
-                    </Button>
+              {pg.paged.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                    Xarajatlar topilmadi
                   </TableCell>
                 </TableRow>
-              ))}
+              ) : (
+                pg.paged.map((e) => (
+                  <TableRow
+                    key={e.id}
+                    className="hover:bg-muted/40"
+                    data-state={sel.has(e.id) ? "selected" : undefined}
+                  >
+                    <TableCell>
+                      <SelectCell checked={sel.has(e.id)} onChange={() => sel.toggle(e.id)} />
+                    </TableCell>
+                    <TableCell className="text-sm">
+                      {new Date(e.date).toLocaleDateString("uz-UZ")}
+                    </TableCell>
+                    <TableCell>
+                      <span className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-xs">
+                        {expenseCategoryLabel(t, e.category)}
+                      </span>
+                    </TableCell>
+                    <TableCell className="hidden sm:table-cell text-sm text-muted-foreground">
+                      {e.note}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums font-semibold">
+                      {formatSom(e.amount)}
+                    </TableCell>
+                    <TableCell className="text-right whitespace-nowrap">
+                      <Button variant="ghost" size="icon" onClick={() => startEdit(e.id)}>
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon" onClick={() => removeOne(e.id)}>
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
             </TableBody>
           </Table>
         </div>
         <PaginationBar {...pg} />
       </Card>
     </div>
-  );
-}
-
-type DetailKind = "expenses" | "profit" | "net" | null;
-function ExpenseDetailDialog({
-  open,
-  onClose,
-  expenses,
-  sales,
-}: {
-  open: DetailKind;
-  onClose: () => void;
-  expenses: ReturnType<typeof useStore.getState>["expenses"];
-  sales: ReturnType<typeof useStore.getState>["sales"];
-}) {
-  const t = useT();
-  if (!open) return null;
-  const title =
-    open === "expenses"
-      ? t("expenses.detail.expenses", { n: expenses.length })
-      : open === "profit"
-        ? t("expenses.detail.profit")
-        : t("expenses.detail.net");
-
-  const expRows = [...expenses].sort((a, b) => +new Date(b.date) - +new Date(a.date));
-  const saleRows = [...sales].sort((a, b) => +new Date(b.date) - +new Date(a.date));
-
-  return (
-    <Dialog open={!!open} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
-        </DialogHeader>
-        <div className="space-y-4 text-sm">
-          {(open === "expenses" || open === "net") && (
-            <div>
-              <div className="font-semibold mb-2 text-warning-foreground">
-                {t("expenses.detail.expenses", { n: expRows.length })}
-              </div>
-              <div className="border rounded-lg divide-y max-h-72 overflow-y-auto">
-                {expRows.map((e) => (
-                  <div key={e.id} className="flex items-center justify-between px-3 py-2">
-                    <div>
-                      <div className="font-medium">{expenseCategoryLabel(t, e.category)}</div>
-                      <div className="text-xs text-muted-foreground">
-                        {new Date(e.date).toLocaleDateString("uz-UZ")} · {e.note || "—"}
-                      </div>
-                    </div>
-                    <div className="tabular-nums text-destructive">−{formatSom(e.amount)}</div>
-                  </div>
-                ))}
-                {expRows.length === 0 && (
-                  <div className="px-3 py-4 text-muted-foreground text-center">
-                    {t("common.none")}
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-          {(open === "profit" || open === "net") && (
-            <div>
-              <div className="font-semibold mb-2 text-success">
-                {t("expenses.salesProfit", { n: saleRows.length })}
-              </div>
-              <div className="border rounded-lg divide-y max-h-72 overflow-y-auto">
-                {saleRows.map((s) => (
-                  <div key={s.id} className="flex items-center justify-between px-3 py-2">
-                    <div>
-                      <div className="font-medium">
-                        {new Date(s.date).toLocaleDateString("uz-UZ")}
-                      </div>
-                      <div className="text-xs text-muted-foreground">
-                        {paymentLabel(t, s.paymentType)} · {formatSom(s.total)}
-                      </div>
-                    </div>
-                    <div className="tabular-nums text-success font-semibold">
-                      +{formatSom(s.profit)}
-                    </div>
-                  </div>
-                ))}
-                {saleRows.length === 0 && (
-                  <div className="px-3 py-4 text-muted-foreground text-center">
-                    {t("common.none")}
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-        </div>
-      </DialogContent>
-    </Dialog>
   );
 }

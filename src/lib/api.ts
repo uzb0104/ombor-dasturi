@@ -15,6 +15,7 @@ import type {
   DebtPayment,
   PriceHistoryEntry,
   AuditEntry,
+  UsedBatteryEntry,
 } from "./types";
 
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:5001";
@@ -167,6 +168,7 @@ export const customersApi = createCrudApi<Customer>("customers");
 export const suppliersApi = createCrudApi<Supplier>("suppliers");
 export const employeesApi = createCrudApi<Employee>("employees");
 export const expensesApi = createCrudApi<Expense>("expenses");
+export const usedBatteriesApi = createCrudApi<UsedBatteryEntry>("used-batteries");
 
 export const salesApi = {
   getAll: () => request<Sale[]>("/api/sales"),

@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { Card } from "@/components/ui/card";
 import {
   Table,
@@ -21,7 +21,7 @@ import {
 import { useStore } from "@/lib/store";
 import { formatSom, ROLES } from "@/lib/constants";
 import { Badge } from "@/components/ui/badge";
-import { Users, Wallet, TrendingDown } from "lucide-react";
+import { Users, Wallet, TrendingDown, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -48,6 +48,7 @@ import { toast } from "sonner";
 export const Route = createFileRoute("/_app/employees")({ component: EmployeesPage });
 
 function EmployeesPage() {
+  const navigate = useNavigate();
   const { employees, addEmployee, updateEmployee, deleteEmployee } = useStore();
   const [editing, setEditing] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
@@ -292,14 +293,18 @@ function EmployeesPage() {
               {pg.paged.map((e) => (
                 <TableRow
                   key={e.id}
-                  className="hover:bg-muted/40"
+                  className="hover:bg-muted/40 cursor-pointer transition-colors"
                   data-state={sel.has(e.id) ? "selected" : undefined}
+                  onClick={() => navigate({ to: "/employees/$id", params: { id: e.id } })}
                 >
-                  <TableCell>
+                  <TableCell onClick={(ev) => ev.stopPropagation()}>
                     <SelectCell checked={sel.has(e.id)} onChange={() => sel.toggle(e.id)} />
                   </TableCell>
-                  <TableCell className="font-medium">
-                    {e.name}
+                  <TableCell className="font-medium text-primary hover:underline">
+                    <div className="flex items-center gap-1.5">
+                      <span>{e.name}</span>
+                      <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/60 opacity-0 group-hover:opacity-100 transition-opacity" />
+                    </div>
                     <div className="sm:hidden text-xs text-muted-foreground">{e.phone}</div>
                   </TableCell>
                   <TableCell className="hidden sm:table-cell text-sm">{e.phone}</TableCell>
@@ -323,11 +328,15 @@ function EmployeesPage() {
                       {e.status}
                     </Badge>
                   </TableCell>
-                  <TableCell className="text-right whitespace-nowrap">
+                  <TableCell
+                    className="text-right whitespace-nowrap"
+                    onClick={(ev) => ev.stopPropagation()}
+                  >
                     <Button
                       size="sm"
                       variant="outline"
-                      onClick={() => {
+                      onClick={(ev) => {
+                        ev.stopPropagation();
                         setAdvanceFor(e.id);
                         setAdvanceAmount(0);
                         setPaymentType("Avans");
@@ -336,10 +345,24 @@ function EmployeesPage() {
                       <HandCoins className="h-3 w-3 mr-1" />
                       Avans
                     </Button>
-                    <Button variant="ghost" size="icon" onClick={() => startEdit(e.id)}>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={(ev) => {
+                        ev.stopPropagation();
+                        startEdit(e.id);
+                      }}
+                    >
                       <Edit className="h-4 w-4" />
                     </Button>
-                    <Button variant="ghost" size="icon" onClick={() => removeOne(e.id, e.name)}>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={(ev) => {
+                        ev.stopPropagation();
+                        removeOne(e.id, e.name);
+                      }}
+                    >
                       <Trash2 className="h-4 w-4 text-destructive" />
                     </Button>
                   </TableCell>
@@ -349,49 +372,6 @@ function EmployeesPage() {
           </Table>
         </div>
         <PaginationBar {...pg} />
-      </Card>
-
-      <Card className="rounded-2xl p-3 md:p-4">
-        <h3 className="font-semibold mb-3">Oylik va avans to'lovlari</h3>
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Sana va vaqt</TableHead>
-                <TableHead>Xodim</TableHead>
-                <TableHead>To'lov turi</TableHead>
-                <TableHead className="text-right">Summa</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {employees
-                .flatMap((employee) =>
-                  (employee.paymentHistory || []).map((payment) => ({
-                    ...payment,
-                    employeeName: employee.name,
-                  })),
-                )
-                .sort((left, right) => +new Date(right.date) - +new Date(left.date))
-                .map((payment) => (
-                  <TableRow key={payment.id}>
-                    <TableCell>{new Date(payment.date).toLocaleString("uz-UZ")}</TableCell>
-                    <TableCell className="font-medium">{payment.employeeName}</TableCell>
-                    <TableCell>{payment.type}</TableCell>
-                    <TableCell className="text-right tabular-nums">
-                      {formatSom(payment.amount)}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              {employees.every((employee) => !employee.paymentHistory?.length) && (
-                <TableRow>
-                  <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
-                    Hozircha to'lovlar yo'q
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </div>
       </Card>
 
       <Dialog open={!!advanceFor} onOpenChange={(v) => !v && setAdvanceFor(null)}>

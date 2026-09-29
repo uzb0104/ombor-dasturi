@@ -170,6 +170,23 @@ CREATE TABLE IF NOT EXISTS audit_logs (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
+-- 12. ESKI AKKUMULYATORLAR (LOM) JADVALI
+CREATE TABLE IF NOT EXISTS used_batteries (
+    id VARCHAR(100) PRIMARY KEY,
+    date VARCHAR(50) NOT NULL,
+    type VARCHAR(50) NOT NULL CHECK (type IN ('kirim', 'chiqim')),
+    customer_name VARCHAR(255),
+    factory_name VARCHAR(255),
+    battery_type VARCHAR(100),
+    weight_kg NUMERIC(15, 2) NOT NULL DEFAULT 0.00,
+    price_per_kg NUMERIC(20, 2) DEFAULT 0.00,
+    total_amount NUMERIC(20, 2) NOT NULL DEFAULT 0.00,
+    payment_method VARCHAR(50),
+    status VARCHAR(50),
+    note TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
 -- INDEKSLAR (TEZKOR QIDIRUV VA FILTRLASH UCHUN)
 CREATE INDEX IF NOT EXISTS idx_products_barcode ON products(barcode);
 CREATE INDEX IF NOT EXISTS idx_products_sku ON products(sku);

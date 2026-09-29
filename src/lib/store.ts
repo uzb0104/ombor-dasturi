@@ -12,6 +12,7 @@ import type {
   AppUser,
   SessionUser,
   DebtPayment,
+  UsedBatteryEntry,
 } from "./types";
 import type { Warehouse, Role } from "./constants";
 import {
@@ -38,6 +39,7 @@ import {
   vehicleBrandsApi,
   branchesApi,
   auditApi,
+  usedBatteriesApi,
 } from "./api";
 import { syncApi, formatApiError } from "./api-sync";
 import { toast } from "sonner";
@@ -75,6 +77,11 @@ type State = {
   vehicleBrands: string[];
   debtPayments: DebtPayment[];
   addDebtPayment: (p: DebtPayment) => void;
+
+  usedBatteries: UsedBatteryEntry[];
+  addUsedBattery: (b: UsedBatteryEntry) => void;
+  updateUsedBattery: (id: string, b: Partial<UsedBatteryEntry>) => void;
+  deleteUsedBattery: (id: string) => void;
 
   addProduct: (p: Product) => void;
   updateProduct: (id: string, p: Partial<Product>) => void;
@@ -222,6 +229,7 @@ export const useStore = create<State>()(
               branches,
               auditLog,
               appUsers,
+              usedBatteries,
             ] = await Promise.all([
               productsApi
                 .getAll()
@@ -239,6 +247,7 @@ export const useStore = create<State>()(
               branchesApi.getAll().catch(() => get().branches),
               auditApi.getAll().catch(() => get().auditLog),
               usersApi.getAll().catch(() => get().appUsers),
+              usedBatteriesApi.getAll().catch(() => get().usedBatteries),
             ]);
             set({
               products,
@@ -254,6 +263,7 @@ export const useStore = create<State>()(
               branches,
               auditLog,
               appUsers,
+              usedBatteries,
               _loading: false,
               _initialized: true,
             });
@@ -352,6 +362,76 @@ export const useStore = create<State>()(
         categories: [...DEFAULT_CATEGORIES],
         vehicleBrands: [],
         debtPayments: [],
+        usedBatteries: [
+          {
+            id: "ub_1",
+            date: "2026-09-25T10:15:00.000Z",
+            type: "kirim",
+            customerName: "Alijon Valiyev",
+            batteryType: "60 Ah",
+            weightKg: 15,
+            totalAmount: 180000,
+            note: "Yangi 60A akkumulyator sotib olganda topshirildi",
+          },
+          {
+            id: "ub_2",
+            date: "2026-09-26T14:30:00.000Z",
+            type: "kirim",
+            customerName: "Sardor Rahimov",
+            batteryType: "75 Ah",
+            weightKg: 18,
+            totalAmount: 220000,
+            note: "75Ah eski akkumulyator topshirildi",
+          },
+          {
+            id: "ub_3",
+            date: "2026-09-28T09:00:00.000Z",
+            type: "chiqim",
+            factoryName: "Jizzax Akkumulyator Zavodi",
+            weightKg: 250,
+            pricePerKg: 12500,
+            totalAmount: 3125000,
+            paymentMethod: "O'tkazma",
+            status: "To'langan",
+            note: "Zavodga 250kg lom topshirildi",
+          },
+        ],
+        addUsedBattery: (b) => {
+          set({ usedBatteries: [b, ...(get().usedBatteries || [])] });
+          syncApi(usedBatteriesApi.create(b), { onFail: resync });
+          get().logAudit({
+            action: "create",
+            entity: "used_battery",
+            entityId: b.id,
+            summary: `Eski akkumulyator ${b.type === "kirim" ? "qabul qilindi" : "zavodga topshirildi"}: ${b.weightKg} kg`,
+          });
+        },
+        updateUsedBattery: (id, b) => {
+          set({
+            usedBatteries: (get().usedBatteries || []).map((x) =>
+              x.id === id ? { ...x, ...b } : x,
+            ),
+          });
+          syncApi(usedBatteriesApi.update(id, b), { onFail: resync });
+          get().logAudit({
+            action: "update",
+            entity: "used_battery",
+            entityId: id,
+            summary: `Eski akkumulyator yozuvi yangilandi`,
+          });
+        },
+        deleteUsedBattery: (id) => {
+          set({
+            usedBatteries: (get().usedBatteries || []).filter((x) => x.id !== id),
+          });
+          syncApi(usedBatteriesApi.delete(id), { onFail: resync });
+          get().logAudit({
+            action: "delete",
+            entity: "used_battery",
+            entityId: id,
+            summary: `Eski akkumulyator yozuvi o'chirildi`,
+          });
+        },
 
         // ─── TOVARLAR (OPTIMISTIC + BACKEND) ───
         addProduct: (p) => {

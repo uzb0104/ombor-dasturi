@@ -157,3 +157,18 @@ export type PriceHistoryEntry = {
   changedByName: string | null;
   createdAt: string;
 };
+
+export type UsedBatteryEntry = {
+  id: string;
+  date: string;
+  type: "kirim" | "chiqim";
+  customerName?: string;
+  factoryName?: string;
+  batteryType?: string;
+  weightKg: number;
+  pricePerKg?: number;
+  totalAmount: number;
+  paymentMethod?: "Naqd" | "Karta" | "O'tkazma" | "Qarz";
+  status?: "To'langan" | "Kutilmoqda";
+  note?: string;
+};

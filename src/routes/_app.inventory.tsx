@@ -37,12 +37,7 @@ import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { useT } from "@/lib/i18n";
 
@@ -426,11 +421,7 @@ function InventoryPage() {
                           >
                             <Edit className="h-4 w-4 text-muted-foreground" />
                           </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleRemoveBrand(b)}
-                          >
+                          <Button variant="ghost" size="icon" onClick={() => handleRemoveBrand(b)}>
                             <Trash2 className="h-4 w-4 text-destructive" />
                           </Button>
                         </div>
@@ -446,4 +437,3 @@ function InventoryPage() {
     </div>
   );
 }
-

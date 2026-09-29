@@ -14,6 +14,7 @@ const uz: Dict = {
   "nav.sales": "Sotuvlar",
   "nav.pos": "Mobil POS",
   "nav.incoming": "Kirimlar",
+  "nav.usedBatteries": "Eski akkumulyatorlar (Lom)",
   "nav.customers": "Mijozlar (CRM)",
   "nav.suppliers": "Yetkazib beruvchilar",
   "nav.debts": "Qarzdorlik",

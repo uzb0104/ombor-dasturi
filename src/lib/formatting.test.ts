@@ -12,7 +12,7 @@ describe("core formatting helpers", () => {
   it("maps payment and user roles through translations", () => {
     const t = (key: string) => key;
 
-    expect(paymentLabel(t, "Naqd")).toBe("payment.cash");   
+    expect(paymentLabel(t, "Naqd")).toBe("payment.cash");
     expect(paymentLabel(t, "Karta")).toBe("payment.card");
     expect(roleLabel(t, "Admin")).toBe("role.admin");
     expect(roleLabel(t, "Omborchi")).toBe("role.warehouse");
