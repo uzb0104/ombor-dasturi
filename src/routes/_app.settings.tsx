@@ -45,6 +45,8 @@ import {
   Sun,
   Car,
   Building2,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import { useState } from "react";
 import { useT } from "@/lib/i18n";
@@ -89,6 +91,10 @@ function SettingsPage() {
 
   const [profileName, setProfileName] = useState(user?.name || "");
   const [passwords, setPasswords] = useState({ current: "", new: "", confirm: "" });
+  const [showCurrentPass, setShowCurrentPass] = useState(false);
+  const [showNewPass, setShowNewPass] = useState(false);
+  const [showConfirmPass, setShowConfirmPass] = useState(false);
+  const [showUserPass, setShowUserPass] = useState(false);
 
   const handleProfileSave = () => {
     if (!profileName.trim()) {
@@ -202,27 +208,60 @@ function SettingsPage() {
             <div className="grid grid-cols-1 gap-3">
               <div>
                 <Label>{t("settings.currentPassword")}</Label>
-                <Input
-                  type="password"
-                  value={passwords.current}
-                  onChange={(e) => setPasswords({ ...passwords, current: e.target.value })}
-                />
+                <div className="relative mt-1">
+                  <Input
+                    type={showCurrentPass ? "text" : "password"}
+                    value={passwords.current}
+                    onChange={(e) => setPasswords({ ...passwords, current: e.target.value })}
+                    className="pr-10"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowCurrentPass(!showCurrentPass)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors p-1"
+                    tabIndex={-1}
+                  >
+                    {showCurrentPass ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
               </div>
               <div>
                 <Label>{t("settings.newPassword")}</Label>
-                <Input
-                  type="password"
-                  value={passwords.new}
-                  onChange={(e) => setPasswords({ ...passwords, new: e.target.value })}
-                />
+                <div className="relative mt-1">
+                  <Input
+                    type={showNewPass ? "text" : "password"}
+                    value={passwords.new}
+                    onChange={(e) => setPasswords({ ...passwords, new: e.target.value })}
+                    className="pr-10"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowNewPass(!showNewPass)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors p-1"
+                    tabIndex={-1}
+                  >
+                    {showNewPass ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
               </div>
               <div>
                 <Label>{t("settings.confirmPassword")}</Label>
-                <Input
-                  type="password"
-                  value={passwords.confirm}
-                  onChange={(e) => setPasswords({ ...passwords, confirm: e.target.value })}
-                />
+                <div className="relative mt-1">
+                  <Input
+                    type={showConfirmPass ? "text" : "password"}
+                    value={passwords.confirm}
+                    onChange={(e) => setPasswords({ ...passwords, confirm: e.target.value })}
+                    className="pr-10"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPass(!showConfirmPass)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors p-1"
+                    tabIndex={-1}
+                  >
+                    {showConfirmPass ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
               </div>
             </div>
             <Button onClick={handlePasswordChange}>{t("common.change")}</Button>
@@ -377,11 +416,22 @@ function UsersManagement({
                   <Label>
                     {t("common.password")} {editing && t("settings.passwordHint")}
                   </Label>
-                  <Input
-                    type="password"
-                    value={form.password}
-                    onChange={(e) => setForm({ ...form, password: e.target.value })}
-                  />
+                  <div className="relative mt-1">
+                    <Input
+                      type={showUserPass ? "text" : "password"}
+                      value={form.password}
+                      onChange={(e) => setForm({ ...form, password: e.target.value })}
+                      className="pr-10"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowUserPass(!showUserPass)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors p-1"
+                      tabIndex={-1}
+                    >
+                      {showUserPass ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
                 </div>
                 <div>
                   <Label>{t("common.role")}</Label>
