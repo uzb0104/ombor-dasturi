@@ -22,6 +22,9 @@ import {
   Receipt,
   Users,
   AlertTriangle,
+  BatteryCharging,
+  ArrowUpRight,
+  ArrowDownLeft,
 } from "lucide-react";
 import { useT } from "@/lib/i18n";
 import { paymentLabel } from "@/lib/i18n/helpers";
@@ -37,6 +40,7 @@ function Dashboard() {
     employees,
     customers,
     suppliers,
+    usedBatteries = [],
     vehicleFilter,
     setVehicleFilter,
     vehicleBrands,
@@ -52,6 +56,7 @@ function Dashboard() {
     | "salary"
     | "net"
     | "debt"
+    | "battery"
   >(null);
 
   const filtered = useMemo(() => {
@@ -86,12 +91,19 @@ function Dashboard() {
   const totalDebt =
     customers.reduce((a, c) => a + c.debt, 0) + suppliers.reduce((a, s) => a + s.debt, 0);
 
+  // Used Batteries calculations
+  const batteryKirimKg = (usedBatteries || [])
+    .filter((x) => x.type === "kirim")
+    .reduce((s, x) => s + x.weightKg, 0);
+  const batteryChiqimKg = (usedBatteries || [])
+    .filter((x) => x.type === "chiqim")
+    .reduce((s, x) => s + x.weightKg, 0);
+  const batteryBalansKg = Math.max(0, batteryKirimKg - batteryChiqimKg);
+
   const lowStock = filtered.products
     .filter((p) => p.quantity > 0 && p.quantity <= p.minQty)
     .slice(0, 6);
   const outStock = filtered.products.filter((p) => p.quantity === 0).slice(0, 4);
-  const recentSales = [...sales].sort((a, b) => +new Date(b.date) - +new Date(a.date)).slice(0, 6);
-  const pendingSalaries = employees.filter((e) => e.advance < e.salary).slice(0, 5);
 
   return (
     <div className="space-y-6">
@@ -119,6 +131,62 @@ function Dashboard() {
           </Select>
         }
       />
+
+      {/* Moliya va Sof Foyda Boshqaruvi Hero Banner */}
+      <Card className="p-6 rounded-2xl bg-gradient-to-br from-card via-card to-primary/5 border border-primary/20 shadow-sm relative overflow-hidden">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-5">
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <Badge
+                variant={netProfit >= 0 ? "default" : "destructive"}
+                className="text-xs px-2.5 py-0.5 font-semibold"
+              >
+                {netProfit >= 0 ? "SOF FOYDA (Sof Daromad)" : "SOF ZIYON (Manfiy)"}
+              </Badge>
+              <span className="text-xs text-muted-foreground font-medium">
+                Aniq Moliyaviy Balans
+              </span>
+            </div>
+            <div className="text-3xl md:text-4xl font-extrabold tracking-tight tabular-nums text-foreground">
+              {formatSom(netProfit)}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Formula: Sotuv Yalpi Foydasi ({formatSom(totalProfit)}) − Jami Chiqimlar (
+              {formatSom(totalExpenses)}) ={" "}
+              <strong className="text-foreground font-semibold">{formatSom(netProfit)}</strong>
+            </p>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-muted/40 p-3 rounded-xl border">
+            <div>
+              <div className="text-[11px] text-muted-foreground font-medium">
+                Jami Sotuv Tushumi
+              </div>
+              <div className="text-sm font-bold tabular-nums">{formatSom(monthSales)}</div>
+            </div>
+            <div>
+              <div className="text-[11px] text-muted-foreground font-medium">
+                Sotuv Yalpi Foydasi
+              </div>
+              <div className="text-sm font-bold text-emerald-600 dark:text-emerald-400 tabular-nums">
+                +{formatSom(totalProfit)}
+              </div>
+            </div>
+            <div>
+              <div className="text-[11px] text-muted-foreground font-medium">Jami Chiqimlar</div>
+              <div className="text-sm font-bold text-rose-600 dark:text-rose-400 tabular-nums">
+                −{formatSom(totalExpenses)}
+              </div>
+            </div>
+            <div>
+              <div className="text-[11px] text-muted-foreground font-medium">Jami Qarzdorlik</div>
+              <div className="text-sm font-bold text-amber-600 dark:text-amber-400 tabular-nums">
+                {formatSom(totalDebt)}
+              </div>
+            </div>
+          </div>
+        </div>
+      </Card>
 
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4">
         <StatCard
@@ -184,6 +252,13 @@ function Dashboard() {
           accent="destructive"
           onClick={() => setDetail("debt")}
         />
+        <StatCard
+          label="Eski Akkumulyatorlar (Lom)"
+          value={`${batteryBalansKg} kg`}
+          icon={BatteryCharging}
+          accent="primary"
+          onClick={() => setDetail("battery")}
+        />
       </div>
 
       <DetailDialog
@@ -196,6 +271,7 @@ function Dashboard() {
           employees,
           customers,
           suppliers,
+          usedBatteries,
         }}
       />
 
@@ -310,6 +386,7 @@ type DetailKind =
   | "salary"
   | "net"
   | "debt"
+  | "battery"
   | null;
 
 function DetailDialog({
@@ -326,6 +403,7 @@ function DetailDialog({
     employees: ReturnType<typeof useStore.getState>["employees"];
     customers: ReturnType<typeof useStore.getState>["customers"];
     suppliers: ReturnType<typeof useStore.getState>["suppliers"];
+    usedBatteries?: ReturnType<typeof useStore.getState>["usedBatteries"];
   };
 }) {
   const t = useT();
@@ -340,6 +418,7 @@ function DetailDialog({
     salary: t("dashboard.detail.salary"),
     net: t("dashboard.detail.net"),
     debt: t("dashboard.detail.debt"),
+    battery: "Eski Akkumulyatorlar (Lom) Balansi",
   };
 
   const now = new Date();
@@ -453,6 +532,22 @@ function DetailDialog({
                   }))}
               />
             </>
+          )}
+          {kind === "battery" && (
+            <List
+              rows={[...(ctx.usedBatteries || [])]
+                .sort((a, b) => +new Date(b.date) - +new Date(a.date))
+                .map((b) => ({
+                  key: b.id,
+                  title:
+                    b.type === "kirim"
+                      ? `Kirim: ${b.customerName || "Mijoz"}`
+                      : `Chiqim: ${b.factoryName || "Zavod"}`,
+                  sub: `${new Date(b.date).toLocaleDateString("uz-UZ")} · ${b.weightKg} kg (${b.batteryType || "Standart"})`,
+                  amount: `${b.type === "kirim" ? "+" : "−"}${formatSom(b.totalAmount)}`,
+                  tone: b.type === "kirim" ? ("success" as const) : ("destructive" as const),
+                }))}
+            />
           )}
         </div>
       </DialogContent>
