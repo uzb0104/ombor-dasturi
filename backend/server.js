@@ -38,16 +38,28 @@ const allowedOrigins = [
   "http://127.0.0.1:5173",
   "http://localhost:4173",
   "http://127.0.0.1:4173",
+  "http://localhost:3000",
   process.env.FRONTEND_URL,
 ].filter(Boolean);
+
+function isOriginAllowed(origin) {
+  if (!origin) return true;
+  if (allowedOrigins.includes(origin)) return true;
+  if (origin.endsWith(".vercel.app")) return true;
+  if (process.env.ALLOWED_ORIGINS) {
+    const extraOrigins = process.env.ALLOWED_ORIGINS.split(",").map((s) => s.trim());
+    if (extraOrigins.includes(origin)) return true;
+  }
+  return false;
+}
 
 app.use(
   cors({
     origin: function (origin, callback) {
-      if (!origin || allowedOrigins.includes(origin)) {
+      if (isOriginAllowed(origin)) {
         callback(null, true);
       } else {
-        callback(new Error("CORS siyosati tomonidan bloklandi"));
+        callback(null, false);
       }
     },
     credentials: true,
