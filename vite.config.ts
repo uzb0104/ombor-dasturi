@@ -7,4 +7,7 @@ import tailwindcss from "@tailwindcss/vite";
 export default defineConfig({
   base: "./",
   plugins: [TanStackRouterVite(), react(), tsconfigPaths(), tailwindcss()],
+  build: {
+    chunkSizeWarningLimit: 1200,
+  },
 });
