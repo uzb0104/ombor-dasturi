@@ -18,7 +18,7 @@ export function validate(schema) {
 }
 
 export const loginSchema = z.object({
-  email: z.string().email("Noto'g'ri email shakli"),
+  email: z.string().min(3, "Login / Email kamida 3 ta belgidan iborat bo'lishi kerak"),
   password: z.string().min(4, "Parol kamida 4 ta belgidan iborat bo'lishi kerak"),
 });
 
@@ -146,7 +146,7 @@ export const debtPaymentSchema = z.object({
 export const userSchema = z.object({
   id: z.string().optional(),
   name: z.string().min(1, "Ism kiritilishi shart"),
-  email: z.string().email("Noto'g'ri email shakli"),
+  email: z.string().min(3, "Login / Email kamida 3 belgidan iborat bo'lishi kerak"),
   password: z.string().min(4, "Parol kamida 4 belgidan iborat bo'lishi kerak").optional(),
   oldPassword: z.string().optional(),
   role: z.enum(["Admin", "Sotuvchi", "Omborchi"]).default("Sotuvchi"),

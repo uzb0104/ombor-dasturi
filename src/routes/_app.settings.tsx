@@ -90,6 +90,7 @@ function SettingsPage() {
   const { confirm } = useConfirm();
 
   const [profileName, setProfileName] = useState(user?.name || "");
+  const [profileEmail, setProfileEmail] = useState(user?.email || "");
   const [passwords, setPasswords] = useState({ current: "", new: "", confirm: "" });
   const [showCurrentPass, setShowCurrentPass] = useState(false);
   const [showNewPass, setShowNewPass] = useState(false);
@@ -101,7 +102,11 @@ function SettingsPage() {
       toast.error(t("settings.nameEmpty"));
       return;
     }
-    updateProfile({ name: profileName.trim() });
+    if (!profileEmail.trim()) {
+      toast.error("Email yoki Login kiritilishi shart");
+      return;
+    }
+    updateProfile({ name: profileName.trim(), email: profileEmail.trim() });
     toast.success(t("settings.profileUpdated"));
   };
 
@@ -164,8 +169,12 @@ function SettingsPage() {
                 <Input value={profileName} onChange={(e) => setProfileName(e.target.value)} />
               </div>
               <div>
-                <Label>{t("common.email")}</Label>
-                <Input value={user?.email} disabled />
+                <Label>Email / Login</Label>
+                <Input
+                  value={profileEmail}
+                  onChange={(e) => setProfileEmail(e.target.value)}
+                  placeholder="admin@autoerp.uz yoki login"
+                />
               </div>
               <div>
                 <Label>{t("common.role")}</Label>
@@ -300,6 +309,7 @@ function UsersManagement({
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<string | null>(null);
   const [form, setForm] = useState<UserForm>(emptyUser());
+  const [showUserPass, setShowUserPass] = useState(false);
   const { confirm, confirmNode } = useConfirm();
 
   const removeUser = async (u: AppUser) => {

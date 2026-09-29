@@ -118,14 +118,14 @@ function LoginPage() {
           </div>
           <form onSubmit={onSubmit} className="space-y-4">
             <div className="space-y-1.5">
-              <Label htmlFor="email">{t("login.email")}</Label>
+              <Label htmlFor="email">Email yoki Login</Label>
               <Input
                 id="email"
-                type="email"
+                type="text"
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="admin@autoerp.uz"
+                placeholder="admin@autoerp.uz yoki login"
               />
             </div>
             <div className="space-y-1.5">

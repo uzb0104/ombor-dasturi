@@ -54,7 +54,7 @@ type State = {
   addAppUser: (u: Omit<AppUser, "id">) => void;
   updateAppUser: (id: string, u: Partial<AppUser>) => void;
   deleteAppUser: (id: string) => void;
-  updateProfile: (data: { name: string }) => void;
+  updateProfile: (data: { name: string; email?: string }) => void;
   changePassword: (currentPassword: string, newPassword: string) => Promise<boolean>;
 
   theme: "light" | "dark";
@@ -310,15 +310,17 @@ export const useStore = create<State>()(
         updateProfile: (data) => {
           const u = get().user;
           if (!u) return;
-          set({ user: { ...u, name: data.name } });
+          const name = data.name;
+          const email = (data.email || u.email).trim().toLowerCase();
+          set({ user: { ...u, name, email } });
           set({
-            appUsers: get().appUsers.map((x) => (x.id === u.id ? { ...x, name: data.name } : x)),
+            appUsers: get().appUsers.map((x) => (x.id === u.id ? { ...x, name, email } : x)),
           });
-          syncApi(usersApi.update(u.id, { name: data.name }), { onFail: resync });
+          syncApi(usersApi.update(u.id, { name, email }), { onFail: resync });
           get().logAudit({
             action: "update",
             entity: "profile",
-            summary: `Profil yangilandi: ${data.name}`,
+            summary: `Profil yangilandi: ${name} (${email})`,
           });
         },
         changePassword: async (currentPassword, newPassword) => {

@@ -80,7 +80,6 @@ router.put("/:id", authenticateToken, validate(userSchema.partial()), async (req
     delete updates.role;
     delete updates.permissions;
     delete updates.active;
-    delete updates.email;
   }
 
   try {
