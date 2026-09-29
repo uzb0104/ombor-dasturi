@@ -81,4 +81,22 @@ export const ALL_PERMISSIONS = PERMISSION_MODULES.map((m) => m.path);
 export const formatSom = (n: number) =>
   new Intl.NumberFormat("uz-UZ").format(Math.round(n)) + " so'm";
 
+export const formatUsd = (n: number) =>
+  "$" +
+  new Intl.NumberFormat("en-US", {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+  }).format(n);
+
 export const formatNumber = (n: number) => new Intl.NumberFormat("uz-UZ").format(n);
+
+export const formatPriceBoth = (som: number, usd?: number, usdRate: number = 12800) => {
+  const finalUsd =
+    usd !== undefined && usd > 0
+      ? usd
+      : som > 0 && usdRate > 0
+        ? Number((som / usdRate).toFixed(2))
+        : 0;
+  if (!finalUsd) return formatSom(som);
+  return `${formatSom(som)} (${formatUsd(finalUsd)})`;
+};

@@ -18,6 +18,9 @@ export type Product = {
   supplierId?: string | null;
   buyPrice: number;
   sellPrice: number;
+  buyPriceUsd?: number;
+  sellPriceUsd?: number;
+  currency?: "UZS" | "USD";
   quantity: number;
   minQty: number;
   image?: string | null;

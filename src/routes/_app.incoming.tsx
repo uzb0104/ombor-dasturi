@@ -90,6 +90,7 @@ function IncomingPage() {
     addSupplier,
     updateSupplier,
     deleteSupplier,
+    usdRate,
   } = useStore();
   const { confirm, confirmNode } = useConfirm();
   const sel = useSelection();
@@ -116,6 +117,7 @@ function IncomingPage() {
   const [productId, setProductId] = useState("");
   const [qty, setQty] = useState(1);
   const [buyPrice, setBuyPrice] = useState(0);
+  const [buyPriceUsd, setBuyPriceUsd] = useState(0);
 
   const [productComboOpen, setProductComboOpen] = useState(false);
   const [supplierComboOpen, setSupplierComboOpen] = useState(false);
@@ -139,7 +141,10 @@ function IncomingPage() {
   const handleProductSelect = (pId: string) => {
     setProductId(pId);
     const p = products.find((x) => x.id === pId);
-    if (p) setBuyPrice(p.buyPrice);
+    if (p) {
+      setBuyPrice(p.buyPrice);
+      setBuyPriceUsd(p.buyPriceUsd ?? (usdRate > 0 && p.buyPrice > 0 ? Number((p.buyPrice / usdRate).toFixed(2)) : 0));
+    }
   };
 
   const openNew = () => {
@@ -149,6 +154,7 @@ function IncomingPage() {
     setProductId("");
     setQty(1);
     setBuyPrice(0);
+    setBuyPriceUsd(0);
     setOpen(true);
   };
 
@@ -159,6 +165,7 @@ function IncomingPage() {
     setProductId(i.productId || "");
     setQty(i.qty || 1);
     setBuyPrice(i.buyPrice || 0);
+    setBuyPriceUsd(usdRate > 0 && i.buyPrice > 0 ? Number((i.buyPrice / usdRate).toFixed(2)) : 0);
     setOpen(true);
   };
 
@@ -803,8 +810,8 @@ function IncomingPage() {
               </div>
             </div>
 
-            {/* Qty & Price */}
-            <div className="grid grid-cols-2 gap-3">
+            {/* Qty & Dual Price */}
+            <div className="space-y-3">
               <div>
                 <Label className="text-xs font-semibold text-muted-foreground uppercase">
                   {t("products.qty")}
@@ -817,17 +824,45 @@ function IncomingPage() {
                   onChange={(e) => setQty(Math.max(1, +e.target.value))}
                 />
               </div>
-              <div>
-                <Label className="text-xs font-semibold text-muted-foreground uppercase">
-                  {t("incoming.incomingPrice")}
-                </Label>
-                <Input
-                  type="number"
-                  min={0}
-                  className="mt-1"
-                  value={buyPrice}
-                  onChange={(e) => setBuyPrice(Math.max(0, +e.target.value))}
-                />
+
+              <div className="p-3 rounded-lg border bg-muted/20 space-y-2">
+                <div className="flex items-center justify-between text-xs font-semibold">
+                  <span>{t("incoming.incomingPrice")} (So'm va Dollar $)</span>
+                  <span className="text-[11px] font-mono text-muted-foreground">1 $ = {usdRate || 12800} so'm</span>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <span className="text-[10px] text-muted-foreground">So'mda (UZS)</span>
+                    <Input
+                      type="number"
+                      min={0}
+                      className="mt-0.5"
+                      value={buyPrice || ""}
+                      onChange={(e) => {
+                        const val = Math.max(0, +e.target.value);
+                        setBuyPrice(val);
+                        setBuyPriceUsd(usdRate > 0 ? Number((val / usdRate).toFixed(2)) : 0);
+                      }}
+                      placeholder="0"
+                    />
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-muted-foreground">Dollarda ($ USD)</span>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      min={0}
+                      className="mt-0.5"
+                      value={buyPriceUsd || ""}
+                      onChange={(e) => {
+                        const val = Math.max(0, +e.target.value);
+                        setBuyPriceUsd(val);
+                        setBuyPrice(Math.round(val * usdRate));
+                      }}
+                      placeholder="0.00"
+                    />
+                  </div>
+                </div>
               </div>
             </div>
           </div>

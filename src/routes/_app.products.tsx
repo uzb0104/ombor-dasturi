@@ -31,9 +31,9 @@ import {
 } from "@/components/ui-kit";
 import { useStore } from "@/lib/store";
 import { productsApi } from "@/lib/api";
-import { formatSom } from "@/lib/constants";
+import { formatSom, formatPriceBoth } from "@/lib/constants";
 import { useEffect, useState } from "react";
-import { Plus, Search, Edit, Trash2, Package, ScanBarcode, Download, History } from "lucide-react";
+import { Plus, Search, Edit, Trash2, Package, ScanBarcode, Download, History, DollarSign } from "lucide-react";
 import { useT } from "@/lib/i18n";
 import { ProductImportDialog } from "@/components/ProductImportDialog";
 import { PriceHistoryDialog } from "@/components/PriceHistoryDialog";
@@ -61,7 +61,9 @@ type FormState = {
   vehicle: string;
   category: string;
   buyPrice: number;
+  buyPriceUsd: number;
   sellPrice: number;
+  sellPriceUsd: number;
   quantity: number;
   minQty: number;
   unitBrand: string;
@@ -78,7 +80,9 @@ const emptyForm = (firstCategory: string, firstBrand: string): FormState => ({
   vehicle: firstBrand,
   category: firstCategory,
   buyPrice: 0,
+  buyPriceUsd: 0,
   sellPrice: 0,
+  sellPriceUsd: 0,
   quantity: 0,
   minQty: 5,
   unitBrand: "",
@@ -95,8 +99,16 @@ const isTire = (cat: string) => /shina|balon/i.test(cat);
 function ProductsPage() {
   const t = useT();
   const navigate = useNavigate();
-  const { products, categories, vehicleBrands, addProduct, updateProduct, deleteProduct } =
-    useStore();
+  const {
+    products,
+    categories,
+    vehicleBrands,
+    addProduct,
+    updateProduct,
+    deleteProduct,
+    usdRate,
+    setUsdRate,
+  } = useStore();
   const [search, setSearch] = useState("");
   const [historyProduct, setHistoryProduct] = useState<Product | null>(null);
   const [cat, setCat] = useState<string>("all");
@@ -172,13 +184,21 @@ function ProductsPage() {
     const a = p.attributes || {};
     const v = a.voltage || "12V";
     const isPreset = VOLTAGE_OPTIONS.includes(v);
+    const buyUsd =
+      p.buyPriceUsd ??
+      (usdRate > 0 && p.buyPrice > 0 ? Number((p.buyPrice / usdRate).toFixed(2)) : 0);
+    const sellUsd =
+      p.sellPriceUsd ??
+      (usdRate > 0 && p.sellPrice > 0 ? Number((p.sellPrice / usdRate).toFixed(2)) : 0);
     setForm({
       name: p.name,
       barcode: p.barcode || "",
       vehicle: p.vehicle,
       category: p.category,
       buyPrice: p.buyPrice,
+      buyPriceUsd: buyUsd,
       sellPrice: p.sellPrice,
+      sellPriceUsd: sellUsd,
       quantity: p.quantity,
       minQty: p.minQty,
       unitBrand: a.unitBrand || "",
@@ -320,7 +340,9 @@ function ProductsPage() {
         ? products.find((product) => product.id === editing)?.supplierId || null
         : null,
       buyPrice: form.buyPrice,
+      buyPriceUsd: form.buyPriceUsd,
       sellPrice: form.sellPrice,
+      sellPriceUsd: form.sellPriceUsd,
       quantity: form.quantity,
       minQty: form.minQty,
       attributes: Object.keys(attributes).length ? attributes : undefined,
@@ -759,23 +781,104 @@ function ProductsPage() {
                       className="mt-1"
                     />
                   </div>
-                  <div>
-                    <Label>{t("products.buyPrice")}</Label>
-                    <Input
-                      type="number"
-                      value={form.buyPrice}
-                      onChange={(e) => setForm({ ...form, buyPrice: +e.target.value })}
-                      className="mt-1"
-                    />
-                  </div>
-                  <div>
-                    <Label>{t("products.sellPrice")}</Label>
-                    <Input
-                      type="number"
-                      value={form.sellPrice}
-                      onChange={(e) => setForm({ ...form, sellPrice: +e.target.value })}
-                      className="mt-1"
-                    />
+                  <div className="col-span-full border rounded-xl p-3 bg-muted/20 space-y-3 mt-1">
+                    <div className="flex flex-wrap items-center justify-between text-xs text-muted-foreground border-b pb-2 gap-2">
+                      <span className="font-semibold text-foreground flex items-center gap-1.5">
+                        <DollarSign className="w-4 h-4 text-emerald-600 dark:text-emerald-400" /> Narxlar (So'm va Dollar $)
+                      </span>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[11px]">Dollar kursi: 1 $ =</span>
+                        <input
+                          type="number"
+                          value={usdRate || 12800}
+                          onChange={(e) => setUsdRate(Math.max(1, Number(e.target.value)))}
+                          className="w-20 px-1.5 py-0.5 border rounded text-right text-xs bg-background font-mono font-semibold"
+                        />
+                        <span className="text-[11px]">so'm</span>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {/* Olish narxi */}
+                      <div className="space-y-1">
+                        <Label className="text-xs font-semibold">{t("products.buyPrice")}</Label>
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <span className="text-[10px] text-muted-foreground">So'mda (UZS)</span>
+                            <Input
+                              type="number"
+                              value={form.buyPrice || ""}
+                              onChange={(e) => {
+                                const val = Math.max(0, +e.target.value);
+                                setForm((f) => ({
+                                  ...f,
+                                  buyPrice: val,
+                                  buyPriceUsd: usdRate > 0 ? Number((val / usdRate).toFixed(2)) : 0,
+                                }));
+                              }}
+                              placeholder="0"
+                            />
+                          </div>
+                          <div>
+                            <span className="text-[10px] text-muted-foreground">Dollarda ($ USD)</span>
+                            <Input
+                              type="number"
+                              step="0.01"
+                              value={form.buyPriceUsd || ""}
+                              onChange={(e) => {
+                                const val = Math.max(0, +e.target.value);
+                                setForm((f) => ({
+                                  ...f,
+                                  buyPriceUsd: val,
+                                  buyPrice: Math.round(val * usdRate),
+                                }));
+                              }}
+                              placeholder="0.00"
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Sotish narxi */}
+                      <div className="space-y-1">
+                        <Label className="text-xs font-semibold">{t("products.sellPrice")}</Label>
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <span className="text-[10px] text-muted-foreground">So'mda (UZS)</span>
+                            <Input
+                              type="number"
+                              value={form.sellPrice || ""}
+                              onChange={(e) => {
+                                const val = Math.max(0, +e.target.value);
+                                setForm((f) => ({
+                                  ...f,
+                                  sellPrice: val,
+                                  sellPriceUsd: usdRate > 0 ? Number((val / usdRate).toFixed(2)) : 0,
+                                }));
+                              }}
+                              placeholder="0"
+                            />
+                          </div>
+                          <div>
+                            <span className="text-[10px] text-muted-foreground">Dollarda ($ USD)</span>
+                            <Input
+                              type="number"
+                              step="0.01"
+                              value={form.sellPriceUsd || ""}
+                              onChange={(e) => {
+                                const val = Math.max(0, +e.target.value);
+                                setForm((f) => ({
+                                  ...f,
+                                  sellPriceUsd: val,
+                                  sellPrice: Math.round(val * usdRate),
+                                }));
+                              }}
+                              placeholder="0.00"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
                 <DialogFooter>
@@ -984,11 +1087,11 @@ function ProductsPage() {
                   <TableCell className="text-right tabular-nums font-semibold">
                     {p.quantity}
                   </TableCell>
-                  <TableCell className="hidden md:table-cell text-right tabular-nums text-sm text-muted-foreground">
-                    {formatSom(p.buyPrice)}
+                  <TableCell className="hidden md:table-cell text-right tabular-nums text-xs text-muted-foreground whitespace-nowrap">
+                    {formatPriceBoth(p.buyPrice, p.buyPriceUsd, usdRate)}
                   </TableCell>
-                  <TableCell className="text-right tabular-nums text-sm font-bold text-foreground">
-                    {formatSom(p.sellPrice)}
+                  <TableCell className="text-right tabular-nums text-xs font-bold text-foreground whitespace-nowrap">
+                    {formatPriceBoth(p.sellPrice, p.sellPriceUsd, usdRate)}
                   </TableCell>
                   <TableCell className="hidden sm:table-cell text-center">
                     <StatusBadge qty={p.quantity} min={p.minQty} />

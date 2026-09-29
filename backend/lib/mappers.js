@@ -11,6 +11,9 @@ export function toDbProduct(p) {
   if (p.supplierId !== undefined) dbObj.supplier_id = p.supplierId || null;
   if (p.buyPrice !== undefined) dbObj.buy_price = p.buyPrice;
   if (p.sellPrice !== undefined) dbObj.sell_price = p.sellPrice;
+  if (p.buyPriceUsd !== undefined) dbObj.buy_price_usd = p.buyPriceUsd;
+  if (p.sellPriceUsd !== undefined) dbObj.sell_price_usd = p.sellPriceUsd;
+  if (p.currency !== undefined) dbObj.currency = p.currency;
   if (p.quantity !== undefined) dbObj.quantity = p.quantity;
   if (p.minQty !== undefined) dbObj.min_qty = p.minQty;
   if (p.image !== undefined) dbObj.image = p.image || null;
@@ -32,6 +35,9 @@ export function toFeProduct(p) {
     supplierId: p.supplier_id,
     buyPrice: Number(p.buy_price || 0),
     sellPrice: Number(p.sell_price || 0),
+    buyPriceUsd: p.buy_price_usd != null ? Number(p.buy_price_usd) : undefined,
+    sellPriceUsd: p.sell_price_usd != null ? Number(p.sell_price_usd) : undefined,
+    currency: p.currency || "UZS",
     quantity: Number(p.quantity || 0),
     minQty: Number(p.min_qty || 0),
     image: p.image,

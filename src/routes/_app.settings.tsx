@@ -47,6 +47,7 @@ import {
   Building2,
   Eye,
   EyeOff,
+  DollarSign,
 } from "lucide-react";
 import { useState } from "react";
 import { useT } from "@/lib/i18n";
@@ -85,6 +86,8 @@ function SettingsPage() {
     deleteBranch,
     updateProfile,
     changePassword,
+    usdRate,
+    setUsdRate,
   } = useStore();
   const isAdmin = user?.role === "Admin";
   const { confirm } = useConfirm();
@@ -186,6 +189,26 @@ function SettingsPage() {
               </div>
             </div>
             <Button onClick={handleProfileSave}>{t("common.save")}</Button>
+          </Card>
+
+          <Card className="p-6 rounded-2xl space-y-4 max-w-2xl mt-5">
+            <h3 className="font-semibold text-base flex items-center gap-2">
+              <DollarSign className="h-5 w-5 text-emerald-500" />
+              Dollar Kursi (Valyuta kursi)
+            </h3>
+            <p className="text-xs text-muted-foreground">
+              Tovarlarga narx kiritish va so'm hamda dollar o'rtasida avtomatik hisob-kitob qilishda ishlatiladigan kurs.
+            </p>
+            <div className="flex items-center gap-3 max-w-xs">
+              <span className="text-sm font-medium">1 USD ($) =</span>
+              <Input
+                type="number"
+                value={usdRate || 12800}
+                onChange={(e) => setUsdRate(Math.max(1, Number(e.target.value)))}
+                className="font-mono text-base font-semibold text-emerald-600 dark:text-emerald-400"
+              />
+              <span className="text-sm font-medium">so'm</span>
+            </div>
           </Card>
         </TabsContent>
 

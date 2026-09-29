@@ -31,7 +31,7 @@ export const Route = createFileRoute("/_app/barcode")({ component: BarcodePage }
 
 function BarcodePage() {
   const t = useT();
-  const { products, categories, vehicleBrands, addProduct, updateProduct } = useStore();
+  const { products, categories, vehicleBrands, addProduct, updateProduct, usdRate } = useStore();
   const [code, setCode] = useState("");
   const [scanBuffer, setScanBuffer] = useState("");
   const [lastScan, setLastScan] = useState<string | null>(null);
@@ -47,7 +47,9 @@ function BarcodePage() {
     category: categories[0] || "Umumiy",
     vehicle: vehicleBrands[0] || "Barchasi",
     buyPrice: 0,
+    buyPriceUsd: 0,
     sellPrice: 0,
+    sellPriceUsd: 0,
     quantity: 1,
     minQty: 5,
   });
@@ -95,7 +97,9 @@ function BarcodePage() {
       category: categories[0] || "Umumiy",
       vehicle: vehicleBrands[0] || "Barchasi",
       buyPrice: 0,
+      buyPriceUsd: 0,
       sellPrice: 0,
+      sellPriceUsd: 0,
       quantity: 1,
       minQty: 5,
     });
@@ -116,7 +120,9 @@ function BarcodePage() {
       category: createForm.category,
       vehicle: createForm.vehicle,
       buyPrice: Number(createForm.buyPrice) || 0,
+      buyPriceUsd: Number(createForm.buyPriceUsd) || undefined,
       sellPrice: Number(createForm.sellPrice) || 0,
+      sellPriceUsd: Number(createForm.sellPriceUsd) || undefined,
       quantity: Number(createForm.quantity) || 0,
       minQty: Number(createForm.minQty) || 5,
     };
@@ -130,7 +136,9 @@ function BarcodePage() {
       category: categories[0] || "Umumiy",
       vehicle: vehicleBrands[0] || "Barchasi",
       buyPrice: 0,
+      buyPriceUsd: 0,
       sellPrice: 0,
+      sellPriceUsd: 0,
       quantity: 1,
       minQty: 5,
     });
@@ -510,31 +518,92 @@ function BarcodePage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label>Kirim narxi (so'm)</Label>
-                <Input
-                  type="number"
-                  min="0"
-                  value={createForm.buyPrice || ""}
-                  onChange={(e) =>
-                    setCreateForm({ ...createForm, buyPrice: Number(e.target.value) })
-                  }
-                  placeholder="0"
-                />
+            <div className="space-y-3 p-3 rounded-lg border bg-muted/20">
+              <div className="text-xs font-semibold text-foreground flex items-center justify-between">
+                <span>Narxlar (So'm va Dollar $)</span>
+                <span className="text-[11px] text-muted-foreground font-mono">1 $ = {usdRate || 12800} so'm</span>
               </div>
+              
+              <div className="grid grid-cols-2 gap-3">
+                {/* Kirim narxi */}
+                <div className="space-y-1">
+                  <Label className="text-xs">Kirim narxi</Label>
+                  <div>
+                    <span className="text-[10px] text-muted-foreground">So'mda (UZS)</span>
+                    <Input
+                      type="number"
+                      min="0"
+                      value={createForm.buyPrice || ""}
+                      onChange={(e) => {
+                        const val = Math.max(0, +e.target.value);
+                        setCreateForm((f) => ({
+                          ...f,
+                          buyPrice: val,
+                          buyPriceUsd: usdRate > 0 ? Number((val / usdRate).toFixed(2)) : 0,
+                        }));
+                      }}
+                      placeholder="0"
+                    />
+                  </div>
+                  <div className="mt-1">
+                    <span className="text-[10px] text-muted-foreground">Dollarda ($ USD)</span>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={createForm.buyPriceUsd || ""}
+                      onChange={(e) => {
+                        const val = Math.max(0, +e.target.value);
+                        setCreateForm((f) => ({
+                          ...f,
+                          buyPriceUsd: val,
+                          buyPrice: Math.round(val * usdRate),
+                        }));
+                      }}
+                      placeholder="0.00"
+                    />
+                  </div>
+                </div>
 
-              <div>
-                <Label>Sotuv narxi (so'm)</Label>
-                <Input
-                  type="number"
-                  min="0"
-                  value={createForm.sellPrice || ""}
-                  onChange={(e) =>
-                    setCreateForm({ ...createForm, sellPrice: Number(e.target.value) })
-                  }
-                  placeholder="0"
-                />
+                {/* Sotuv narxi */}
+                <div className="space-y-1">
+                  <Label className="text-xs">Sotuv narxi</Label>
+                  <div>
+                    <span className="text-[10px] text-muted-foreground">So'mda (UZS)</span>
+                    <Input
+                      type="number"
+                      min="0"
+                      value={createForm.sellPrice || ""}
+                      onChange={(e) => {
+                        const val = Math.max(0, +e.target.value);
+                        setCreateForm((f) => ({
+                          ...f,
+                          sellPrice: val,
+                          sellPriceUsd: usdRate > 0 ? Number((val / usdRate).toFixed(2)) : 0,
+                        }));
+                      }}
+                      placeholder="0"
+                    />
+                  </div>
+                  <div className="mt-1">
+                    <span className="text-[10px] text-muted-foreground">Dollarda ($ USD)</span>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={createForm.sellPriceUsd || ""}
+                      onChange={(e) => {
+                        const val = Math.max(0, +e.target.value);
+                        setCreateForm((f) => ({
+                          ...f,
+                          sellPriceUsd: val,
+                          sellPrice: Math.round(val * usdRate),
+                        }));
+                      }}
+                      placeholder="0.00"
+                    />
+                  </div>
+                </div>
               </div>
             </div>
 
