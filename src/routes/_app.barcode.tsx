@@ -41,6 +41,8 @@ function BarcodePage() {
 
   // Yangi tovar yaratish modal holatlari
   const [quickCreateOpen, setQuickCreateOpen] = useState(false);
+  const [createBuyCurrency, setCreateBuyCurrency] = useState<"UZS" | "USD">("UZS");
+  const [createSellCurrency, setCreateSellCurrency] = useState<"UZS" | "USD">("UZS");
   const [createForm, setCreateForm] = useState({
     name: "",
     barcode: "",
@@ -524,84 +526,106 @@ function BarcodePage() {
                 <span className="text-[11px] text-muted-foreground font-mono">1 $ = {usdRate || 12800} so'm</span>
               </div>
               
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {/* Kirim narxi */}
-                <div className="space-y-1">
-                  <Label className="text-xs">Kirim narxi</Label>
-                  <div>
-                    <span className="text-[10px] text-muted-foreground">So'mda (UZS)</span>
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-semibold">Kirim narxi</Label>
+                  <div className="flex items-center gap-2">
                     <Input
                       type="number"
+                      step={createBuyCurrency === "USD" ? "0.01" : "1"}
                       min="0"
-                      value={createForm.buyPrice || ""}
+                      value={createBuyCurrency === "UZS" ? (createForm.buyPrice || "") : (createForm.buyPriceUsd || "")}
                       onChange={(e) => {
                         const val = Math.max(0, +e.target.value);
-                        setCreateForm((f) => ({
-                          ...f,
-                          buyPrice: val,
-                          buyPriceUsd: usdRate > 0 ? Number((val / usdRate).toFixed(2)) : 0,
-                        }));
+                        if (createBuyCurrency === "UZS") {
+                          setCreateForm((f) => ({
+                            ...f,
+                            buyPrice: val,
+                            buyPriceUsd: usdRate > 0 ? Number((val / usdRate).toFixed(2)) : 0,
+                          }));
+                        } else {
+                          setCreateForm((f) => ({
+                            ...f,
+                            buyPriceUsd: val,
+                            buyPrice: Math.round(val * usdRate),
+                          }));
+                        }
                       }}
                       placeholder="0"
+                      className="flex-1"
                     />
+                    <Select value={createBuyCurrency} onValueChange={(v: "UZS" | "USD") => setCreateBuyCurrency(v)}>
+                      <SelectTrigger className="w-[110px] text-xs shrink-0">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="UZS">So'm (UZS)</SelectItem>
+                        <SelectItem value="USD">Dollar ($)</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
-                  <div className="mt-1">
-                    <span className="text-[10px] text-muted-foreground">Dollarda ($ USD)</span>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      value={createForm.buyPriceUsd || ""}
-                      onChange={(e) => {
-                        const val = Math.max(0, +e.target.value);
-                        setCreateForm((f) => ({
-                          ...f,
-                          buyPriceUsd: val,
-                          buyPrice: Math.round(val * usdRate),
-                        }));
-                      }}
-                      placeholder="0.00"
-                    />
+                  <div className="text-[11px] text-muted-foreground px-0.5 min-h-[16px]">
+                    {createBuyCurrency === "UZS" ? (
+                      createForm.buyPrice > 0 ? (
+                        <span>≈ ${createForm.buyPriceUsd || (usdRate > 0 ? (createForm.buyPrice / usdRate).toFixed(2) : 0)} USD</span>
+                      ) : null
+                    ) : (
+                      createForm.buyPriceUsd > 0 ? (
+                        <span>≈ {formatSom(createForm.buyPrice || Math.round(createForm.buyPriceUsd * usdRate))} so'm</span>
+                      ) : null
+                    )}
                   </div>
                 </div>
 
                 {/* Sotuv narxi */}
-                <div className="space-y-1">
-                  <Label className="text-xs">Sotuv narxi</Label>
-                  <div>
-                    <span className="text-[10px] text-muted-foreground">So'mda (UZS)</span>
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-semibold">Sotuv narxi</Label>
+                  <div className="flex items-center gap-2">
                     <Input
                       type="number"
+                      step={createSellCurrency === "USD" ? "0.01" : "1"}
                       min="0"
-                      value={createForm.sellPrice || ""}
+                      value={createSellCurrency === "UZS" ? (createForm.sellPrice || "") : (createForm.sellPriceUsd || "")}
                       onChange={(e) => {
                         const val = Math.max(0, +e.target.value);
-                        setCreateForm((f) => ({
-                          ...f,
-                          sellPrice: val,
-                          sellPriceUsd: usdRate > 0 ? Number((val / usdRate).toFixed(2)) : 0,
-                        }));
+                        if (createSellCurrency === "UZS") {
+                          setCreateForm((f) => ({
+                            ...f,
+                            sellPrice: val,
+                            sellPriceUsd: usdRate > 0 ? Number((val / usdRate).toFixed(2)) : 0,
+                          }));
+                        } else {
+                          setCreateForm((f) => ({
+                            ...f,
+                            sellPriceUsd: val,
+                            sellPrice: Math.round(val * usdRate),
+                          }));
+                        }
                       }}
                       placeholder="0"
+                      className="flex-1"
                     />
+                    <Select value={createSellCurrency} onValueChange={(v: "UZS" | "USD") => setCreateSellCurrency(v)}>
+                      <SelectTrigger className="w-[110px] text-xs shrink-0">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="UZS">So'm (UZS)</SelectItem>
+                        <SelectItem value="USD">Dollar ($)</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
-                  <div className="mt-1">
-                    <span className="text-[10px] text-muted-foreground">Dollarda ($ USD)</span>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      value={createForm.sellPriceUsd || ""}
-                      onChange={(e) => {
-                        const val = Math.max(0, +e.target.value);
-                        setCreateForm((f) => ({
-                          ...f,
-                          sellPriceUsd: val,
-                          sellPrice: Math.round(val * usdRate),
-                        }));
-                      }}
-                      placeholder="0.00"
-                    />
+                  <div className="text-[11px] text-muted-foreground px-0.5 min-h-[16px]">
+                    {createSellCurrency === "UZS" ? (
+                      createForm.sellPrice > 0 ? (
+                        <span>≈ ${createForm.sellPriceUsd || (usdRate > 0 ? (createForm.sellPrice / usdRate).toFixed(2) : 0)} USD</span>
+                      ) : null
+                    ) : (
+                      createForm.sellPriceUsd > 0 ? (
+                        <span>≈ {formatSom(createForm.sellPrice || Math.round(createForm.sellPriceUsd * usdRate))} so'm</span>
+                      ) : null
+                    )}
                   </div>
                 </div>
               </div>

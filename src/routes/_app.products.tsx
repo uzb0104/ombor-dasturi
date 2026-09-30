@@ -123,6 +123,8 @@ function ProductsPage() {
   const [restockBuyPrice, setRestockBuyPrice] = useState("");
   const [restockSellPrice, setRestockSellPrice] = useState("");
   const [editing, setEditing] = useState<string | null>(null);
+  const [buyCurrency, setBuyCurrency] = useState<"UZS" | "USD">("UZS");
+  const [sellCurrency, setSellCurrency] = useState<"UZS" | "USD">("UZS");
   const [form, setForm] = useState<FormState>(
     emptyForm(categories[0] || "", vehicleBrands[0] || ""),
   );
@@ -181,6 +183,8 @@ function ProductsPage() {
     const p = products.find((x) => x.id === id);
     if (!p) return;
     setEditing(id);
+    setBuyCurrency(p.buyPriceUsd && !p.buyPrice ? "USD" : "UZS");
+    setSellCurrency(p.sellPriceUsd && !p.sellPrice ? "USD" : "UZS");
     const a = p.attributes || {};
     const v = a.voltage || "12V";
     const isPreset = VOLTAGE_OPTIONS.includes(v);
@@ -301,13 +305,6 @@ function ProductsPage() {
     const category = categories.includes(form.category) ? form.category : categories[0];
     const vehicle = vehicleBrands.includes(form.vehicle) ? form.vehicle : vehicleBrands[0];
     const bc = form.barcode.trim().toUpperCase();
-    if (bc) {
-      const dup = products.find((p) => p.barcode === bc && p.id !== editing);
-      if (dup) {
-        toast.error(t("products.codeExists", { name: dup.name }));
-        return;
-      }
-    }
     const attributes: ProductAttributes = {};
     if (form.unitBrand.trim()) attributes.unitBrand = form.unitBrand.trim();
     if (isBattery(category)) {
@@ -492,6 +489,8 @@ function ProductsPage() {
                     onClick={() => {
                       setAddModeOpen(false);
                       setEditing(null);
+                      setBuyCurrency("UZS");
+                      setSellCurrency("UZS");
                       setForm(emptyForm(categories[0] || "", vehicleBrands[0] || ""));
                       setOpen(true);
                     }}
@@ -800,82 +799,104 @@ function ProductsPage() {
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       {/* Olish narxi */}
-                      <div className="space-y-1">
+                      <div className="space-y-1.5">
                         <Label className="text-xs font-semibold">{t("products.buyPrice")}</Label>
-                        <div className="grid grid-cols-2 gap-2">
-                          <div>
-                            <span className="text-[10px] text-muted-foreground">So'mda (UZS)</span>
-                            <Input
-                              type="number"
-                              value={form.buyPrice || ""}
-                              onChange={(e) => {
-                                const val = Math.max(0, +e.target.value);
+                        <div className="flex items-center gap-2">
+                          <Input
+                            type="number"
+                            step={buyCurrency === "USD" ? "0.01" : "1"}
+                            min="0"
+                            value={buyCurrency === "UZS" ? (form.buyPrice || "") : (form.buyPriceUsd || "")}
+                            onChange={(e) => {
+                              const val = Math.max(0, +e.target.value);
+                              if (buyCurrency === "UZS") {
                                 setForm((f) => ({
                                   ...f,
                                   buyPrice: val,
                                   buyPriceUsd: usdRate > 0 ? Number((val / usdRate).toFixed(2)) : 0,
                                 }));
-                              }}
-                              placeholder="0"
-                            />
-                          </div>
-                          <div>
-                            <span className="text-[10px] text-muted-foreground">Dollarda ($ USD)</span>
-                            <Input
-                              type="number"
-                              step="0.01"
-                              value={form.buyPriceUsd || ""}
-                              onChange={(e) => {
-                                const val = Math.max(0, +e.target.value);
+                              } else {
                                 setForm((f) => ({
                                   ...f,
                                   buyPriceUsd: val,
                                   buyPrice: Math.round(val * usdRate),
                                 }));
-                              }}
-                              placeholder="0.00"
-                            />
-                          </div>
+                              }
+                            }}
+                            placeholder="0"
+                            className="flex-1"
+                          />
+                          <Select value={buyCurrency} onValueChange={(v: "UZS" | "USD") => setBuyCurrency(v)}>
+                            <SelectTrigger className="w-[110px] text-xs shrink-0">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="UZS">So'm (UZS)</SelectItem>
+                              <SelectItem value="USD">Dollar ($)</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="text-[11px] text-muted-foreground px-0.5 min-h-[16px]">
+                          {buyCurrency === "UZS" ? (
+                            form.buyPrice > 0 ? (
+                              <span>≈ ${form.buyPriceUsd || (usdRate > 0 ? (form.buyPrice / usdRate).toFixed(2) : 0)} USD</span>
+                            ) : null
+                          ) : (
+                            form.buyPriceUsd > 0 ? (
+                              <span>≈ {formatSom(form.buyPrice || Math.round(form.buyPriceUsd * usdRate))} so'm</span>
+                            ) : null
+                          )}
                         </div>
                       </div>
 
                       {/* Sotish narxi */}
-                      <div className="space-y-1">
+                      <div className="space-y-1.5">
                         <Label className="text-xs font-semibold">{t("products.sellPrice")}</Label>
-                        <div className="grid grid-cols-2 gap-2">
-                          <div>
-                            <span className="text-[10px] text-muted-foreground">So'mda (UZS)</span>
-                            <Input
-                              type="number"
-                              value={form.sellPrice || ""}
-                              onChange={(e) => {
-                                const val = Math.max(0, +e.target.value);
+                        <div className="flex items-center gap-2">
+                          <Input
+                            type="number"
+                            step={sellCurrency === "USD" ? "0.01" : "1"}
+                            min="0"
+                            value={sellCurrency === "UZS" ? (form.sellPrice || "") : (form.sellPriceUsd || "")}
+                            onChange={(e) => {
+                              const val = Math.max(0, +e.target.value);
+                              if (sellCurrency === "UZS") {
                                 setForm((f) => ({
                                   ...f,
                                   sellPrice: val,
                                   sellPriceUsd: usdRate > 0 ? Number((val / usdRate).toFixed(2)) : 0,
                                 }));
-                              }}
-                              placeholder="0"
-                            />
-                          </div>
-                          <div>
-                            <span className="text-[10px] text-muted-foreground">Dollarda ($ USD)</span>
-                            <Input
-                              type="number"
-                              step="0.01"
-                              value={form.sellPriceUsd || ""}
-                              onChange={(e) => {
-                                const val = Math.max(0, +e.target.value);
+                              } else {
                                 setForm((f) => ({
                                   ...f,
                                   sellPriceUsd: val,
                                   sellPrice: Math.round(val * usdRate),
                                 }));
-                              }}
-                              placeholder="0.00"
-                            />
-                          </div>
+                              }
+                            }}
+                            placeholder="0"
+                            className="flex-1"
+                          />
+                          <Select value={sellCurrency} onValueChange={(v: "UZS" | "USD") => setSellCurrency(v)}>
+                            <SelectTrigger className="w-[110px] text-xs shrink-0">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="UZS">So'm (UZS)</SelectItem>
+                              <SelectItem value="USD">Dollar ($)</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="text-[11px] text-muted-foreground px-0.5 min-h-[16px]">
+                          {sellCurrency === "UZS" ? (
+                            form.sellPrice > 0 ? (
+                              <span>≈ ${form.sellPriceUsd || (usdRate > 0 ? (form.sellPrice / usdRate).toFixed(2) : 0)} USD</span>
+                            ) : null
+                          ) : (
+                            form.sellPriceUsd > 0 ? (
+                              <span>≈ {formatSom(form.sellPrice || Math.round(form.sellPriceUsd * usdRate))} so'm</span>
+                            ) : null
+                          )}
                         </div>
                       </div>
                     </div>

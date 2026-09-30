@@ -32,6 +32,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   Command,
@@ -118,6 +125,7 @@ function IncomingPage() {
   const [qty, setQty] = useState(1);
   const [buyPrice, setBuyPrice] = useState(0);
   const [buyPriceUsd, setBuyPriceUsd] = useState(0);
+  const [buyCurrency, setBuyCurrency] = useState<"UZS" | "USD">("UZS");
 
   const [productComboOpen, setProductComboOpen] = useState(false);
   const [supplierComboOpen, setSupplierComboOpen] = useState(false);
@@ -827,41 +835,48 @@ function IncomingPage() {
 
               <div className="p-3 rounded-lg border bg-muted/20 space-y-2">
                 <div className="flex items-center justify-between text-xs font-semibold">
-                  <span>{t("incoming.incomingPrice")} (So'm va Dollar $)</span>
+                  <span>{t("incoming.incomingPrice")}</span>
                   <span className="text-[11px] font-mono text-muted-foreground">1 $ = {usdRate || 12800} so'm</span>
                 </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <span className="text-[10px] text-muted-foreground">So'mda (UZS)</span>
-                    <Input
-                      type="number"
-                      min={0}
-                      className="mt-0.5"
-                      value={buyPrice || ""}
-                      onChange={(e) => {
-                        const val = Math.max(0, +e.target.value);
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="number"
+                    step={buyCurrency === "USD" ? "0.01" : "1"}
+                    min={0}
+                    value={buyCurrency === "UZS" ? (buyPrice || "") : (buyPriceUsd || "")}
+                    onChange={(e) => {
+                      const val = Math.max(0, +e.target.value);
+                      if (buyCurrency === "UZS") {
                         setBuyPrice(val);
                         setBuyPriceUsd(usdRate > 0 ? Number((val / usdRate).toFixed(2)) : 0);
-                      }}
-                      placeholder="0"
-                    />
-                  </div>
-                  <div>
-                    <span className="text-[10px] text-muted-foreground">Dollarda ($ USD)</span>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      min={0}
-                      className="mt-0.5"
-                      value={buyPriceUsd || ""}
-                      onChange={(e) => {
-                        const val = Math.max(0, +e.target.value);
+                      } else {
                         setBuyPriceUsd(val);
                         setBuyPrice(Math.round(val * usdRate));
-                      }}
-                      placeholder="0.00"
-                    />
-                  </div>
+                      }
+                    }}
+                    placeholder="0"
+                    className="flex-1"
+                  />
+                  <Select value={buyCurrency} onValueChange={(v: "UZS" | "USD") => setBuyCurrency(v)}>
+                    <SelectTrigger className="w-[110px] text-xs shrink-0">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="UZS">So'm (UZS)</SelectItem>
+                      <SelectItem value="USD">Dollar ($)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="text-[11px] text-muted-foreground px-0.5 min-h-[16px]">
+                  {buyCurrency === "UZS" ? (
+                    buyPrice > 0 ? (
+                      <span>≈ ${buyPriceUsd || (usdRate > 0 ? (buyPrice / usdRate).toFixed(2) : 0)} USD</span>
+                    ) : null
+                  ) : (
+                    buyPriceUsd > 0 ? (
+                      <span>≈ {formatSom(buyPrice || Math.round(buyPriceUsd * usdRate))} so'm</span>
+                    ) : null
+                  )}
                 </div>
               </div>
             </div>
