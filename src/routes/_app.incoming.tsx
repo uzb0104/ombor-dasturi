@@ -872,17 +872,6 @@ function IncomingPage() {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="text-[11px] text-muted-foreground px-0.5 min-h-[16px]">
-                  {buyCurrency === "UZS" ? (
-                    buyPrice > 0 ? (
-                      <span>
-                        ≈ ${buyPriceUsd || (usdRate > 0 ? (buyPrice / usdRate).toFixed(2) : 0)} USD
-                      </span>
-                    ) : null
-                  ) : buyPriceUsd > 0 ? (
-                    <span>≈ {formatSom(buyPrice || Math.round(buyPriceUsd * usdRate))} so'm</span>
-                  ) : null}
-                </div>
               </div>
             </div>
           </div>

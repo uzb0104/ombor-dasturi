@@ -571,26 +571,6 @@ function BarcodePage() {
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="text-[11px] text-muted-foreground px-0.5 min-h-[16px]">
-                    {createBuyCurrency === "UZS" ? (
-                      createForm.buyPrice > 0 ? (
-                        <span>
-                          ≈ $
-                          {createForm.buyPriceUsd ||
-                            (usdRate > 0 ? (createForm.buyPrice / usdRate).toFixed(2) : 0)}{" "}
-                          USD
-                        </span>
-                      ) : null
-                    ) : createForm.buyPriceUsd > 0 ? (
-                      <span>
-                        ≈{" "}
-                        {formatSom(
-                          createForm.buyPrice || Math.round(createForm.buyPriceUsd * usdRate),
-                        )}{" "}
-                        so'm
-                      </span>
-                    ) : null}
-                  </div>
                 </div>
 
                 {/* Sotuv narxi */}
@@ -637,26 +617,6 @@ function BarcodePage() {
                         <SelectItem value="USD">Dollar ($)</SelectItem>
                       </SelectContent>
                     </Select>
-                  </div>
-                  <div className="text-[11px] text-muted-foreground px-0.5 min-h-[16px]">
-                    {createSellCurrency === "UZS" ? (
-                      createForm.sellPrice > 0 ? (
-                        <span>
-                          ≈ $
-                          {createForm.sellPriceUsd ||
-                            (usdRate > 0 ? (createForm.sellPrice / usdRate).toFixed(2) : 0)}{" "}
-                          USD
-                        </span>
-                      ) : null
-                    ) : createForm.sellPriceUsd > 0 ? (
-                      <span>
-                        ≈{" "}
-                        {formatSom(
-                          createForm.sellPrice || Math.round(createForm.sellPriceUsd * usdRate),
-                        )}{" "}
-                        so'm
-                      </span>
-                    ) : null}
                   </div>
                 </div>
               </div>

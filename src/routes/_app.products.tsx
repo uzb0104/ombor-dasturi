@@ -32,7 +32,7 @@ import {
 import { useStore } from "@/lib/store";
 import { productsApi } from "@/lib/api";
 import { formatSom, formatPriceBoth } from "@/lib/constants";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import {
   Plus,
   Search,
@@ -43,6 +43,8 @@ import {
   Download,
   History,
   DollarSign,
+  ShoppingCart,
+  TrendingUp,
 } from "lucide-react";
 import { useT } from "@/lib/i18n";
 import { ProductImportDialog } from "@/components/ProductImportDialog";
@@ -140,6 +142,18 @@ function ProductsPage() {
   );
   const { confirm, confirmNode } = useConfirm();
   const sel = useSelection();
+
+  const totalBuyCost = useMemo(
+    () => products.reduce((acc, p) => acc + (p.buyPrice || 0) * (p.quantity || 0), 0),
+    [products],
+  );
+
+  const totalSellValue = useMemo(
+    () => products.reduce((acc, p) => acc + (p.sellPrice || 0) * (p.quantity || 0), 0),
+    [products],
+  );
+
+  const expectedProfit = totalSellValue - totalBuyCost;
 
   const [serverPage, setServerPage] = useState(1);
   const [serverPages, setServerPages] = useState(1);
@@ -856,23 +870,6 @@ function ProductsPage() {
                             </SelectContent>
                           </Select>
                         </div>
-                        <div className="text-[11px] text-muted-foreground px-0.5 min-h-[16px]">
-                          {buyCurrency === "UZS" ? (
-                            form.buyPrice > 0 ? (
-                              <span>
-                                ≈ $
-                                {form.buyPriceUsd ||
-                                  (usdRate > 0 ? (form.buyPrice / usdRate).toFixed(2) : 0)}{" "}
-                                USD
-                              </span>
-                            ) : null
-                          ) : form.buyPriceUsd > 0 ? (
-                            <span>
-                              ≈ {formatSom(form.buyPrice || Math.round(form.buyPriceUsd * usdRate))}{" "}
-                              so'm
-                            </span>
-                          ) : null}
-                        </div>
                       </div>
 
                       {/* Sotish narxi */}
@@ -921,24 +918,6 @@ function ProductsPage() {
                             </SelectContent>
                           </Select>
                         </div>
-                        <div className="text-[11px] text-muted-foreground px-0.5 min-h-[16px]">
-                          {sellCurrency === "UZS" ? (
-                            form.sellPrice > 0 ? (
-                              <span>
-                                ≈ $
-                                {form.sellPriceUsd ||
-                                  (usdRate > 0 ? (form.sellPrice / usdRate).toFixed(2) : 0)}{" "}
-                                USD
-                              </span>
-                            ) : null
-                          ) : form.sellPriceUsd > 0 ? (
-                            <span>
-                              ≈{" "}
-                              {formatSom(form.sellPrice || Math.round(form.sellPriceUsd * usdRate))}{" "}
-                              so'm
-                            </span>
-                          ) : null}
-                        </div>
                       </div>
                     </div>
                   </div>
@@ -951,6 +930,82 @@ function ProductsPage() {
           </>
         }
       />
+
+      {/* Ombor Moliyaviy Statikasi */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <Card className="p-4 rounded-2xl border bg-card shadow-sm flex flex-col justify-between">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+              Sotib olishga qilingan xarajat
+            </span>
+            <div className="p-2 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400">
+              <ShoppingCart className="w-5 h-5" />
+            </div>
+          </div>
+          <div className="mt-2">
+            <div className="text-xl font-bold tracking-tight text-foreground">
+              {formatSom(totalBuyCost)}
+            </div>
+            {usdRate > 0 && (
+              <div className="text-xs text-muted-foreground font-mono mt-0.5">
+                ≈ $
+                {(totalBuyCost / usdRate).toLocaleString("en-US", {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                })}{" "}
+                USD
+              </div>
+            )}
+          </div>
+        </Card>
+
+        <Card className="p-4 rounded-2xl border bg-card shadow-sm flex flex-col justify-between">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+              Sotiladigan tovar qiymati
+            </span>
+            <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+              <TrendingUp className="w-5 h-5" />
+            </div>
+          </div>
+          <div className="mt-2">
+            <div className="text-xl font-bold tracking-tight text-foreground">
+              {formatSom(totalSellValue)}
+            </div>
+            {usdRate > 0 && (
+              <div className="text-xs text-muted-foreground font-mono mt-0.5">
+                ≈ $
+                {(totalSellValue / usdRate).toLocaleString("en-US", {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                })}{" "}
+                USD
+              </div>
+            )}
+          </div>
+        </Card>
+
+        <Card className="p-4 rounded-2xl border bg-card shadow-sm flex flex-col justify-between">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+              Kutilayotgan sof foyda
+            </span>
+            <div className="p-2 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400">
+              <DollarSign className="w-5 h-5" />
+            </div>
+          </div>
+          <div className="mt-2">
+            <div className="text-xl font-bold tracking-tight text-emerald-600 dark:text-emerald-400">
+              {formatSom(expectedProfit)}
+            </div>
+            <div className="text-xs text-muted-foreground mt-0.5">
+              {totalBuyCost > 0
+                ? `+${((expectedProfit / totalBuyCost) * 100).toFixed(1)}% umumiy ustama`
+                : "0% ustama"}
+            </div>
+          </div>
+        </Card>
+      </div>
 
       <Card className="p-4 rounded-2xl card-elevated border-border/60">
         <div className="flex flex-col sm:flex-row sm:flex-wrap gap-2 sm:gap-3 mb-4">
