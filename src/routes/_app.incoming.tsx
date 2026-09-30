@@ -151,7 +151,10 @@ function IncomingPage() {
     const p = products.find((x) => x.id === pId);
     if (p) {
       setBuyPrice(p.buyPrice);
-      setBuyPriceUsd(p.buyPriceUsd ?? (usdRate > 0 && p.buyPrice > 0 ? Number((p.buyPrice / usdRate).toFixed(2)) : 0));
+      setBuyPriceUsd(
+        p.buyPriceUsd ??
+          (usdRate > 0 && p.buyPrice > 0 ? Number((p.buyPrice / usdRate).toFixed(2)) : 0),
+      );
     }
   };
 
@@ -836,14 +839,16 @@ function IncomingPage() {
               <div className="p-3 rounded-lg border bg-muted/20 space-y-2">
                 <div className="flex items-center justify-between text-xs font-semibold">
                   <span>{t("incoming.incomingPrice")}</span>
-                  <span className="text-[11px] font-mono text-muted-foreground">1 $ = {usdRate || 12800} so'm</span>
+                  <span className="text-[11px] font-mono text-muted-foreground">
+                    1 $ = {usdRate || 12800} so'm
+                  </span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Input
                     type="number"
                     step={buyCurrency === "USD" ? "0.01" : "1"}
                     min={0}
-                    value={buyCurrency === "UZS" ? (buyPrice || "") : (buyPriceUsd || "")}
+                    value={buyCurrency === "UZS" ? buyPrice || "" : buyPriceUsd || ""}
                     onChange={(e) => {
                       const val = Math.max(0, +e.target.value);
                       if (buyCurrency === "UZS") {
@@ -857,7 +862,10 @@ function IncomingPage() {
                     placeholder="0"
                     className="flex-1"
                   />
-                  <Select value={buyCurrency} onValueChange={(v: "UZS" | "USD") => setBuyCurrency(v)}>
+                  <Select
+                    value={buyCurrency}
+                    onValueChange={(v: "UZS" | "USD") => setBuyCurrency(v)}
+                  >
                     <SelectTrigger className="w-[110px] text-xs shrink-0">
                       <SelectValue />
                     </SelectTrigger>
@@ -870,13 +878,13 @@ function IncomingPage() {
                 <div className="text-[11px] text-muted-foreground px-0.5 min-h-[16px]">
                   {buyCurrency === "UZS" ? (
                     buyPrice > 0 ? (
-                      <span>≈ ${buyPriceUsd || (usdRate > 0 ? (buyPrice / usdRate).toFixed(2) : 0)} USD</span>
+                      <span>
+                        ≈ ${buyPriceUsd || (usdRate > 0 ? (buyPrice / usdRate).toFixed(2) : 0)} USD
+                      </span>
                     ) : null
-                  ) : (
-                    buyPriceUsd > 0 ? (
-                      <span>≈ {formatSom(buyPrice || Math.round(buyPriceUsd * usdRate))} so'm</span>
-                    ) : null
-                  )}
+                  ) : buyPriceUsd > 0 ? (
+                    <span>≈ {formatSom(buyPrice || Math.round(buyPriceUsd * usdRate))} so'm</span>
+                  ) : null}
                 </div>
               </div>
             </div>

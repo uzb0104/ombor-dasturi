@@ -197,7 +197,8 @@ function SettingsPage() {
               Dollar Kursi (Valyuta kursi)
             </h3>
             <p className="text-xs text-muted-foreground">
-              Tovarlarga narx kiritish va so'm hamda dollar o'rtasida avtomatik hisob-kitob qilishda ishlatiladigan kurs.
+              Tovarlarga narx kiritish va so'm hamda dollar o'rtasida avtomatik hisob-kitob qilishda
+              ishlatiladigan kurs.
             </p>
             <div className="flex items-center gap-3 max-w-xs">
               <span className="text-sm font-medium">1 USD ($) =</span>

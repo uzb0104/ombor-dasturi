@@ -523,9 +523,11 @@ function BarcodePage() {
             <div className="space-y-3 p-3 rounded-lg border bg-muted/20">
               <div className="text-xs font-semibold text-foreground flex items-center justify-between">
                 <span>Narxlar (So'm va Dollar $)</span>
-                <span className="text-[11px] text-muted-foreground font-mono">1 $ = {usdRate || 12800} so'm</span>
+                <span className="text-[11px] text-muted-foreground font-mono">
+                  1 $ = {usdRate || 12800} so'm
+                </span>
               </div>
-              
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {/* Kirim narxi */}
                 <div className="space-y-1.5">
@@ -535,7 +537,11 @@ function BarcodePage() {
                       type="number"
                       step={createBuyCurrency === "USD" ? "0.01" : "1"}
                       min="0"
-                      value={createBuyCurrency === "UZS" ? (createForm.buyPrice || "") : (createForm.buyPriceUsd || "")}
+                      value={
+                        createBuyCurrency === "UZS"
+                          ? createForm.buyPrice || ""
+                          : createForm.buyPriceUsd || ""
+                      }
                       onChange={(e) => {
                         const val = Math.max(0, +e.target.value);
                         if (createBuyCurrency === "UZS") {
@@ -555,7 +561,10 @@ function BarcodePage() {
                       placeholder="0"
                       className="flex-1"
                     />
-                    <Select value={createBuyCurrency} onValueChange={(v: "UZS" | "USD") => setCreateBuyCurrency(v)}>
+                    <Select
+                      value={createBuyCurrency}
+                      onValueChange={(v: "UZS" | "USD") => setCreateBuyCurrency(v)}
+                    >
                       <SelectTrigger className="w-[110px] text-xs shrink-0">
                         <SelectValue />
                       </SelectTrigger>
@@ -568,13 +577,22 @@ function BarcodePage() {
                   <div className="text-[11px] text-muted-foreground px-0.5 min-h-[16px]">
                     {createBuyCurrency === "UZS" ? (
                       createForm.buyPrice > 0 ? (
-                        <span>≈ ${createForm.buyPriceUsd || (usdRate > 0 ? (createForm.buyPrice / usdRate).toFixed(2) : 0)} USD</span>
+                        <span>
+                          ≈ $
+                          {createForm.buyPriceUsd ||
+                            (usdRate > 0 ? (createForm.buyPrice / usdRate).toFixed(2) : 0)}{" "}
+                          USD
+                        </span>
                       ) : null
-                    ) : (
-                      createForm.buyPriceUsd > 0 ? (
-                        <span>≈ {formatSom(createForm.buyPrice || Math.round(createForm.buyPriceUsd * usdRate))} so'm</span>
-                      ) : null
-                    )}
+                    ) : createForm.buyPriceUsd > 0 ? (
+                      <span>
+                        ≈{" "}
+                        {formatSom(
+                          createForm.buyPrice || Math.round(createForm.buyPriceUsd * usdRate),
+                        )}{" "}
+                        so'm
+                      </span>
+                    ) : null}
                   </div>
                 </div>
 
@@ -586,7 +604,11 @@ function BarcodePage() {
                       type="number"
                       step={createSellCurrency === "USD" ? "0.01" : "1"}
                       min="0"
-                      value={createSellCurrency === "UZS" ? (createForm.sellPrice || "") : (createForm.sellPriceUsd || "")}
+                      value={
+                        createSellCurrency === "UZS"
+                          ? createForm.sellPrice || ""
+                          : createForm.sellPriceUsd || ""
+                      }
                       onChange={(e) => {
                         const val = Math.max(0, +e.target.value);
                         if (createSellCurrency === "UZS") {
@@ -606,7 +628,10 @@ function BarcodePage() {
                       placeholder="0"
                       className="flex-1"
                     />
-                    <Select value={createSellCurrency} onValueChange={(v: "UZS" | "USD") => setCreateSellCurrency(v)}>
+                    <Select
+                      value={createSellCurrency}
+                      onValueChange={(v: "UZS" | "USD") => setCreateSellCurrency(v)}
+                    >
                       <SelectTrigger className="w-[110px] text-xs shrink-0">
                         <SelectValue />
                       </SelectTrigger>
@@ -619,13 +644,22 @@ function BarcodePage() {
                   <div className="text-[11px] text-muted-foreground px-0.5 min-h-[16px]">
                     {createSellCurrency === "UZS" ? (
                       createForm.sellPrice > 0 ? (
-                        <span>≈ ${createForm.sellPriceUsd || (usdRate > 0 ? (createForm.sellPrice / usdRate).toFixed(2) : 0)} USD</span>
+                        <span>
+                          ≈ $
+                          {createForm.sellPriceUsd ||
+                            (usdRate > 0 ? (createForm.sellPrice / usdRate).toFixed(2) : 0)}{" "}
+                          USD
+                        </span>
                       ) : null
-                    ) : (
-                      createForm.sellPriceUsd > 0 ? (
-                        <span>≈ {formatSom(createForm.sellPrice || Math.round(createForm.sellPriceUsd * usdRate))} so'm</span>
-                      ) : null
-                    )}
+                    ) : createForm.sellPriceUsd > 0 ? (
+                      <span>
+                        ≈{" "}
+                        {formatSom(
+                          createForm.sellPrice || Math.round(createForm.sellPriceUsd * usdRate),
+                        )}{" "}
+                        so'm
+                      </span>
+                    ) : null}
                   </div>
                 </div>
               </div>

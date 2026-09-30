@@ -33,7 +33,17 @@ import { useStore } from "@/lib/store";
 import { productsApi } from "@/lib/api";
 import { formatSom, formatPriceBoth } from "@/lib/constants";
 import { useEffect, useState } from "react";
-import { Plus, Search, Edit, Trash2, Package, ScanBarcode, Download, History, DollarSign } from "lucide-react";
+import {
+  Plus,
+  Search,
+  Edit,
+  Trash2,
+  Package,
+  ScanBarcode,
+  Download,
+  History,
+  DollarSign,
+} from "lucide-react";
 import { useT } from "@/lib/i18n";
 import { ProductImportDialog } from "@/components/ProductImportDialog";
 import { PriceHistoryDialog } from "@/components/PriceHistoryDialog";
@@ -783,7 +793,8 @@ function ProductsPage() {
                   <div className="col-span-full border rounded-xl p-3 bg-muted/20 space-y-3 mt-1">
                     <div className="flex flex-wrap items-center justify-between text-xs text-muted-foreground border-b pb-2 gap-2">
                       <span className="font-semibold text-foreground flex items-center gap-1.5">
-                        <DollarSign className="w-4 h-4 text-emerald-600 dark:text-emerald-400" /> Narxlar (So'm va Dollar $)
+                        <DollarSign className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />{" "}
+                        Narxlar (So'm va Dollar $)
                       </span>
                       <div className="flex items-center gap-1.5">
                         <span className="text-[11px]">Dollar kursi: 1 $ =</span>
@@ -806,7 +817,9 @@ function ProductsPage() {
                             type="number"
                             step={buyCurrency === "USD" ? "0.01" : "1"}
                             min="0"
-                            value={buyCurrency === "UZS" ? (form.buyPrice || "") : (form.buyPriceUsd || "")}
+                            value={
+                              buyCurrency === "UZS" ? form.buyPrice || "" : form.buyPriceUsd || ""
+                            }
                             onChange={(e) => {
                               const val = Math.max(0, +e.target.value);
                               if (buyCurrency === "UZS") {
@@ -826,7 +839,10 @@ function ProductsPage() {
                             placeholder="0"
                             className="flex-1"
                           />
-                          <Select value={buyCurrency} onValueChange={(v: "UZS" | "USD") => setBuyCurrency(v)}>
+                          <Select
+                            value={buyCurrency}
+                            onValueChange={(v: "UZS" | "USD") => setBuyCurrency(v)}
+                          >
                             <SelectTrigger className="w-[110px] text-xs shrink-0">
                               <SelectValue />
                             </SelectTrigger>
@@ -839,13 +855,19 @@ function ProductsPage() {
                         <div className="text-[11px] text-muted-foreground px-0.5 min-h-[16px]">
                           {buyCurrency === "UZS" ? (
                             form.buyPrice > 0 ? (
-                              <span>≈ ${form.buyPriceUsd || (usdRate > 0 ? (form.buyPrice / usdRate).toFixed(2) : 0)} USD</span>
+                              <span>
+                                ≈ $
+                                {form.buyPriceUsd ||
+                                  (usdRate > 0 ? (form.buyPrice / usdRate).toFixed(2) : 0)}{" "}
+                                USD
+                              </span>
                             ) : null
-                          ) : (
-                            form.buyPriceUsd > 0 ? (
-                              <span>≈ {formatSom(form.buyPrice || Math.round(form.buyPriceUsd * usdRate))} so'm</span>
-                            ) : null
-                          )}
+                          ) : form.buyPriceUsd > 0 ? (
+                            <span>
+                              ≈ {formatSom(form.buyPrice || Math.round(form.buyPriceUsd * usdRate))}{" "}
+                              so'm
+                            </span>
+                          ) : null}
                         </div>
                       </div>
 
@@ -857,14 +879,19 @@ function ProductsPage() {
                             type="number"
                             step={sellCurrency === "USD" ? "0.01" : "1"}
                             min="0"
-                            value={sellCurrency === "UZS" ? (form.sellPrice || "") : (form.sellPriceUsd || "")}
+                            value={
+                              sellCurrency === "UZS"
+                                ? form.sellPrice || ""
+                                : form.sellPriceUsd || ""
+                            }
                             onChange={(e) => {
                               const val = Math.max(0, +e.target.value);
                               if (sellCurrency === "UZS") {
                                 setForm((f) => ({
                                   ...f,
                                   sellPrice: val,
-                                  sellPriceUsd: usdRate > 0 ? Number((val / usdRate).toFixed(2)) : 0,
+                                  sellPriceUsd:
+                                    usdRate > 0 ? Number((val / usdRate).toFixed(2)) : 0,
                                 }));
                               } else {
                                 setForm((f) => ({
@@ -877,7 +904,10 @@ function ProductsPage() {
                             placeholder="0"
                             className="flex-1"
                           />
-                          <Select value={sellCurrency} onValueChange={(v: "UZS" | "USD") => setSellCurrency(v)}>
+                          <Select
+                            value={sellCurrency}
+                            onValueChange={(v: "UZS" | "USD") => setSellCurrency(v)}
+                          >
                             <SelectTrigger className="w-[110px] text-xs shrink-0">
                               <SelectValue />
                             </SelectTrigger>
@@ -890,13 +920,20 @@ function ProductsPage() {
                         <div className="text-[11px] text-muted-foreground px-0.5 min-h-[16px]">
                           {sellCurrency === "UZS" ? (
                             form.sellPrice > 0 ? (
-                              <span>≈ ${form.sellPriceUsd || (usdRate > 0 ? (form.sellPrice / usdRate).toFixed(2) : 0)} USD</span>
+                              <span>
+                                ≈ $
+                                {form.sellPriceUsd ||
+                                  (usdRate > 0 ? (form.sellPrice / usdRate).toFixed(2) : 0)}{" "}
+                                USD
+                              </span>
                             ) : null
-                          ) : (
-                            form.sellPriceUsd > 0 ? (
-                              <span>≈ {formatSom(form.sellPrice || Math.round(form.sellPriceUsd * usdRate))} so'm</span>
-                            ) : null
-                          )}
+                          ) : form.sellPriceUsd > 0 ? (
+                            <span>
+                              ≈{" "}
+                              {formatSom(form.sellPrice || Math.round(form.sellPriceUsd * usdRate))}{" "}
+                              so'm
+                            </span>
+                          ) : null}
                         </div>
                       </div>
                     </div>
