@@ -115,3 +115,40 @@ export const formatPriceBoth = (
   if (calcUsd <= 0) return formatSom(mainSom);
   return `${formatSom(mainSom)} (${formatUsd(calcUsd)})`;
 };
+
+export function getEffectiveSellPrice(
+  p: { sellPrice: number; sellPriceUsd?: number; currency?: string },
+  usdRate: number = 12835,
+): number {
+  const activeRate = usdRate > 0 ? usdRate : 12835;
+  if (p.currency === "USD" && p.sellPriceUsd !== undefined && p.sellPriceUsd > 0) {
+    return Math.round(p.sellPriceUsd * activeRate);
+  }
+  return p.sellPrice || 0;
+}
+
+export function getEffectiveBuyPrice(
+  p: { buyPrice: number; buyPriceUsd?: number; currency?: string },
+  usdRate: number = 12835,
+): number {
+  const activeRate = usdRate > 0 ? usdRate : 12835;
+  if (p.currency === "USD" && p.buyPriceUsd !== undefined && p.buyPriceUsd > 0) {
+    return Math.round(p.buyPriceUsd * activeRate);
+  }
+  return p.buyPrice || 0;
+}
+
+export async function fetchCbuRate(): Promise<number | null> {
+  try {
+    const res = await fetch("https://cbu.uz/uz/arkhiv-kursov-valyut/json/USD/");
+    if (!res.ok) return null;
+    const data = await res.json();
+    if (Array.isArray(data) && data[0]?.Rate) {
+      const rate = parseFloat(data[0].Rate);
+      if (!isNaN(rate) && rate > 0) return rate;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}

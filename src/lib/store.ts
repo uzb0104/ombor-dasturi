@@ -20,6 +20,7 @@ import {
   DEFAULT_VEHICLE_BRANDS,
   DEFAULT_BRANCHES,
   ALL_PERMISSIONS,
+  fetchCbuRate,
 } from "./constants";
 import {
   apiLogin,
@@ -67,6 +68,7 @@ type State = {
   setVehicleFilter: (v: string) => void;
   usdRate: number;
   setUsdRate: (rate: number) => void;
+  fetchLiveUsdRate: () => Promise<number | null>;
 
   products: Product[];
   customers: Customer[];
@@ -269,6 +271,7 @@ export const useStore = create<State>()(
               _loading: false,
               _initialized: true,
             });
+            void get().fetchLiveUsdRate();
           } catch (err) {
             set({ _loading: false });
             toast.error(err instanceof Error ? err.message : "Ma'lumotlarni yuklab bo'lmadi");
@@ -357,6 +360,14 @@ export const useStore = create<State>()(
         setVehicleFilter: (v) => set({ vehicleFilter: v }),
         usdRate: 12835,
         setUsdRate: (rate: number) => set({ usdRate: rate > 0 ? rate : 12835 }),
+        fetchLiveUsdRate: async () => {
+          const liveRate = await fetchCbuRate();
+          if (liveRate && liveRate > 0) {
+            set({ usdRate: liveRate });
+            return liveRate;
+          }
+          return null;
+        },
 
         products: [],
         customers: [],

@@ -49,6 +49,7 @@ import {
   EyeOff,
   DollarSign,
   Languages,
+  RefreshCw,
 } from "lucide-react";
 import { useState } from "react";
 import { useT, useLang, LANG_LABELS, UI_LANGS, type Lang } from "@/lib/i18n";
@@ -90,7 +91,9 @@ function SettingsPage() {
     changePassword,
     usdRate,
     setUsdRate,
+    fetchLiveUsdRate,
   } = useStore();
+  const [fetchingRate, setFetchingRate] = useState(false);
   const isAdmin = user?.role === "Admin";
   const { confirm } = useConfirm();
 
@@ -219,15 +222,40 @@ function SettingsPage() {
           </Card>
 
           <Card className="p-6 rounded-2xl space-y-4 max-w-2xl mt-5">
-            <h3 className="font-semibold text-base flex items-center gap-2">
-              <DollarSign className="h-5 w-5 text-emerald-500" />
-              Dollar Kursi (Valyuta kursi)
-            </h3>
-            <p className="text-xs text-muted-foreground">
-              Tovarlarga narx kiritish va so'm hamda dollar o'rtasida avtomatik hisob-kitob qilishda
-              ishlatiladigan kurs.
-            </p>
-            <div className="flex items-center gap-3 max-w-xs">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h3 className="font-semibold text-base flex items-center gap-2">
+                  <DollarSign className="h-5 w-5 text-emerald-500" />
+                  Dollar Kursi (Valyuta kursi)
+                </h3>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Tovarlarga narx kiritish va so'm hamda dollar o'rtasida real vaqtda avtomatik
+                  hisob-kitob qilishda ishlatiladi.
+                </p>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={fetchingRate}
+                onClick={async () => {
+                  setFetchingRate(true);
+                  const rate = await fetchLiveUsdRate();
+                  setFetchingRate(false);
+                  if (rate) {
+                    toast.success(
+                      `Markaziy Bank kursi yangilandi: 1 USD = ${rate.toLocaleString()} so'm`,
+                    );
+                  } else {
+                    toast.error("Markaziy Bank kursini olib bo'lmadi");
+                  }
+                }}
+                className="gap-2 text-xs"
+              >
+                <RefreshCw className={`h-3.5 w-3.5 ${fetchingRate ? "animate-spin" : ""}`} />
+                Markaziy Bank kursini yangilash
+              </Button>
+            </div>
+            <div className="flex items-center gap-3 max-w-xs pt-1">
               <span className="text-sm font-medium">1 USD ($) =</span>
               <Input
                 type="number"
