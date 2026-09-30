@@ -355,8 +355,8 @@ export const useStore = create<State>()(
         setWarehouse: (w) => set({ warehouse: w }),
         vehicleFilter: "all",
         setVehicleFilter: (v) => set({ vehicleFilter: v }),
-        usdRate: 12800,
-        setUsdRate: (rate: number) => set({ usdRate: rate > 0 ? rate : 12800 }),
+        usdRate: 12835,
+        setUsdRate: (rate: number) => set({ usdRate: rate > 0 ? rate : 12835 }),
 
         products: [],
         customers: [],

@@ -231,7 +231,7 @@ function SettingsPage() {
               <span className="text-sm font-medium">1 USD ($) =</span>
               <Input
                 type="number"
-                value={usdRate || 12800}
+                value={usdRate || 12835}
                 onChange={(e) => setUsdRate(Math.max(1, Number(e.target.value)))}
                 className="font-mono text-base font-semibold text-emerald-600 dark:text-emerald-400"
               />

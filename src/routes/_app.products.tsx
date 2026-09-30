@@ -1205,10 +1205,10 @@ function ProductsPage() {
                     {p.quantity}
                   </TableCell>
                   <TableCell className="hidden md:table-cell text-right tabular-nums text-xs text-muted-foreground whitespace-nowrap">
-                    {formatPriceBoth(p.buyPrice, p.buyPriceUsd, usdRate)}
+                    {formatPriceBoth(p.buyPrice, p.buyPriceUsd, usdRate, p.currency)}
                   </TableCell>
                   <TableCell className="text-right tabular-nums text-xs font-bold text-foreground whitespace-nowrap">
-                    {formatPriceBoth(p.sellPrice, p.sellPriceUsd, usdRate)}
+                    {formatPriceBoth(p.sellPrice, p.sellPriceUsd, usdRate, p.currency)}
                   </TableCell>
                   <TableCell className="hidden sm:table-cell text-center">
                     <StatusBadge qty={p.quantity} min={p.minQty} />

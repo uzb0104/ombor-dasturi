@@ -90,13 +90,28 @@ export const formatUsd = (n: number) =>
 
 export const formatNumber = (n: number) => new Intl.NumberFormat("uz-UZ").format(n);
 
-export const formatPriceBoth = (som: number, usd?: number, usdRate: number = 12800) => {
-  const finalUsd =
+export const formatPriceBoth = (
+  som: number,
+  usd?: number,
+  usdRate: number = 12835,
+  currency?: "UZS" | "USD",
+) => {
+  const activeRate = usdRate > 0 ? usdRate : 12835;
+
+  if (currency === "USD" || (usd !== undefined && usd > 0 && (!som || som === 0))) {
+    const mainUsd = usd || 0;
+    const calcSom = Math.round(mainUsd * activeRate);
+    if (mainUsd <= 0) return formatSom(0);
+    return `${formatUsd(mainUsd)} (${formatSom(calcSom)})`;
+  }
+
+  const mainSom = som || 0;
+  const calcUsd =
     usd !== undefined && usd > 0
       ? usd
-      : som > 0 && usdRate > 0
-        ? Number((som / usdRate).toFixed(2))
+      : mainSom > 0
+        ? Number((mainSom / activeRate).toFixed(2))
         : 0;
-  if (!finalUsd) return formatSom(som);
-  return `${formatSom(som)} (${formatUsd(finalUsd)})`;
+  if (calcUsd <= 0) return formatSom(mainSom);
+  return `${formatSom(mainSom)} (${formatUsd(calcUsd)})`;
 };
