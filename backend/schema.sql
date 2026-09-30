@@ -59,6 +59,9 @@ CREATE TABLE IF NOT EXISTS products (
     supplier_id VARCHAR(100) REFERENCES suppliers(id) ON DELETE SET NULL,
     buy_price NUMERIC(20, 2) NOT NULL DEFAULT 0.00,
     sell_price NUMERIC(20, 2) NOT NULL DEFAULT 0.00,
+    buy_price_usd NUMERIC(20, 2) DEFAULT 0.00,
+    sell_price_usd NUMERIC(20, 2) DEFAULT 0.00,
+    currency VARCHAR(10) DEFAULT 'UZS',
     quantity NUMERIC(15, 2) DEFAULT 0.00,
     min_qty NUMERIC(15, 2) DEFAULT 0.00,
     image TEXT,
@@ -200,6 +203,9 @@ CREATE INDEX IF NOT EXISTS idx_audit_logs_ts ON audit_logs(ts);
 ALTER TABLE suppliers ADD COLUMN IF NOT EXISTS delivered_product TEXT DEFAULT '';
 ALTER TABLE suppliers ADD COLUMN IF NOT EXISTS delivered_quantity NUMERIC(15, 2) NOT NULL DEFAULT 0.00;
 ALTER TABLE employees ADD COLUMN IF NOT EXISTS payment_history JSONB NOT NULL DEFAULT '[]'::jsonb;
+ALTER TABLE products ADD COLUMN IF NOT EXISTS buy_price_usd NUMERIC(20, 2) DEFAULT 0.00;
+ALTER TABLE products ADD COLUMN IF NOT EXISTS sell_price_usd NUMERIC(20, 2) DEFAULT 0.00;
+ALTER TABLE products ADD COLUMN IF NOT EXISTS currency VARCHAR(10) DEFAULT 'UZS';
 
 ALTER TABLE sales DROP CONSTRAINT IF EXISTS sales_payment_type_check;
 ALTER TABLE sales ADD CONSTRAINT sales_payment_type_check

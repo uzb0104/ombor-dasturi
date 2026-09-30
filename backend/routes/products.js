@@ -145,11 +145,27 @@ router.post(
       if (isSupabaseConfigured) {
         const dbObj = toDbProduct(p);
         console.log("📦 [Products POST] Ma'lumot:", JSON.stringify(dbObj, null, 2));
-        const { data, error } = await supabaseClient
+        let { data, error } = await supabaseClient
           .from("products")
           .insert([dbObj])
           .select()
           .single();
+        if (
+          error &&
+          (error.message?.includes("buy_price_usd") ||
+            error.message?.includes("sell_price_usd") ||
+            error.message?.includes("schema cache"))
+        ) {
+          console.warn(
+            "⚠️ Column buy_price_usd missing on DB, retrying insert without USD columns...",
+          );
+          delete dbObj.buy_price_usd;
+          delete dbObj.sell_price_usd;
+          delete dbObj.currency;
+          const retry = await supabaseClient.from("products").insert([dbObj]).select().single();
+          data = retry.data;
+          error = retry.error;
+        }
         if (error) {
           console.error(
             "❌ [Products POST] Supabase xatolik:",
@@ -195,12 +211,33 @@ router.put(
         const dbObj = toDbProduct(updates);
         delete dbObj.id;
         console.log(`📦 [Products PUT] ID: ${id}, Ma'lumot:`, JSON.stringify(dbObj, null, 2));
-        const { data, error } = await supabaseClient
+        let { data, error } = await supabaseClient
           .from("products")
           .update(dbObj)
           .eq("id", id)
           .select()
           .single();
+        if (
+          error &&
+          (error.message?.includes("buy_price_usd") ||
+            error.message?.includes("sell_price_usd") ||
+            error.message?.includes("schema cache"))
+        ) {
+          console.warn(
+            "⚠️ Column buy_price_usd missing on DB, retrying update without USD columns...",
+          );
+          delete dbObj.buy_price_usd;
+          delete dbObj.sell_price_usd;
+          delete dbObj.currency;
+          const retry = await supabaseClient
+            .from("products")
+            .update(dbObj)
+            .eq("id", id)
+            .select()
+            .single();
+          data = retry.data;
+          error = retry.error;
+        }
         if (error) {
           console.error(
             "❌ [Products PUT] Supabase xatolik:",
