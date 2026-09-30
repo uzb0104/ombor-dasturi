@@ -225,3 +225,5 @@ ON CONFLICT DO NOTHING;
 INSERT INTO branches (name) VALUES 
 ('Asosiy ombor'), ('Filial 1'), ('Filial 2')
 ON CONFLICT DO NOTHING;
+
+
