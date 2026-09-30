@@ -936,7 +936,7 @@ function ProductsPage() {
         <Card className="p-4 rounded-2xl border bg-card shadow-sm flex flex-col justify-between">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-              Sotib olishga qilingan xarajat
+              {t("products.totalBuyCost")}
             </span>
             <div className="p-2 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400">
               <ShoppingCart className="w-5 h-5" />
@@ -962,7 +962,7 @@ function ProductsPage() {
         <Card className="p-4 rounded-2xl border bg-card shadow-sm flex flex-col justify-between">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-              Sotiladigan tovar qiymati
+              {t("products.totalSellValue")}
             </span>
             <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
               <TrendingUp className="w-5 h-5" />
@@ -988,7 +988,7 @@ function ProductsPage() {
         <Card className="p-4 rounded-2xl border bg-card shadow-sm flex flex-col justify-between">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-              Kutilayotgan sof foyda
+              {t("products.expectedProfit")}
             </span>
             <div className="p-2 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400">
               <DollarSign className="w-5 h-5" />
@@ -1000,8 +1000,8 @@ function ProductsPage() {
             </div>
             <div className="text-xs text-muted-foreground mt-0.5">
               {totalBuyCost > 0
-                ? `+${((expectedProfit / totalBuyCost) * 100).toFixed(1)}% umumiy ustama`
-                : "0% ustama"}
+                ? `+${((expectedProfit / totalBuyCost) * 100).toFixed(1)}% ${t("products.totalMarkup")}`
+                : `0% ${t("products.totalMarkup")}`}
             </div>
           </div>
         </Card>

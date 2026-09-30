@@ -48,9 +48,10 @@ import {
   Eye,
   EyeOff,
   DollarSign,
+  Languages,
 } from "lucide-react";
 import { useState } from "react";
-import { useT } from "@/lib/i18n";
+import { useT, useLang, LANG_LABELS, UI_LANGS, type Lang } from "@/lib/i18n";
 import { roleLabel } from "@/lib/i18n/helpers";
 
 export const Route = createFileRoute("/_app/settings")({ component: SettingsPage });
@@ -67,6 +68,7 @@ const emptyUser = (): UserForm => ({
 
 function SettingsPage() {
   const t = useT();
+  const { lang, setLang } = useLang();
   const {
     user,
     theme,
@@ -189,6 +191,31 @@ function SettingsPage() {
               </div>
             </div>
             <Button onClick={handleProfileSave}>{t("common.save")}</Button>
+          </Card>
+
+          <Card className="p-6 rounded-2xl space-y-4 max-w-2xl mt-5">
+            <h3 className="font-semibold text-base flex items-center gap-2">
+              <Languages className="h-5 w-5 text-primary" />
+              {t("settings.language")}
+            </h3>
+            <p className="text-xs text-muted-foreground">{t("settings.selectLanguage")}</p>
+            <div className="flex items-center gap-3 max-w-xs">
+              <Select
+                value={lang === "uz_cyr" ? "uz" : lang}
+                onValueChange={(v) => setLang(v as Lang)}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {UI_LANGS.map((l) => (
+                    <SelectItem key={l} value={l}>
+                      {LANG_LABELS[l]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </Card>
 
           <Card className="p-6 rounded-2xl space-y-4 max-w-2xl mt-5">

@@ -199,6 +199,12 @@ export const extraUz: Record<string, string> = {
   "employees.bulkDeleted": "{n} ta xodim o'chirildi",
 
   "products.noCode": "kodsiz",
+  "products.totalBuyCost": "Sotib olishga qilingan xarajat",
+  "products.totalSellValue": "Sotiladigan tovar qiymati",
+  "products.expectedProfit": "Kutilayotgan sof foyda",
+  "products.totalMarkup": "umumiy ustama",
+  "settings.language": "Tizim tili",
+  "settings.selectLanguage": "Tizim tilini tanlang (O'zbekcha / Русский)",
 
   "inventory.valueLabel": "Qiymati:",
   "inventory.summaryLine": "{count} ta tovar · {qty} dona",
@@ -447,6 +453,12 @@ export const extraRu: Record<string, string> = {
   "audit.section": "Раздел",
 
   "products.deleteTitle": "Удалить товар",
+  "products.totalBuyCost": "Затраты на закупку",
+  "products.totalSellValue": "Стоимость товаров по продаже",
+  "products.expectedProfit": "Ожидаемая чистая прибыль",
+  "products.totalMarkup": "общая наценка",
+  "settings.language": "Язык системы",
+  "settings.selectLanguage": "Выберите язык системы (Узбекский / Русский)",
   "products.deleteDesc": "Удалить «{name}»?",
   "products.bulkDeleteDesc": "Будет удалено товаров: {n}. Продолжить?",
   "products.exportListTitle": "Список товаров на складе",
