@@ -52,8 +52,8 @@ function BarcodePage() {
     buyPriceUsd: 0,
     sellPrice: 0,
     sellPriceUsd: 0,
-    quantity: 1,
-    minQty: 5,
+    quantity: 0,
+    minQty: 0,
   });
 
   const clearScanResult = () => {
@@ -141,8 +141,8 @@ function BarcodePage() {
       buyPriceUsd: 0,
       sellPrice: 0,
       sellPriceUsd: 0,
-      quantity: 1,
-      minQty: 5,
+      quantity: 0,
+      minQty: 0,
     });
     if (lastScan === createForm.barcode) {
       setLastScan(createForm.barcode);
@@ -521,11 +521,8 @@ function BarcodePage() {
             </div>
 
             <div className="space-y-3 p-3 rounded-lg border bg-muted/20">
-              <div className="text-xs font-semibold text-foreground flex items-center justify-between">
+              <div className="text-xs font-semibold text-foreground">
                 <span>Narxlar (So'm va Dollar $)</span>
-                <span className="text-[11px] text-muted-foreground font-mono">
-                  1 $ = {usdRate || 12800} so'm
-                </span>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -671,9 +668,13 @@ function BarcodePage() {
                 <Input
                   type="number"
                   min="0"
-                  value={createForm.quantity}
+                  value={createForm.quantity || ""}
+                  placeholder="0"
                   onChange={(e) =>
-                    setCreateForm({ ...createForm, quantity: Number(e.target.value) })
+                    setCreateForm({
+                      ...createForm,
+                      quantity: e.target.value === "" ? 0 : Math.max(0, Number(e.target.value)),
+                    })
                   }
                 />
               </div>
@@ -682,9 +683,15 @@ function BarcodePage() {
                 <Label>Minimal ogohlantirish soni</Label>
                 <Input
                   type="number"
-                  min="1"
-                  value={createForm.minQty}
-                  onChange={(e) => setCreateForm({ ...createForm, minQty: Number(e.target.value) })}
+                  min="0"
+                  value={createForm.minQty || ""}
+                  placeholder="0"
+                  onChange={(e) =>
+                    setCreateForm({
+                      ...createForm,
+                      minQty: e.target.value === "" ? 0 : Math.max(0, Number(e.target.value)),
+                    })
+                  }
                 />
               </div>
             </div>

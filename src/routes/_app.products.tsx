@@ -94,7 +94,7 @@ const emptyForm = (firstCategory: string, firstBrand: string): FormState => ({
   sellPrice: 0,
   sellPriceUsd: 0,
   quantity: 0,
-  minQty: 5,
+  minQty: 0,
   unitBrand: "",
   amperage: "",
   voltage: "12V",
@@ -776,8 +776,15 @@ function ProductsPage() {
                     <Label>{t("products.qty")}</Label>
                     <Input
                       type="number"
-                      value={form.quantity}
-                      onChange={(e) => setForm({ ...form, quantity: +e.target.value })}
+                      min="0"
+                      value={form.quantity || ""}
+                      placeholder="0"
+                      onChange={(e) =>
+                        setForm({
+                          ...form,
+                          quantity: e.target.value === "" ? 0 : Math.max(0, +e.target.value),
+                        })
+                      }
                       className="mt-1"
                     />
                   </div>
@@ -785,27 +792,24 @@ function ProductsPage() {
                     <Label>{t("common.minQty")}</Label>
                     <Input
                       type="number"
-                      value={form.minQty}
-                      onChange={(e) => setForm({ ...form, minQty: +e.target.value })}
+                      min="0"
+                      value={form.minQty || ""}
+                      placeholder="0"
+                      onChange={(e) =>
+                        setForm({
+                          ...form,
+                          minQty: e.target.value === "" ? 0 : Math.max(0, +e.target.value),
+                        })
+                      }
                       className="mt-1"
                     />
                   </div>
                   <div className="col-span-full border rounded-xl p-3 bg-muted/20 space-y-3 mt-1">
-                    <div className="flex flex-wrap items-center justify-between text-xs text-muted-foreground border-b pb-2 gap-2">
+                    <div className="flex items-center justify-between text-xs text-muted-foreground border-b pb-2">
                       <span className="font-semibold text-foreground flex items-center gap-1.5">
                         <DollarSign className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />{" "}
                         Narxlar (So'm va Dollar $)
                       </span>
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-[11px]">Dollar kursi: 1 $ =</span>
-                        <input
-                          type="number"
-                          value={usdRate || 12800}
-                          onChange={(e) => setUsdRate(Math.max(1, Number(e.target.value)))}
-                          className="w-20 px-1.5 py-0.5 border rounded text-right text-xs bg-background font-mono font-semibold"
-                        />
-                        <span className="text-[11px]">so'm</span>
-                      </div>
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

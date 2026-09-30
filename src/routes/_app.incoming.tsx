@@ -837,11 +837,8 @@ function IncomingPage() {
               </div>
 
               <div className="p-3 rounded-lg border bg-muted/20 space-y-2">
-                <div className="flex items-center justify-between text-xs font-semibold">
+                <div className="text-xs font-semibold">
                   <span>{t("incoming.incomingPrice")}</span>
-                  <span className="text-[11px] font-mono text-muted-foreground">
-                    1 $ = {usdRate || 12800} so'm
-                  </span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Input
