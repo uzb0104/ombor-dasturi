@@ -659,16 +659,6 @@ function ProductsPage() {
                             className="mt-1"
                           />
                         </div>
-                        <div className="sm:col-span-2">
-                          <Label>{t("products.sellPrice")}</Label>
-                          <Input
-                            type="number"
-                            min="0"
-                            value={restockSellPrice}
-                            onChange={(event) => setRestockSellPrice(event.target.value)}
-                            className="mt-1"
-                          />
-                        </div>
                       </div>
                       <DialogFooter>
                         <Button type="button" onClick={saveBarcodeUpdate}>
@@ -981,57 +971,10 @@ function ProductsPage() {
                           </Select>
                         </div>
                       </div>
-
-                      {/* Sotish narxi */}
-                      <div className="space-y-1.5">
-                        <Label className="text-xs font-semibold">{t("products.sellPrice")}</Label>
-                        <div className="flex items-center gap-2">
-                          <Input
-                            type="number"
-                            step={sellCurrency === "USD" ? "0.01" : "1"}
-                            min="0"
-                            value={
-                              sellCurrency === "UZS"
-                                ? form.sellPrice || ""
-                                : form.sellPriceUsd || ""
-                            }
-                            onChange={(e) => {
-                              const val = Math.max(0, +e.target.value);
-                              if (sellCurrency === "UZS") {
-                                setForm((f) => ({
-                                  ...f,
-                                  sellPrice: val,
-                                  sellPriceUsd:
-                                    usdRate > 0 ? Number((val / usdRate).toFixed(2)) : 0,
-                                }));
-                              } else {
-                                setForm((f) => ({
-                                  ...f,
-                                  sellPriceUsd: val,
-                                  sellPrice: Math.round(val * usdRate),
-                                }));
-                              }
-                            }}
-                            placeholder="0"
-                            className="flex-1"
-                          />
-                          <Select
-                            value={sellCurrency}
-                            onValueChange={(v: "UZS" | "USD") => setSellCurrency(v)}
-                          >
-                            <SelectTrigger className="w-[110px] text-xs shrink-0">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="UZS">So'm (UZS)</SelectItem>
-                              <SelectItem value="USD">Dollar ($)</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      </div>
                     </div>
                   </div>
                 </div>
+
                 <DialogFooter>
                   <Button onClick={submit}>{t("common.save")}</Button>
                 </DialogFooter>
@@ -1041,81 +984,41 @@ function ProductsPage() {
         }
       />
 
-      {/* Ombor Moliyaviy Statikasi */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <Card className="p-4 rounded-2xl border bg-card shadow-sm flex flex-col justify-between">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-              {t("products.totalBuyCost")}
-            </span>
-            <div className="p-2 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400">
-              <ShoppingCart className="w-5 h-5" />
+      {/* Ombor Umumiy Qiymati */}
+      <Card className="p-5 rounded-2xl border bg-gradient-to-br from-amber-500/5 to-orange-500/5 shadow-sm">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="p-3 rounded-xl bg-amber-500/15 text-amber-600 dark:text-amber-400">
+              <ShoppingCart className="w-6 h-6" />
             </div>
-          </div>
-          <div className="mt-2">
-            <div className="text-xl font-bold tracking-tight text-foreground">
-              {formatSom(totalBuyCost)}
-            </div>
-            {usdRate > 0 && (
-              <div className="text-xs text-muted-foreground font-mono mt-0.5">
-                ≈ $
-                {(totalBuyCost / usdRate).toLocaleString("en-US", {
-                  minimumFractionDigits: 2,
-                  maximumFractionDigits: 2,
-                })}{" "}
-                USD
+            <div>
+              <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-0.5">
+                Omborning umumiy qiymati (sotib olish narxi)
               </div>
-            )}
-          </div>
-        </Card>
-
-        <Card className="p-4 rounded-2xl border bg-card shadow-sm flex flex-col justify-between">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-              {t("products.totalSellValue")}
-            </span>
-            <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
-              <TrendingUp className="w-5 h-5" />
-            </div>
-          </div>
-          <div className="mt-2">
-            <div className="text-xl font-bold tracking-tight text-foreground">
-              {formatSom(totalSellValue)}
-            </div>
-            {usdRate > 0 && (
-              <div className="text-xs text-muted-foreground font-mono mt-0.5">
-                ≈ $
-                {(totalSellValue / usdRate).toLocaleString("en-US", {
-                  minimumFractionDigits: 2,
-                  maximumFractionDigits: 2,
-                })}{" "}
-                USD
+              <div className="text-2xl font-bold tracking-tight text-foreground">
+                {formatSom(totalBuyCost)}
               </div>
-            )}
-          </div>
-        </Card>
-
-        <Card className="p-4 rounded-2xl border bg-card shadow-sm flex flex-col justify-between">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-              {t("products.expectedProfit")}
-            </span>
-            <div className="p-2 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400">
-              <DollarSign className="w-5 h-5" />
+              {usdRate > 0 && (
+                <div className="text-sm text-amber-600 dark:text-amber-400 font-mono font-semibold mt-0.5">
+                  ≈ $
+                  {(totalBuyCost / usdRate).toLocaleString("en-US", {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}{" "}
+                  USD
+                </div>
+              )}
             </div>
           </div>
-          <div className="mt-2">
-            <div className="text-xl font-bold tracking-tight text-emerald-600 dark:text-emerald-400">
-              {formatSom(expectedProfit)}
+          <div className="text-right hidden sm:block">
+            <div className="text-xs text-muted-foreground">Jami tovarlar</div>
+            <div className="text-2xl font-bold text-foreground">
+              {serverTotal || products.length}
             </div>
-            <div className="text-xs text-muted-foreground mt-0.5">
-              {totalBuyCost > 0
-                ? `+${((expectedProfit / totalBuyCost) * 100).toFixed(1)}% ${t("products.totalMarkup")}`
-                : `0% ${t("products.totalMarkup")}`}
-            </div>
+            <div className="text-xs text-muted-foreground">ta mahsulot</div>
           </div>
-        </Card>
-      </div>
+        </div>
+      </Card>
 
       <Card className="p-4 rounded-2xl card-elevated border-border/60">
         <div className="flex flex-col sm:flex-row sm:flex-wrap gap-2 sm:gap-3 mb-4">
@@ -1214,18 +1117,10 @@ function ProductsPage() {
                     onSort={requestSort}
                   />
                 </TableHead>
-                <TableHead className="hidden md:table-cell text-right">
+                <TableHead className="text-right">
                   <SortButton
                     label={t("products.buyPrice")}
                     sortKey="buyPrice"
-                    sortConfig={sortConfig}
-                    onSort={requestSort}
-                  />
-                </TableHead>
-                <TableHead className="text-right">
-                  <SortButton
-                    label={t("products.sellPrice")}
-                    sortKey="sellPrice"
                     sortConfig={sortConfig}
                     onSort={requestSort}
                   />
@@ -1239,20 +1134,6 @@ function ProductsPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              <TableRow>
-                <TableCell colSpan={10} className="py-2">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="w-full justify-start text-muted-foreground"
-                    onClick={() => setAddModeOpen(true)}
-                  >
-                    <Plus className="mr-2 h-4 w-4" />
-                    {t("products.new")}
-                  </Button>
-                </TableCell>
-              </TableRow>
               {pg.paged.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={10} className="text-center py-10 text-muted-foreground">
@@ -1337,11 +1218,8 @@ function ProductsPage() {
                   <TableCell className="text-right tabular-nums font-semibold">
                     {p.quantity}
                   </TableCell>
-                  <TableCell className="hidden md:table-cell text-right tabular-nums text-xs text-muted-foreground whitespace-nowrap">
+                  <TableCell className="text-right tabular-nums text-xs font-semibold whitespace-nowrap">
                     {formatPriceBoth(p.buyPrice, p.buyPriceUsd, usdRate, p.currency)}
-                  </TableCell>
-                  <TableCell className="text-right tabular-nums text-xs font-bold text-foreground whitespace-nowrap">
-                    {formatPriceBoth(p.sellPrice, p.sellPriceUsd, usdRate, p.currency)}
                   </TableCell>
                   <TableCell className="hidden sm:table-cell text-center">
                     <StatusBadge qty={p.quantity} min={p.minQty} />

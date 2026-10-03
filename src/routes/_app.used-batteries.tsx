@@ -102,7 +102,7 @@ function UsedBatteriesPage() {
     note: "",
   });
 
-  const list = usedBatteries || [];
+  const list = useMemo(() => usedBatteries || [], [usedBatteries]);
 
   // Metrics
   const totalKirimKg = list

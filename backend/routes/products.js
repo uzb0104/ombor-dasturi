@@ -177,9 +177,7 @@ router.post(
             error.message?.includes("vehicles") ||
             error.message?.includes("schema cache"))
         ) {
-          console.warn(
-            "⚠️ Column missing on DB, retrying insert without problematic columns...",
-          );
+          console.warn("⚠️ Column missing on DB, retrying insert without problematic columns...");
           delete dbObj.buy_price_usd;
           delete dbObj.sell_price_usd;
           delete dbObj.currency;
@@ -246,9 +244,7 @@ router.put(
             error.message?.includes("vehicles") ||
             error.message?.includes("schema cache"))
         ) {
-          console.warn(
-            "⚠️ Column missing on DB, retrying update without problematic columns...",
-          );
+          console.warn("⚠️ Column missing on DB, retrying update without problematic columns...");
           delete dbObj.buy_price_usd;
           delete dbObj.sell_price_usd;
           delete dbObj.currency;

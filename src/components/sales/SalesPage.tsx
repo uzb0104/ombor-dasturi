@@ -65,6 +65,7 @@ export function SalesPage() {
   const [debtCustomerPhone, setDebtCustomerPhone] = useState("");
   const [debtProductId, setDebtProductId] = useState("");
   const [debtQuantity, setDebtQuantity] = useState(1);
+  const [debtPrice, setDebtPrice] = useState(0);
   const [debtPaidNow, setDebtPaidNow] = useState(0);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [vehicleBrand, setVehicleBrand] = useState("all");
@@ -72,10 +73,12 @@ export function SalesPage() {
   const [productId, setProductId] = useState("");
   const [qty, setQty] = useState(1);
   const [price, setPrice] = useState(0);
-  const [discount, setDiscount] = useState(0);
   const [paymentType, setPaymentType] = useState<"Naqd" | "Karta" | "Qarz">("Naqd");
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
+
+  const [debtVehicleBrand, setDebtVehicleBrand] = useState("all");
+  const [debtCategory, setDebtCategory] = useState("all");
 
   const availableProducts = useMemo(() => {
     return products.filter((product) => {
@@ -89,6 +92,19 @@ export function SalesPage() {
       return matchVeh && matchCat;
     });
   }, [products, vehicleBrand, category]);
+
+  const availableDebtProducts = useMemo(() => {
+    return products.filter((product) => {
+      const matchVeh =
+        debtVehicleBrand === "all" ||
+        product.vehicle === debtVehicleBrand ||
+        (product.vehicles && product.vehicles.includes(debtVehicleBrand)) ||
+        (product.vehicle && product.vehicle.includes(debtVehicleBrand)) ||
+        product.vehicle === "Barchasi";
+      const matchCat = debtCategory === "all" || product.category === debtCategory;
+      return matchVeh && matchCat;
+    });
+  }, [products, debtVehicleBrand, debtCategory]);
 
   const filtered = useMemo(() => {
     const paymentSales =
@@ -125,7 +141,12 @@ export function SalesPage() {
       return;
     }
 
-    const nextTotal = qty * price - discount;
+    if (price <= 0) {
+      toast.error("Mahsulot sotish narxini kiriting");
+      return;
+    }
+
+    const nextTotal = qty * price;
     let customerId: string | null = null;
     if (paymentType === "Qarz") {
       const name = customerName.trim();
@@ -174,11 +195,13 @@ export function SalesPage() {
       date: new Date().toISOString(),
       customerId,
       sellerId: employees.find((item) => item.role === "Sotuvchi")?.id || employees[0]?.id || "",
-      items: [{ productId, qty, price, buyPrice: product.buyPrice }],
-      discount,
+      items: [
+        { productId, productName: product.name, qty, price, buyPrice: product.buyPrice || 0 },
+      ],
+      discount: 0,
       paymentType,
       total: nextTotal,
-      profit: (price - product.buyPrice) * qty - discount,
+      profit: (price - (product.buyPrice || 0)) * qty,
       paid: paymentType === "Qarz" ? 0 : nextTotal,
     };
 
@@ -206,7 +229,11 @@ export function SalesPage() {
       toast.error(t("toast.qtyMin"));
       return;
     }
-    const total = product.sellPrice * debtQuantity;
+    if (debtPrice <= 0) {
+      toast.error("Mahsulot narxini kiriting");
+      return;
+    }
+    const total = debtPrice * debtQuantity;
     if (!Number.isFinite(debtPaidNow) || debtPaidNow < 0 || debtPaidNow > total) {
       toast.error(t("sales.paidAmountInvalid"));
       return;
@@ -264,14 +291,14 @@ export function SalesPage() {
           productId: product.id,
           productName: product.name,
           qty: debtQuantity,
-          price: product.sellPrice,
-          buyPrice: product.buyPrice,
+          price: debtPrice,
+          buyPrice: product.buyPrice || 0,
         },
       ],
       discount: 0,
       paymentType: "Qarz",
       total,
-      profit: (product.sellPrice - product.buyPrice) * debtQuantity,
+      profit: (debtPrice - (product.buyPrice || 0)) * debtQuantity,
       paid: debtPaidNow,
     };
     addSale(debtSale);
@@ -280,8 +307,11 @@ export function SalesPage() {
     setDebtCustomerName("");
     setDebtCustomerAddress("");
     setDebtCustomerPhone("");
+    setDebtVehicleBrand("all");
+    setDebtCategory("all");
     setDebtProductId("");
     setDebtQuantity(1);
+    setDebtPrice(0);
     setDebtPaidNow(0);
   };
 
@@ -293,7 +323,6 @@ export function SalesPage() {
     setProductId("");
     setQty(1);
     setPrice(0);
-    setDiscount(0);
     setPaymentType("Naqd");
     setCustomerName("");
     setCustomerPhone("");
@@ -439,7 +468,6 @@ export function SalesPage() {
                 <TableHead>{t("common.product")}</TableHead>
                 <TableHead className="text-right">{t("products.qty")}</TableHead>
                 <TableHead className="text-right">{t("sales.price")}</TableHead>
-                <TableHead className="text-right">{t("sales.discount")}</TableHead>
                 <TableHead className="text-right">{t("common.total")}</TableHead>
                 <TableHead className="text-right">{t("sales.paidTotal")}</TableHead>
                 <TableHead className="text-right">{t("sales.remainingDebt")}</TableHead>
@@ -450,7 +478,7 @@ export function SalesPage() {
             <TableBody>
               {paged.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={11} className="text-center py-10 text-muted-foreground">
+                  <TableCell colSpan={10} className="text-center py-10 text-muted-foreground">
                     {t("sales.notFound")}
                   </TableCell>
                 </TableRow>
@@ -513,9 +541,6 @@ export function SalesPage() {
                         ))}
                       </div>
                     </TableCell>
-                    <TableCell className="text-right tabular-nums">
-                      {formatSom(sale.discount)}
-                    </TableCell>
                     <TableCell className="text-right font-bold tabular-nums">
                       {formatSom(sale.total)}
                     </TableCell>
@@ -549,7 +574,6 @@ export function SalesPage() {
                             setProductId(sale.items[0]?.productId || "");
                             setQty(sale.items[0]?.qty || 1);
                             setPrice(sale.items[0]?.price || 0);
-                            setDiscount(sale.discount || 0);
                             setPaymentType(sale.paymentType as "Naqd" | "Karta" | "Qarz");
                             const customer = customers.find((item) => item.id === sale.customerId);
                             setCustomerName(customer?.name || "");
@@ -638,8 +662,6 @@ export function SalesPage() {
                 value={productId}
                 onValueChange={(value) => {
                   setProductId(value);
-                  const selectedProduct = availableProducts.find((item) => item.id === value);
-                  setPrice(selectedProduct?.sellPrice || 0);
                 }}
               >
                 <SelectTrigger className="mt-1">
@@ -648,8 +670,8 @@ export function SalesPage() {
                 <SelectContent>
                   {availableProducts.map((product) => (
                     <SelectItem key={product.id} value={product.id}>
-                      [{product.vehicle || "Universal"}] {product.name} —{" "}
-                      {formatSom(product.sellPrice)}
+                      [{product.vehicle || "Universal"}] {product.name} ({product.quantity} dona
+                      mavjud)
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -666,23 +688,15 @@ export function SalesPage() {
                 />
               </div>
               <div>
-                <Label>{t("sales.price")}</Label>
+                <Label>{t("sales.price")} (so'm) *</Label>
                 <Input
                   type="number"
                   min={0}
-                  value={price}
+                  value={price || ""}
+                  placeholder="0"
                   onChange={(event) => setPrice(Math.max(0, Number(event.target.value)))}
                 />
               </div>
-            </div>
-            <div>
-              <Label>{t("sales.discountTotal")}</Label>
-              <Input
-                type="number"
-                min={0}
-                value={discount}
-                onChange={(event) => setDiscount(Math.max(0, Number(event.target.value)))}
-              />
             </div>
             <div>
               <Label>{t("sales.payment")}</Label>
@@ -770,17 +784,66 @@ export function SalesPage() {
                 placeholder={t("sales.customerAddress")}
               />
             </div>
+            <div>
+              <Label>Avtomobil (Mashina brendi)</Label>
+              <Select
+                value={debtVehicleBrand}
+                onValueChange={(value) => {
+                  setDebtVehicleBrand(value);
+                  setDebtProductId("");
+                }}
+              >
+                <SelectTrigger className="mt-1">
+                  <SelectValue placeholder="Barcha mashinalar" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Barcha mashinalar</SelectItem>
+                  {vehicleBrands.map((brand) => (
+                    <SelectItem key={brand} value={brand}>
+                      {brand}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>{t("products.category")}</Label>
+              <Select
+                value={debtCategory}
+                onValueChange={(value) => {
+                  setDebtCategory(value);
+                  setDebtProductId("");
+                }}
+              >
+                <SelectTrigger className="mt-1">
+                  <SelectValue placeholder="Barcha kategoriyalar" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Barcha kategoriyalar</SelectItem>
+                  {categories.map((item) => (
+                    <SelectItem key={item} value={item}>
+                      {item}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
             <div className="sm:col-span-2">
               <Label>{t("common.product")}</Label>
-              <Select value={debtProductId} onValueChange={setDebtProductId}>
+              <Select
+                value={debtProductId}
+                onValueChange={(value) => {
+                  setDebtProductId(value);
+                }}
+              >
                 <SelectTrigger className="mt-1">
                   <SelectValue placeholder={t("sales.searchProduct")} />
                 </SelectTrigger>
                 <SelectContent>
-                  {products.map((product) => (
+                  {availableDebtProducts.map((product) => (
                     <SelectItem key={product.id} value={product.id}>
-                      [{product.vehicle || "Universal"}] {product.name} · {product.quantity}{" "}
-                      {t("products.qty").toLowerCase()}
+                      [{product.vehicle || "Universal"}] {product.name} ({product.quantity} dona
+                      mavjud)
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -796,24 +859,16 @@ export function SalesPage() {
                 onChange={(event) => setDebtQuantity(Number(event.target.value))}
               />
             </div>
-            {debtProductId && (
-              <div className="flex flex-col justify-center text-sm text-muted-foreground">
-                <span className="flex gap-1">
-                  <span>{t("sales.unitPrice")}:</span>
-                  <span>
-                    {formatSom(products.find((p) => p.id === debtProductId)?.sellPrice || 0)}
-                  </span>
-                </span>
-                <span className="flex gap-1">
-                  <span>{t("common.total")}:</span>
-                  <span>
-                    {formatSom(
-                      (products.find((p) => p.id === debtProductId)?.sellPrice || 0) * debtQuantity,
-                    )}
-                  </span>
-                </span>
-              </div>
-            )}
+            <div>
+              <Label>{t("sales.price")} (so'm) *</Label>
+              <Input
+                type="number"
+                min={0}
+                value={debtPrice || ""}
+                placeholder="0"
+                onChange={(event) => setDebtPrice(Math.max(0, Number(event.target.value)))}
+              />
+            </div>
             {debtProductId && (
               <div className="sm:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
@@ -827,15 +882,8 @@ export function SalesPage() {
                 </div>
                 <div className="flex flex-col justify-center text-sm">
                   <span className="text-muted-foreground">{t("sales.remainingDebt")}</span>
-                  <span className="font-semibold">
-                    {formatSom(
-                      Math.max(
-                        0,
-                        (products.find((p) => p.id === debtProductId)?.sellPrice || 0) *
-                          debtQuantity -
-                          debtPaidNow,
-                      ),
-                    )}
+                  <span className="font-semibold text-destructive">
+                    {formatSom(Math.max(0, debtPrice * debtQuantity - debtPaidNow))}
                   </span>
                 </div>
               </div>
