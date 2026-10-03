@@ -6,8 +6,12 @@ export function toDbProduct(p) {
   if (p.name !== undefined) dbObj.name = p.name;
   if (p.sku !== undefined) dbObj.sku = p.sku || null;
   if (p.barcode !== undefined) dbObj.barcode = p.barcode || null;
-  if (p.vehicle !== undefined) dbObj.vehicle = p.vehicle || null;
-  if (p.vehicles !== undefined) dbObj.vehicles = p.vehicles;
+  // vehicles array ni vehicle string sifatida saqlaydi (Supabase da vehicles ustuni yo'q)
+  if (p.vehicles !== undefined && Array.isArray(p.vehicles) && p.vehicles.length > 0) {
+    dbObj.vehicle = p.vehicles.join(", ");
+  } else if (p.vehicle !== undefined) {
+    dbObj.vehicle = p.vehicle || null;
+  }
   if (p.category !== undefined) dbObj.category = p.category || null;
   if (p.supplierId !== undefined) dbObj.supplier_id = p.supplierId || null;
   if (p.buyPrice !== undefined) dbObj.buy_price = p.buyPrice;
@@ -26,20 +30,19 @@ export function toDbProduct(p) {
 
 export function toFeProduct(p) {
   if (!p) return null;
-  const vehicles = Array.isArray(p.vehicles)
-    ? p.vehicles
-    : p.vehicle
-      ? p.vehicle
-          .split(/,\s*/)
-          .map((s) => s.trim())
-          .filter(Boolean)
-      : [];
+  // vehicle string ni massivga parse qilish (vergul bilan ajratilgan)
+  const vehicles = p.vehicle
+    ? p.vehicle
+        .split(/,\s*/)
+        .map((s) => s.trim())
+        .filter(Boolean)
+    : [];
   return {
     id: p.id,
     name: p.name,
     sku: p.sku,
     barcode: p.barcode,
-    vehicle: p.vehicle || (vehicles.length ? vehicles.join(", ") : ""),
+    vehicle: p.vehicle || "",
     vehicles,
     category: p.category,
     supplierId: p.supplier_id,

@@ -174,14 +174,16 @@ router.post(
           error &&
           (error.message?.includes("buy_price_usd") ||
             error.message?.includes("sell_price_usd") ||
+            error.message?.includes("vehicles") ||
             error.message?.includes("schema cache"))
         ) {
           console.warn(
-            "⚠️ Column buy_price_usd missing on DB, retrying insert without USD columns...",
+            "⚠️ Column missing on DB, retrying insert without problematic columns...",
           );
           delete dbObj.buy_price_usd;
           delete dbObj.sell_price_usd;
           delete dbObj.currency;
+          delete dbObj.vehicles;
           const retry = await supabaseClient.from("products").insert([dbObj]).select().single();
           data = retry.data;
           error = retry.error;
@@ -241,14 +243,16 @@ router.put(
           error &&
           (error.message?.includes("buy_price_usd") ||
             error.message?.includes("sell_price_usd") ||
+            error.message?.includes("vehicles") ||
             error.message?.includes("schema cache"))
         ) {
           console.warn(
-            "⚠️ Column buy_price_usd missing on DB, retrying update without USD columns...",
+            "⚠️ Column missing on DB, retrying update without problematic columns...",
           );
           delete dbObj.buy_price_usd;
           delete dbObj.sell_price_usd;
           delete dbObj.currency;
+          delete dbObj.vehicles;
           const retry = await supabaseClient
             .from("products")
             .update(dbObj)
