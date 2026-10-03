@@ -477,7 +477,8 @@ export function SalesPage() {
                       <div className="flex min-w-40 flex-col gap-1.5">
                         {sale.items.map((item, index) => {
                           const p = products.find((product) => product.id === item.productId);
-                          const productName = p?.name || item.productName || t("sales.unknownProduct");
+                          const productName =
+                            p?.name || item.productName || t("sales.unknownProduct");
                           const vehicleLabel = p?.vehicle || "";
                           return (
                             <div
@@ -647,7 +648,8 @@ export function SalesPage() {
                 <SelectContent>
                   {availableProducts.map((product) => (
                     <SelectItem key={product.id} value={product.id}>
-                      [{product.vehicle || "Universal"}] {product.name} — {formatSom(product.sellPrice)}
+                      [{product.vehicle || "Universal"}] {product.name} —{" "}
+                      {formatSom(product.sellPrice)}
                     </SelectItem>
                   ))}
                 </SelectContent>

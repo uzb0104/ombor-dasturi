@@ -29,7 +29,10 @@ export function toFeProduct(p) {
   const vehicles = Array.isArray(p.vehicles)
     ? p.vehicles
     : p.vehicle
-      ? p.vehicle.split(/,\s*/).map((s) => s.trim()).filter(Boolean)
+      ? p.vehicle
+          .split(/,\s*/)
+          .map((s) => s.trim())
+          .filter(Boolean)
       : [];
   return {
     id: p.id,

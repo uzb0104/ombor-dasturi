@@ -67,7 +67,7 @@ export const Route = createFileRoute("/_app/products")({ component: ProductsPage
 
 const VOLTAGE_OPTIONS = ["6V", "12V", "24V", "36V", "48V", "60V", "72V"];
 
-export function matchProductSearch(p: Product, query: string): boolean {
+function matchProductSearch(p: Product, query: string): boolean {
   if (!query || !query.trim()) return true;
   const q = query.toLowerCase().trim();
   const searchables: (string | number | undefined | null)[] = [
@@ -264,7 +264,10 @@ function ProductsPage() {
       p.vehicles && p.vehicles.length > 0
         ? p.vehicles
         : p.vehicle
-          ? p.vehicle.split(/,\s*/).map((s) => s.trim()).filter(Boolean)
+          ? p.vehicle
+              .split(/,\s*/)
+              .map((s) => s.trim())
+              .filter(Boolean)
           : [vehicleBrands[0] || ""];
     setForm({
       name: p.name,
@@ -789,7 +792,9 @@ function ProductsPage() {
                     {form.vehicles.length > 0 && (
                       <div className="text-[11px] text-muted-foreground pt-1 flex flex-wrap gap-1 items-center">
                         <span>Tanlangan mashinalar ({form.vehicles.length}):</span>
-                        <span className="font-semibold text-foreground">{form.vehicles.join(", ")}</span>
+                        <span className="font-semibold text-foreground">
+                          {form.vehicles.join(", ")}
+                        </span>
                       </div>
                     )}
                   </div>
