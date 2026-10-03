@@ -14,6 +14,7 @@ export type Product = {
   sku?: string | null;
   barcode?: string | null;
   vehicle: VehicleBrand | string;
+  vehicles?: string[];
   category: Category | string;
   supplierId?: string | null;
   buyPrice: number;

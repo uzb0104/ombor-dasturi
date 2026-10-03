@@ -90,9 +90,11 @@ router.get("/", authenticateToken, requirePermission("/products"), async (req, r
         query = query.range(from, from + limit - 1);
       }
       if (search)
-        query = query.or(`name.ilike.%${search}%,barcode.ilike.%${search}%,sku.ilike.%${search}%`);
+        query = query.or(
+          `name.ilike.%${search}%,barcode.ilike.%${search}%,sku.ilike.%${search}%,category.ilike.%${search}%,vehicle.ilike.%${search}%,description.ilike.%${search}%`,
+        );
       if (category) query = query.eq("category", category);
-      if (vehicle) query = query.eq("vehicle", vehicle);
+      if (vehicle) query = query.ilike("vehicle", `%${vehicle}%`);
       const { data, count, error } = await query;
       if (error) throw error;
 
@@ -111,13 +113,31 @@ router.get("/", authenticateToken, requirePermission("/products"), async (req, r
       const filtered = (Array.isArray(db.products) ? db.products : []).filter(
         (p) =>
           (!search ||
-            [p.name, p.barcode, p.sku].some((v) =>
+            [
+              p.name,
+              p.barcode,
+              p.sku,
+              p.category,
+              p.vehicle,
+              ...(Array.isArray(p.vehicles) ? p.vehicles : []),
+              p.description,
+              p.attributes?.unitBrand,
+              p.attributes?.amperage,
+              p.attributes?.voltage,
+              p.attributes?.tireSize,
+              p.attributes?.tireSeason,
+              p.buyPrice != null ? String(p.buyPrice) : "",
+              p.sellPrice != null ? String(p.sellPrice) : "",
+            ].some((v) =>
               String(v || "")
                 .toLowerCase()
                 .includes(search.toLowerCase()),
             )) &&
           (!category || p.category === category) &&
-          (!vehicle || p.vehicle === vehicle),
+          (!vehicle ||
+            p.vehicle === vehicle ||
+            (p.vehicle && p.vehicle.includes(vehicle)) ||
+            (Array.isArray(p.vehicles) && p.vehicles.includes(vehicle))),
       );
       const start = (page - 1) * limit;
       const result = {

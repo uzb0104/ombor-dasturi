@@ -28,6 +28,7 @@ export const productSchema = z.object({
   sku: z.string().nullable().optional(),
   barcode: z.string().nullable().optional(),
   vehicle: z.string().nullable().optional(),
+  vehicles: z.array(z.string()).optional(),
   category: z.string().nullable().optional(),
   supplierId: z.string().nullable().optional(),
   buyPrice: z.number().nonnegative("Sotib olish narxi 0 dan kam bo'lmasligi kerak"),

@@ -67,9 +67,32 @@ export const Route = createFileRoute("/_app/products")({ component: ProductsPage
 
 const VOLTAGE_OPTIONS = ["6V", "12V", "24V", "36V", "48V", "60V", "72V"];
 
+export function matchProductSearch(p: Product, query: string): boolean {
+  if (!query || !query.trim()) return true;
+  const q = query.toLowerCase().trim();
+  const searchables: (string | number | undefined | null)[] = [
+    p.name,
+    p.barcode,
+    p.sku,
+    p.category,
+    p.vehicle,
+    ...(p.vehicles || []),
+    p.description,
+    p.attributes?.unitBrand,
+    p.attributes?.amperage,
+    p.attributes?.voltage,
+    p.attributes?.tireSize,
+    p.attributes?.tireSeason,
+    p.buyPrice != null ? String(p.buyPrice) : undefined,
+    p.sellPrice != null ? String(p.sellPrice) : undefined,
+  ];
+  return searchables.some((val) => val != null && String(val).toLowerCase().includes(q));
+}
+
 type FormState = {
   name: string;
   barcode: string;
+  vehicles: string[];
   vehicle: string;
   category: string;
   buyPrice: number;
@@ -89,7 +112,8 @@ type FormState = {
 const emptyForm = (firstCategory: string, firstBrand: string): FormState => ({
   name: "",
   barcode: "",
-  vehicle: firstBrand,
+  vehicles: firstBrand ? [firstBrand] : [],
+  vehicle: firstBrand || "",
   category: firstCategory,
   buyPrice: 0,
   buyPriceUsd: 0,
@@ -164,7 +188,7 @@ function ProductsPage() {
 
   useEffect(() => {
     let active = true;
-    void productsApi
+    productsApi
       .getPage({
         page: serverPage,
         limit: pageSize,
@@ -178,7 +202,25 @@ function ProductsPage() {
         setServerTotal(result.total);
         setPageItems(result.items);
       })
-      .catch(() => undefined);
+      .catch(() => {
+        if (!active) return;
+        const filtered = products.filter((p) => {
+          const matchCat = cat === "all" || p.category === cat;
+          const matchVeh =
+            serverVehicle === "" ||
+            p.vehicle === serverVehicle ||
+            (p.vehicles && p.vehicles.includes(serverVehicle)) ||
+            (p.vehicle && p.vehicle.includes(serverVehicle));
+          const matchSearch = matchProductSearch(p, search);
+          return matchCat && matchVeh && matchSearch;
+        });
+        const total = filtered.length;
+        const pages = Math.ceil(total / pageSize) || 1;
+        const start = (serverPage - 1) * pageSize;
+        setServerPages(pages);
+        setServerTotal(total);
+        setPageItems(filtered.slice(start, start + pageSize));
+      });
     return () => {
       active = false;
     };
@@ -218,10 +260,17 @@ function ProductsPage() {
     const sellUsd =
       p.sellPriceUsd ??
       (usdRate > 0 && p.sellPrice > 0 ? Number((p.sellPrice / usdRate).toFixed(2)) : 0);
+    const initialVehicles =
+      p.vehicles && p.vehicles.length > 0
+        ? p.vehicles
+        : p.vehicle
+          ? p.vehicle.split(/,\s*/).map((s) => s.trim()).filter(Boolean)
+          : [vehicleBrands[0] || ""];
     setForm({
       name: p.name,
       barcode: p.barcode || "",
-      vehicle: p.vehicle,
+      vehicles: initialVehicles,
+      vehicle: p.vehicle || initialVehicles.join(", "),
       category: p.category,
       buyPrice: p.buyPrice,
       buyPriceUsd: buyUsd,
@@ -327,7 +376,11 @@ function ProductsPage() {
       return;
     }
     const category = categories.includes(form.category) ? form.category : categories[0];
-    const vehicle = vehicleBrands.includes(form.vehicle) ? form.vehicle : vehicleBrands[0];
+    const selectedVehicles =
+      form.vehicles.length > 0
+        ? form.vehicles.filter((v) => vehicleBrands.includes(v))
+        : [vehicleBrands[0] || "Barchasi"];
+    const vehicleString = selectedVehicles.join(", ");
     const bc = form.barcode.trim().toUpperCase();
     const attributes: ProductAttributes = {};
     if (form.unitBrand.trim()) attributes.unitBrand = form.unitBrand.trim();
@@ -355,7 +408,8 @@ function ProductsPage() {
       name: form.name,
       barcode: bc,
       sku: "",
-      vehicle,
+      vehicle: vehicleString,
+      vehicles: selectedVehicles,
       category,
       supplierId: editing
         ? products.find((product) => product.id === editing)?.supplierId || null
@@ -668,26 +722,77 @@ function ProductsPage() {
                       {t("products.form.codeHint")}
                     </p>
                   </div>
-                  {!(isBattery(form.category) || isTire(form.category)) && (
-                    <div>
-                      <Label>{t("products.brand")}</Label>
-                      <Select
-                        value={form.vehicle}
-                        onValueChange={(v) => setForm({ ...form, vehicle: v })}
+                  <div className="sm:col-span-2 space-y-2 border rounded-xl p-3 bg-muted/20">
+                    <div className="flex items-center justify-between">
+                      <Label className="font-semibold text-foreground text-xs uppercase tracking-wider">
+                        Mos keladigan avtomobillar (Mashinalarni tanlang) *
+                      </Label>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 text-[11px] px-2"
+                        onClick={() => {
+                          if (form.vehicles.length === vehicleBrands.length) {
+                            setForm((f) => ({ ...f, vehicles: [], vehicle: "" }));
+                          } else {
+                            setForm((f) => ({
+                              ...f,
+                              vehicles: [...vehicleBrands],
+                              vehicle: vehicleBrands.join(", "),
+                            }));
+                          }
+                        }}
                       >
-                        <SelectTrigger className="mt-1">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {vehicleBrands.map((b) => (
-                            <SelectItem key={b} value={b}>
-                              {b}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                        {form.vehicles.length === vehicleBrands.length
+                          ? "Bekor qilish"
+                          : "Barchasini tanlash"}
+                      </Button>
                     </div>
-                  )}
+                    <div className="flex flex-wrap gap-1.5 pt-1">
+                      {vehicleBrands.map((b) => {
+                        const isSelected = form.vehicles.includes(b);
+                        return (
+                          <button
+                            key={b}
+                            type="button"
+                            onClick={() => {
+                              const next = isSelected
+                                ? form.vehicles.filter((v) => v !== b)
+                                : [...form.vehicles, b];
+                              setForm((f) => ({
+                                ...f,
+                                vehicles: next,
+                                vehicle: next.join(", "),
+                              }));
+                            }}
+                            className={`px-2.5 py-1 text-xs rounded-lg border transition-all flex items-center gap-1.5 ${
+                              isSelected
+                                ? "bg-primary text-primary-foreground border-primary font-medium shadow-sm"
+                                : "bg-background hover:bg-muted text-muted-foreground border-border"
+                            }`}
+                          >
+                            <span
+                              className={`w-3.5 h-3.5 rounded-full border grid place-items-center text-[9px] ${
+                                isSelected
+                                  ? "border-primary-foreground bg-primary-foreground/20 font-bold"
+                                  : "border-muted-foreground"
+                              }`}
+                            >
+                              {isSelected ? "✓" : ""}
+                            </span>
+                            {b}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    {form.vehicles.length > 0 && (
+                      <div className="text-[11px] text-muted-foreground pt-1 flex flex-wrap gap-1 items-center">
+                        <span>Tanlangan mashinalar ({form.vehicles.length}):</span>
+                        <span className="font-semibold text-foreground">{form.vehicles.join(", ")}</span>
+                      </div>
+                    )}
+                  </div>
                   <div>
                     <Label>{t("products.category")}</Label>
                     <Select
@@ -1199,7 +1304,30 @@ function ProductsPage() {
                       <span className="italic normal-case font-sans">{t("products.noCode")}</span>
                     )}
                   </TableCell>
-                  <TableCell className="hidden sm:table-cell font-medium">{p.vehicle}</TableCell>
+                  <TableCell className="hidden sm:table-cell font-medium">
+                    <div className="flex flex-wrap gap-1 max-w-[220px]">
+                      {(p.vehicles && p.vehicles.length > 0
+                        ? p.vehicles
+                        : p.vehicle
+                          ? p.vehicle.split(/,\s*/)
+                          : []
+                      )
+                        .slice(0, 3)
+                        .map((v) => (
+                          <span
+                            key={v}
+                            className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-muted text-foreground border border-border/80"
+                          >
+                            {v}
+                          </span>
+                        ))}
+                      {(p.vehicles || (p.vehicle ? p.vehicle.split(/,\s*/) : [])).length > 3 && (
+                        <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-primary/10 text-primary">
+                          +{(p.vehicles || p.vehicle.split(/,\s*/)).length - 3}
+                        </span>
+                      )}
+                    </div>
+                  </TableCell>
                   <TableCell className="hidden lg:table-cell text-sm">{p.category}</TableCell>
                   <TableCell className="text-right tabular-nums font-semibold">
                     {p.quantity}

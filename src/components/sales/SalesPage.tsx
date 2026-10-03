@@ -44,8 +44,17 @@ import { toast } from "sonner";
 
 export function SalesPage() {
   const t = useT();
-  const { sales, products, customers, employees, categories, addSale, updateSale, deleteSale } =
-    useStore();
+  const {
+    sales,
+    products,
+    customers,
+    employees,
+    categories,
+    vehicleBrands,
+    addSale,
+    updateSale,
+    deleteSale,
+  } = useStore();
   const { confirm, confirmNode } = useConfirm();
   const [period, setPeriod] = useState("all");
   const [paymentFilter, setPaymentFilter] = useState<"all" | "Naqd" | "Karta" | "Qarz">("all");
@@ -58,7 +67,8 @@ export function SalesPage() {
   const [debtQuantity, setDebtQuantity] = useState(1);
   const [debtPaidNow, setDebtPaidNow] = useState(0);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [category, setCategory] = useState(categories[0] || "");
+  const [vehicleBrand, setVehicleBrand] = useState("all");
+  const [category, setCategory] = useState("all");
   const [productId, setProductId] = useState("");
   const [qty, setQty] = useState(1);
   const [price, setPrice] = useState(0);
@@ -66,10 +76,19 @@ export function SalesPage() {
   const [paymentType, setPaymentType] = useState<"Naqd" | "Karta" | "Qarz">("Naqd");
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
-  const categoryProducts = useMemo(
-    () => products.filter((product) => product.category === category),
-    [products, category],
-  );
+
+  const availableProducts = useMemo(() => {
+    return products.filter((product) => {
+      const matchVeh =
+        vehicleBrand === "all" ||
+        product.vehicle === vehicleBrand ||
+        (product.vehicles && product.vehicles.includes(vehicleBrand)) ||
+        (product.vehicle && product.vehicle.includes(vehicleBrand)) ||
+        product.vehicle === "Barchasi";
+      const matchCat = category === "all" || product.category === category;
+      return matchVeh && matchCat;
+    });
+  }, [products, vehicleBrand, category]);
 
   const filtered = useMemo(() => {
     const paymentSales =
@@ -269,7 +288,8 @@ export function SalesPage() {
   const resetForm = () => {
     setOpen(false);
     setEditingId(null);
-    setCategory(categories[0] || "");
+    setVehicleBrand("all");
+    setCategory("all");
     setProductId("");
     setQty(1);
     setPrice(0);
@@ -454,14 +474,28 @@ export function SalesPage() {
                       })()}
                     </TableCell>
                     <TableCell>
-                      <div className="flex min-w-40 flex-col gap-1">
-                        {sale.items.map((item, index) => (
-                          <span key={`${sale.id}-${item.productId}-${index}`}>
-                            {products.find((product) => product.id === item.productId)?.name ||
-                              item.productName ||
-                              t("sales.unknownProduct")}
-                          </span>
-                        ))}
+                      <div className="flex min-w-40 flex-col gap-1.5">
+                        {sale.items.map((item, index) => {
+                          const p = products.find((product) => product.id === item.productId);
+                          const productName = p?.name || item.productName || t("sales.unknownProduct");
+                          const vehicleLabel = p?.vehicle || "";
+                          return (
+                            <div
+                              key={`${sale.id}-${item.productId}-${index}`}
+                              className="flex items-center gap-1.5 flex-wrap"
+                            >
+                              {vehicleLabel && (
+                                <Badge
+                                  variant="outline"
+                                  className="text-[10px] px-1.5 py-0 font-normal bg-muted/60 shrink-0"
+                                >
+                                  {vehicleLabel}
+                                </Badge>
+                              )}
+                              <span className="font-medium">{productName}</span>
+                            </div>
+                          );
+                        })}
                       </div>
                     </TableCell>
                     <TableCell className="text-right tabular-nums">
@@ -509,7 +543,8 @@ export function SalesPage() {
                             const saleProduct = products.find(
                               (product) => product.id === sale.items[0]?.productId,
                             );
-                            setCategory(saleProduct?.category || categories[0] || "");
+                            setVehicleBrand("all");
+                            setCategory(saleProduct?.category || "all");
                             setProductId(sale.items[0]?.productId || "");
                             setQty(sale.items[0]?.qty || 1);
                             setPrice(sale.items[0]?.price || 0);
@@ -551,6 +586,29 @@ export function SalesPage() {
           </DialogHeader>
           <div className="space-y-3">
             <div>
+              <Label>Avtomobil (Mashina brendi)</Label>
+              <Select
+                value={vehicleBrand}
+                onValueChange={(value) => {
+                  setVehicleBrand(value);
+                  setProductId("");
+                  setPrice(0);
+                }}
+              >
+                <SelectTrigger className="mt-1">
+                  <SelectValue placeholder="Barcha mashinalar" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Barcha mashinalar</SelectItem>
+                  {vehicleBrands.map((brand) => (
+                    <SelectItem key={brand} value={brand}>
+                      {brand}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
               <Label>{t("products.category")}</Label>
               <Select
                 value={category}
@@ -561,9 +619,10 @@ export function SalesPage() {
                 }}
               >
                 <SelectTrigger className="mt-1">
-                  <SelectValue placeholder={t("products.category")} />
+                  <SelectValue placeholder="Barcha kategoriyalar" />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="all">Barcha kategoriyalar</SelectItem>
                   {categories.map((item) => (
                     <SelectItem key={item} value={item}>
                       {item}
@@ -578,7 +637,7 @@ export function SalesPage() {
                 value={productId}
                 onValueChange={(value) => {
                   setProductId(value);
-                  const selectedProduct = categoryProducts.find((item) => item.id === value);
+                  const selectedProduct = availableProducts.find((item) => item.id === value);
                   setPrice(selectedProduct?.sellPrice || 0);
                 }}
               >
@@ -586,9 +645,9 @@ export function SalesPage() {
                   <SelectValue placeholder={t("sales.searchProduct")} />
                 </SelectTrigger>
                 <SelectContent>
-                  {categoryProducts.map((product) => (
+                  {availableProducts.map((product) => (
                     <SelectItem key={product.id} value={product.id}>
-                      {product.name}
+                      [{product.vehicle || "Universal"}] {product.name} — {formatSom(product.sellPrice)}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -718,7 +777,8 @@ export function SalesPage() {
                 <SelectContent>
                   {products.map((product) => (
                     <SelectItem key={product.id} value={product.id}>
-                      {product.name} · {product.quantity} {t("products.qty").toLowerCase()}
+                      [{product.vehicle || "Universal"}] {product.name} · {product.quantity}{" "}
+                      {t("products.qty").toLowerCase()}
                     </SelectItem>
                   ))}
                 </SelectContent>

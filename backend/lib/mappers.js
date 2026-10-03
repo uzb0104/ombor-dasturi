@@ -7,6 +7,7 @@ export function toDbProduct(p) {
   if (p.sku !== undefined) dbObj.sku = p.sku || null;
   if (p.barcode !== undefined) dbObj.barcode = p.barcode || null;
   if (p.vehicle !== undefined) dbObj.vehicle = p.vehicle || null;
+  if (p.vehicles !== undefined) dbObj.vehicles = p.vehicles;
   if (p.category !== undefined) dbObj.category = p.category || null;
   if (p.supplierId !== undefined) dbObj.supplier_id = p.supplierId || null;
   if (p.buyPrice !== undefined) dbObj.buy_price = p.buyPrice;
@@ -25,12 +26,18 @@ export function toDbProduct(p) {
 
 export function toFeProduct(p) {
   if (!p) return null;
+  const vehicles = Array.isArray(p.vehicles)
+    ? p.vehicles
+    : p.vehicle
+      ? p.vehicle.split(/,\s*/).map((s) => s.trim()).filter(Boolean)
+      : [];
   return {
     id: p.id,
     name: p.name,
     sku: p.sku,
     barcode: p.barcode,
-    vehicle: p.vehicle,
+    vehicle: p.vehicle || (vehicles.length ? vehicles.join(", ") : ""),
+    vehicles,
     category: p.category,
     supplierId: p.supplier_id,
     buyPrice: Number(p.buy_price || 0),
