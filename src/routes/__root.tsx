@@ -30,19 +30,20 @@ function NotFoundComponent() {
   );
 }
 
-function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
+function ErrorComponent({ error, reset }: { error: any; reset?: () => void }) {
   console.error(error);
   const router = useRouter();
   const t = useRootT();
+  const errorMessage = error instanceof Error ? error.message : String(error || "");
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="max-w-md text-center">
         <h1 className="text-xl font-semibold">{t("error.loadFailed")}</h1>
-        <p className="mt-2 text-sm text-muted-foreground">{error.message}</p>
+        <p className="mt-2 text-sm text-muted-foreground">{errorMessage}</p>
         <button
           onClick={() => {
             router.invalidate();
-            reset();
+            reset?.();
           }}
           className="mt-6 inline-flex rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
         >
