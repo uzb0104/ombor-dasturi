@@ -168,8 +168,8 @@ app.use("/api/incoming", incomingRouter);
 app.use("/api/sales", salesRouter);
 app.use("/api/used-batteries", usedBatteriesRouter);
 
-// Serverni ishga tushirish (test rejimida port tinglanmaydi, faqat app eksport qilinadi)
-if (process.env.NODE_ENV !== "test") {
+// Serverni ishga tushirish (test va vercel serverless rejimida port tinglanmaydi)
+if (process.env.NODE_ENV !== "test" && !process.env.VERCEL) {
   app.listen(PORT, async () => {
     console.log(`📡 AutoERP Pro backend server port ${PORT} da muvaffaqiyatli ishga tushdi!`);
     console.log(`🔗 API manzili: http://localhost:${PORT}`);
@@ -177,8 +177,8 @@ if (process.env.NODE_ENV !== "test") {
     await ensureDefaultAdmin();
   });
 } else {
-  // Test rejimida ham default admin foydalanuvchi mavjudligini ta'minlash
-  await ensureDefaultAdmin();
+  // Serverless / test rejimida ham default admin foydalanuvchi mavjudligini ta'minlash
+  await ensureDefaultAdmin().catch(() => undefined);
 }
 
 export default app;

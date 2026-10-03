@@ -5,7 +5,7 @@ import tsconfigPaths from "vite-tsconfig-paths";
 import tailwindcss from "@tailwindcss/vite";
 
 export default defineConfig({
-  base: "./",
+  base: "/",
   plugins: [TanStackRouterVite(), react(), tsconfigPaths(), tailwindcss()],
   build: {
     chunkSizeWarningLimit: 1200,
