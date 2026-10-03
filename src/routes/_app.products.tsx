@@ -183,7 +183,7 @@ function ProductsPage() {
   const [serverPages, setServerPages] = useState(1);
   const [serverTotal, setServerTotal] = useState(0);
   const [pageItems, setPageItems] = useState<Product[]>([]);
-  const pageSize = 12;
+  const pageSize = 50;
   const serverVehicle = veh === "all" ? "" : veh;
 
   useEffect(() => {
