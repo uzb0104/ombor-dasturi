@@ -59,7 +59,7 @@ function rowToProduct(
     id: `prd_${Math.random().toString(36).slice(2, 9)}`,
     name,
     sku: String(mapped.sku || ""),
-    barcode: String(mapped.barcode || "").toUpperCase(),
+    barcode: "",
     vehicle: veh as Product["vehicle"],
     category: cat as Product["category"],
     supplierId: "",
@@ -113,8 +113,8 @@ export function parseProductCsv(
 export async function downloadImportTemplate() {
   const XLSX = await import("xlsx");
   const ws = XLSX.utils.aoa_to_sheet([
-    ["nom", "kod", "brend", "kategoriya", "miqdor", "sotib", "sotuv", "min"],
-    ["Tormoz kolodkasi", "B7RTC", "Chevrolet", "Tormoz tizimi", 10, 50000, 75000, 5],
+    ["nom", "brend", "kategoriya", "miqdor", "sotib", "sotuv", "min"],
+    ["Tormoz kolodkasi", "Chevrolet", "Tormoz tizimi", 10, 50000, 75000, 5],
   ]);
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, "Tovarlar");

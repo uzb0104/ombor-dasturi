@@ -21,6 +21,7 @@ import { Route as AppDebtsRouteImport } from './routes/_app.debts'
 import { Route as AppEmployeesRouteImport } from './routes/_app.employees'
 import { Route as AppExpensesRouteImport } from './routes/_app.expenses'
 import { Route as AppIncomingRouteImport } from './routes/_app.incoming'
+import { Route as AppIncomingCategoriesRouteImport } from './routes/_app.incoming-categories'
 import { Route as AppInventoryRouteImport } from './routes/_app.inventory'
 import { Route as AppProductsRouteImport } from './routes/_app.products'
 import { Route as AppReportsRouteImport } from './routes/_app.reports'
@@ -90,6 +91,11 @@ const AppIncomingRoute = AppIncomingRouteImport.update({
   path: '/incoming',
   getParentRoute: () => AppRoute,
 } as any)
+const AppIncomingCategoriesRoute = AppIncomingCategoriesRouteImport.update({
+  id: '/incoming-categories',
+  path: '/incoming-categories',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppInventoryRoute = AppInventoryRouteImport.update({
   id: '/inventory',
   path: '/inventory',
@@ -148,6 +154,7 @@ export interface FileRoutesByFullPath {
   '/employees': typeof AppEmployeesRoute
   '/expenses': typeof AppExpensesRoute
   '/incoming': typeof AppIncomingRoute
+  '/incoming-categories': typeof AppIncomingCategoriesRoute
   '/inventory': typeof AppInventoryRoute
   '/products': typeof AppProductsRoute
   '/reports': typeof AppReportsRoute
@@ -170,6 +177,7 @@ export interface FileRoutesByTo {
   '/employees': typeof AppEmployeesRoute
   '/expenses': typeof AppExpensesRoute
   '/incoming': typeof AppIncomingRoute
+  '/incoming-categories': typeof AppIncomingCategoriesRoute
   '/inventory': typeof AppInventoryRoute
   '/products': typeof AppProductsRoute
   '/reports': typeof AppReportsRoute
@@ -194,6 +202,7 @@ export interface FileRoutesById {
   '/_app/employees': typeof AppEmployeesRoute
   '/_app/expenses': typeof AppExpensesRoute
   '/_app/incoming': typeof AppIncomingRoute
+  '/_app/incoming-categories': typeof AppIncomingCategoriesRoute
   '/_app/inventory': typeof AppInventoryRoute
   '/_app/products': typeof AppProductsRoute
   '/_app/reports': typeof AppReportsRoute
@@ -218,6 +227,7 @@ export interface FileRouteTypes {
     | '/employees'
     | '/expenses'
     | '/incoming'
+    | '/incoming-categories'
     | '/inventory'
     | '/products'
     | '/reports'
@@ -240,6 +250,7 @@ export interface FileRouteTypes {
     | '/employees'
     | '/expenses'
     | '/incoming'
+    | '/incoming-categories'
     | '/inventory'
     | '/products'
     | '/reports'
@@ -263,6 +274,7 @@ export interface FileRouteTypes {
     | '/_app/employees'
     | '/_app/expenses'
     | '/_app/incoming'
+    | '/_app/incoming-categories'
     | '/_app/inventory'
     | '/_app/products'
     | '/_app/reports'
@@ -366,6 +378,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppIncomingRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/incoming-categories': {
+      id: '/_app/incoming-categories'
+      path: '/incoming-categories'
+      fullPath: '/incoming-categories'
+      preLoaderRoute: typeof AppIncomingCategoriesRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/inventory': {
       id: '/_app/inventory'
       path: '/inventory'
@@ -442,6 +461,7 @@ interface AppRouteChildren {
   AppEmployeesRoute: typeof AppEmployeesRoute
   AppExpensesRoute: typeof AppExpensesRoute
   AppIncomingRoute: typeof AppIncomingRoute
+  AppIncomingCategoriesRoute: typeof AppIncomingCategoriesRoute
   AppInventoryRoute: typeof AppInventoryRoute
   AppProductsRoute: typeof AppProductsRoute
   AppReportsRoute: typeof AppReportsRoute
@@ -463,6 +483,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppEmployeesRoute: AppEmployeesRoute,
   AppExpensesRoute: AppExpensesRoute,
   AppIncomingRoute: AppIncomingRoute,
+  AppIncomingCategoriesRoute: AppIncomingCategoriesRoute,
   AppInventoryRoute: AppInventoryRoute,
   AppProductsRoute: AppProductsRoute,
   AppReportsRoute: AppReportsRoute,

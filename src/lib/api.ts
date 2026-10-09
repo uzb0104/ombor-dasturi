@@ -251,6 +251,24 @@ export const categoriesApi = {
     }),
 };
 
+export const incomingCategoriesApi = {
+  getAll: () => request<string[]>("/api/incoming-categories"),
+  create: (name: string) =>
+    request<{ name: string }>("/api/incoming-categories", {
+      method: "POST",
+      body: JSON.stringify({ name }),
+    }),
+  update: (oldName: string, newName: string) =>
+    request<{ name: string }>(`/api/incoming-categories/${encodeURIComponent(oldName)}`, {
+      method: "PUT",
+      body: JSON.stringify({ name: newName }),
+    }),
+  delete: (name: string) =>
+    request<{ success: boolean }>(`/api/incoming-categories/${encodeURIComponent(name)}`, {
+      method: "DELETE",
+    }),
+};
+
 export const vehicleBrandsApi = {
   getAll: () => request<string[]>("/api/vehicle-brands"),
   create: (name: string) =>

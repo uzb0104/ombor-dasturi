@@ -37,11 +37,13 @@ import {
   debtPaymentsApi,
   usersApi,
   categoriesApi,
+  incomingCategoriesApi,
   vehicleBrandsApi,
   branchesApi,
   auditApi,
   usedBatteriesApi,
 } from "./api";
+import { DEFAULT_INCOMING_CATEGORIES } from "./constants";
 import { syncApi, formatApiError } from "./api-sync";
 import { toast } from "sonner";
 
@@ -78,6 +80,7 @@ type State = {
   expenses: Expense[];
   incoming: IncomingStock[];
   categories: string[];
+  incomingCategories: string[];
   vehicleBrands: string[];
   debtPayments: DebtPayment[];
   addDebtPayment: (p: DebtPayment) => void;
@@ -118,6 +121,10 @@ type State = {
   addCategory: (c: string) => void;
   updateCategory: (oldName: string, newName: string) => void;
   deleteCategory: (c: string) => void;
+
+  addIncomingCategory: (c: string) => void;
+  updateIncomingCategory: (oldName: string, newName: string) => void;
+  deleteIncomingCategory: (c: string) => void;
 
   addVehicleBrand: (b: string) => void;
   updateVehicleBrand: (oldName: string, newName: string) => void;
@@ -229,6 +236,7 @@ export const useStore = create<State>()(
               incoming,
               debtPayments,
               categories,
+              incomingCategories,
               vehicleBrands,
               branches,
               auditLog,
@@ -247,6 +255,7 @@ export const useStore = create<State>()(
               incomingApi.getAll().catch(() => get().incoming),
               debtPaymentsApi.getAll().catch(() => get().debtPayments),
               categoriesApi.getAll().catch(() => get().categories),
+              incomingCategoriesApi.getAll().catch(() => get().incomingCategories),
               vehicleBrandsApi.getAll().catch(() => get().vehicleBrands),
               branchesApi.getAll().catch(() => get().branches),
               auditApi.getAll().catch(() => get().auditLog),
@@ -262,8 +271,15 @@ export const useStore = create<State>()(
               expenses,
               incoming,
               debtPayments,
-              categories,
-              vehicleBrands,
+              categories: (categories || [])
+                .slice()
+                .sort((a, b) => a.localeCompare(b, "uz", { sensitivity: "base" })),
+              incomingCategories: (incomingCategories || [])
+                .slice()
+                .sort((a, b) => a.localeCompare(b, "uz", { sensitivity: "base" })),
+              vehicleBrands: (vehicleBrands || [])
+                .slice()
+                .sort((a, b) => a.localeCompare(b, "uz", { sensitivity: "base" })),
               branches,
               auditLog,
               appUsers,
@@ -377,6 +393,7 @@ export const useStore = create<State>()(
         expenses: [],
         incoming: [],
         categories: [...DEFAULT_CATEGORIES],
+        incomingCategories: [...DEFAULT_INCOMING_CATEGORIES],
         vehicleBrands: [],
         debtPayments: [],
         usedBatteries: [
@@ -878,14 +895,20 @@ export const useStore = create<State>()(
         addCategory: (c) => {
           const name = c.trim();
           if (!name || get().categories.includes(name)) return;
-          set({ categories: [...get().categories, name] });
+          const next = [...get().categories, name].sort((a, b) =>
+            a.localeCompare(b, "uz", { sensitivity: "base" }),
+          );
+          set({ categories: next });
           syncApi(categoriesApi.create(name), { onFail: resync });
         },
         updateCategory: (oldName, newName) => {
           const n = newName.trim();
           if (!n) return;
+          const next = get()
+            .categories.map((c) => (c === oldName ? n : c))
+            .sort((a, b) => a.localeCompare(b, "uz", { sensitivity: "base" }));
           set({
-            categories: get().categories.map((c) => (c === oldName ? n : c)),
+            categories: next,
             products: get().products.map((p) =>
               p.category === oldName ? { ...p, category: n } : p,
             ),
@@ -895,6 +918,30 @@ export const useStore = create<State>()(
         deleteCategory: (c) => {
           set({ categories: get().categories.filter((x) => x !== c) });
           syncApi(categoriesApi.delete(c), { onFail: resync });
+        },
+
+        // ─── KIRIM KATEGORIYALARI ───
+        addIncomingCategory: (c) => {
+          const name = c.trim();
+          if (!name || get().incomingCategories.includes(name)) return;
+          const next = [...get().incomingCategories, name].sort((a, b) =>
+            a.localeCompare(b, "uz", { sensitivity: "base" }),
+          );
+          set({ incomingCategories: next });
+          syncApi(incomingCategoriesApi.create(name), { onFail: resync });
+        },
+        updateIncomingCategory: (oldName, newName) => {
+          const n = newName.trim();
+          if (!n) return;
+          const next = get()
+            .incomingCategories.map((c) => (c === oldName ? n : c))
+            .sort((a, b) => a.localeCompare(b, "uz", { sensitivity: "base" }));
+          set({ incomingCategories: next });
+          syncApi(incomingCategoriesApi.update(oldName, n), { onFail: resync });
+        },
+        deleteIncomingCategory: (c) => {
+          set({ incomingCategories: get().incomingCategories.filter((x) => x !== c) });
+          syncApi(incomingCategoriesApi.delete(c), { onFail: resync });
         },
 
         // ─── MASHINA BRENDLARI ───
@@ -909,7 +956,20 @@ export const useStore = create<State>()(
           if (!n) return;
           set({
             vehicleBrands: get().vehicleBrands.map((b) => (b === oldName ? n : b)),
-            products: get().products.map((p) => (p.vehicle === oldName ? { ...p, vehicle: n } : p)),
+            products: get().products.map((p) => {
+              const hasInVehicles = p.vehicles && p.vehicles.includes(oldName);
+              const hasInVehicleStr = p.vehicle && p.vehicle.includes(oldName);
+              if (!hasInVehicles && !hasInVehicleStr && p.vehicle !== oldName) return p;
+
+              const nextVehicles = (p.vehicles || (p.vehicle ? p.vehicle.split(/,\s*/) : [])).map(
+                (v) => (v === oldName ? n : v),
+              );
+              return {
+                ...p,
+                vehicles: nextVehicles,
+                vehicle: nextVehicles.join(", "),
+              };
+            }),
             customers: get().customers.map((c) =>
               c.vehicle === oldName ? { ...c, vehicle: n } : c,
             ),
@@ -917,7 +977,23 @@ export const useStore = create<State>()(
           syncApi(vehicleBrandsApi.update(oldName, n), { onFail: resync });
         },
         deleteVehicleBrand: (b) => {
-          set({ vehicleBrands: get().vehicleBrands.filter((x) => x !== b) });
+          set({
+            vehicleBrands: get().vehicleBrands.filter((x) => x !== b),
+            products: get().products.map((p) => {
+              const hasInVehicles = p.vehicles && p.vehicles.includes(b);
+              const hasInVehicleStr = p.vehicle && p.vehicle.includes(b);
+              if (!hasInVehicles && !hasInVehicleStr) return p;
+
+              const nextVehicles = (
+                p.vehicles || (p.vehicle ? p.vehicle.split(/,\s*/) : [])
+              ).filter((v) => v !== b);
+              return {
+                ...p,
+                vehicles: nextVehicles,
+                vehicle: nextVehicles.join(", "),
+              };
+            }),
+          });
           syncApi(vehicleBrandsApi.delete(b), { onFail: resync });
         },
 

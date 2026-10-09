@@ -20,23 +20,44 @@ router.get("/constants", authenticateToken, async (req, res) => {
     if (cached) return res.json(cached);
 
     if (isSupabaseConfigured) {
-      const { data: cats } = await supabaseClient.from("categories").select("name");
-      const { data: brands } = await supabaseClient.from("vehicle_brands").select("name");
-      const { data: branches } = await supabaseClient.from("branches").select("name");
+      const { data: cats } = await supabaseClient
+        .from("categories")
+        .select("name")
+        .order("name", { ascending: true });
+      const { data: brands } = await supabaseClient
+        .from("vehicle_brands")
+        .select("name")
+        .order("name", { ascending: true });
+      const { data: branches } = await supabaseClient
+        .from("branches")
+        .select("name")
+        .order("name", { ascending: true });
 
       const resData = {
-        categories: (cats || []).map((c) => c.name),
-        vehicleBrands: (brands || []).map((b) => b.name),
-        branches: (branches || []).map((br) => br.name),
+        categories: (cats || [])
+          .map((c) => c.name)
+          .sort((a, b) => a.localeCompare(b, "uz", { sensitivity: "base" })),
+        vehicleBrands: (brands || [])
+          .map((b) => b.name)
+          .sort((a, b) => a.localeCompare(b, "uz", { sensitivity: "base" })),
+        branches: (branches || [])
+          .map((br) => br.name)
+          .sort((a, b) => a.localeCompare(b, "uz", { sensitivity: "base" })),
       };
       await setCached(cacheKey, resData);
       res.json(resData);
     } else {
       const db = readLocalDb();
       res.json({
-        categories: db.categories || [],
-        vehicleBrands: db.vehicle_brands || [],
-        branches: db.branches || [],
+        categories: (db.categories || [])
+          .slice()
+          .sort((a, b) => a.localeCompare(b, "uz", { sensitivity: "base" })),
+        vehicleBrands: (db.vehicle_brands || [])
+          .slice()
+          .sort((a, b) => a.localeCompare(b, "uz", { sensitivity: "base" })),
+        branches: (db.branches || [])
+          .slice()
+          .sort((a, b) => a.localeCompare(b, "uz", { sensitivity: "base" })),
       });
     }
   } catch (error) {
@@ -52,14 +73,23 @@ router.get("/categories", authenticateToken, async (req, res) => {
     if (cached) return res.json(cached);
 
     if (isSupabaseConfigured) {
-      const { data, error } = await supabaseClient.from("categories").select("name");
+      const { data, error } = await supabaseClient
+        .from("categories")
+        .select("name")
+        .order("name", { ascending: true });
       if (error) throw error;
-      const resData = (data || []).map((c) => c.name);
+      const resData = (data || [])
+        .map((c) => c.name)
+        .sort((a, b) => a.localeCompare(b, "uz", { sensitivity: "base" }));
       await setCached(cacheKey, resData);
       res.json(resData);
     } else {
       const db = readLocalDb();
-      res.json(db.categories || []);
+      res.json(
+        (db.categories || [])
+          .slice()
+          .sort((a, b) => a.localeCompare(b, "uz", { sensitivity: "base" })),
+      );
     }
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -155,6 +185,109 @@ router.delete("/categories/:name", authenticateToken, async (req, res) => {
       writeLocalDb(db);
       res.json({ success: true });
     }
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ─────────────── INCOMING CATEGORIES ───────────────
+router.get("/incoming-categories", authenticateToken, async (req, res) => {
+  const cacheKey = "cache:incoming_categories";
+  try {
+    const cached = await getCached(cacheKey);
+    if (cached) return res.json(cached);
+
+    if (isSupabaseConfigured) {
+      const { data, error } = await supabaseClient
+        .from("incoming_categories")
+        .select("name")
+        .order("name", { ascending: true });
+      if (!error && data) {
+        const resData = data
+          .map((c) => c.name)
+          .sort((a, b) => a.localeCompare(b, "uz", { sensitivity: "base" }));
+        await setCached(cacheKey, resData);
+        return res.json(resData);
+      }
+    }
+    const db = readLocalDb();
+    const resData = (db.incoming_categories || [])
+      .slice()
+      .sort((a, b) => a.localeCompare(b, "uz", { sensitivity: "base" }));
+    await setCached(cacheKey, resData);
+    res.json(resData);
+  } catch (error) {
+    const db = readLocalDb();
+    res.json(
+      (db.incoming_categories || [])
+        .slice()
+        .sort((a, b) => a.localeCompare(b, "uz", { sensitivity: "base" })),
+    );
+  }
+});
+
+router.post("/incoming-categories", authenticateToken, async (req, res) => {
+  const { name } = req.body;
+  if (!name || !name.trim())
+    return res.status(400).json({ error: "Kategoriya nomi kiritilishi shart" });
+  try {
+    const n = name.trim();
+    if (isSupabaseConfigured) {
+      try {
+        await supabaseClient.from("incoming_categories").insert([{ name: n }]);
+      } catch (_) {}
+    }
+    const db = readLocalDb();
+    if (!db.incoming_categories) db.incoming_categories = [];
+    if (!db.incoming_categories.includes(n)) {
+      db.incoming_categories.push(n);
+      writeLocalDb(db);
+    }
+    await clearCached("cache:incoming_categories");
+    res.json({ name: n });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.put("/incoming-categories/:oldName", authenticateToken, async (req, res) => {
+  const oldName = decodeURIComponent(req.params.oldName);
+  const { name: newName } = req.body;
+  if (!newName || !newName.trim())
+    return res.status(400).json({ error: "Yangi nom kiritilishi shart" });
+  try {
+    const n = newName.trim();
+    if (isSupabaseConfigured) {
+      try {
+        await supabaseClient.from("incoming_categories").update({ name: n }).eq("name", oldName);
+      } catch (_) {}
+    }
+    const db = readLocalDb();
+    if (!db.incoming_categories) db.incoming_categories = [];
+    db.incoming_categories = db.incoming_categories.map((c) => (c === oldName ? n : c));
+    writeLocalDb(db);
+    await clearCached("cache:incoming_categories");
+    res.json({ name: n });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.delete("/incoming-categories/:name", authenticateToken, async (req, res) => {
+  const name = decodeURIComponent(req.params.name);
+  try {
+    if (isSupabaseConfigured) {
+      try {
+        await supabaseClient.from("incoming_categories").delete().eq("name", name);
+      } catch (_) {}
+    }
+    const db = readLocalDb();
+    if (db.incoming_categories) {
+      db.incoming_categories = db.incoming_categories.filter((c) => c !== name);
+      writeLocalDb(db);
+    }
+    await clearCached("cache:incoming_categories");
+    res.json({ success: true });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

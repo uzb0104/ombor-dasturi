@@ -39,16 +39,16 @@ import {
   Edit,
   Trash2,
   Package,
-  ScanBarcode,
   Download,
-  History,
   DollarSign,
   ShoppingCart,
-  TrendingUp,
+  CheckCircle2,
+  Circle,
+  Check,
+  ChevronsUpDown,
 } from "lucide-react";
 import { useT } from "@/lib/i18n";
 import { ProductImportDialog } from "@/components/ProductImportDialog";
-import { PriceHistoryDialog } from "@/components/PriceHistoryDialog";
 import type { Product, ProductAttributes } from "@/lib/types";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -57,11 +57,20 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import { cn } from "@/lib/utils";
+import { createFileRoute } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/_app/products")({ component: ProductsPage });
 
@@ -72,7 +81,6 @@ function matchProductSearch(p: Product, query: string): boolean {
   const q = query.toLowerCase().trim();
   const searchables: (string | number | undefined | null)[] = [
     p.name,
-    p.barcode,
     p.sku,
     p.category,
     p.vehicle,
@@ -91,7 +99,6 @@ function matchProductSearch(p: Product, query: string): boolean {
 
 type FormState = {
   name: string;
-  barcode: string;
   vehicles: string[];
   vehicle: string;
   category: string;
@@ -111,17 +118,16 @@ type FormState = {
 
 const emptyForm = (firstCategory: string, firstBrand: string): FormState => ({
   name: "",
-  barcode: "",
   vehicles: firstBrand ? [firstBrand] : [],
   vehicle: firstBrand || "",
-  category: firstCategory,
+  category: firstCategory || "Dvigatel",
   buyPrice: 0,
   buyPriceUsd: 0,
   sellPrice: 0,
   sellPriceUsd: 0,
   quantity: 0,
   minQty: 0,
-  unitBrand: "",
+  unitBrand: "Xitoy",
   amperage: "",
   voltage: "12V",
   customVoltage: "",
@@ -134,35 +140,21 @@ const isTire = (cat: string) => /shina|balon/i.test(cat);
 
 function ProductsPage() {
   const t = useT();
-  const navigate = useNavigate();
-  const {
-    products,
-    categories,
-    vehicleBrands,
-    addProduct,
-    updateProduct,
-    deleteProduct,
-    usdRate,
-    setUsdRate,
-  } = useStore();
+  const { products, categories, vehicleBrands, addProduct, updateProduct, deleteProduct, usdRate } =
+    useStore();
   const [search, setSearch] = useState("");
-  const [historyProduct, setHistoryProduct] = useState<Product | null>(null);
   const [cat, setCat] = useState<string>("all");
   const [veh, setVeh] = useState<string>("all");
   const [open, setOpen] = useState(false);
-  const [addModeOpen, setAddModeOpen] = useState(false);
-  const [barcodeOpen, setBarcodeOpen] = useState(false);
-  const [barcodeValue, setBarcodeValue] = useState("");
-  const [barcodeLookupLoading, setBarcodeLookupLoading] = useState(false);
-  const [barcodeProduct, setBarcodeProduct] = useState<Product | null>(null);
-  const [restockQuantity, setRestockQuantity] = useState("1");
-  const [restockBuyPrice, setRestockBuyPrice] = useState("");
-  const [restockSellPrice, setRestockSellPrice] = useState("");
   const [editing, setEditing] = useState<string | null>(null);
   const [buyCurrency, setBuyCurrency] = useState<"UZS" | "USD">("UZS");
-  const [sellCurrency, setSellCurrency] = useState<"UZS" | "USD">("UZS");
+  const [categoryComboOpen, setCategoryComboOpen] = useState(false);
+  const sortedCategories = useMemo(
+    () => [...categories].sort((a, b) => a.localeCompare(b, "uz", { sensitivity: "base" })),
+    [categories],
+  );
   const [form, setForm] = useState<FormState>(
-    emptyForm(categories[0] || "", vehicleBrands[0] || ""),
+    emptyForm(categories[0] || "Dvigatel", vehicleBrands[0] || ""),
   );
   const { confirm, confirmNode } = useConfirm();
   const sel = useSelection();
@@ -171,13 +163,6 @@ function ProductsPage() {
     () => products.reduce((acc, p) => acc + (p.buyPrice || 0) * (p.quantity || 0), 0),
     [products],
   );
-
-  const totalSellValue = useMemo(
-    () => products.reduce((acc, p) => acc + (p.sellPrice || 0) * (p.quantity || 0), 0),
-    [products],
-  );
-
-  const expectedProfit = totalSellValue - totalBuyCost;
 
   const [serverPage, setServerPage] = useState(1);
   const [serverPages, setServerPages] = useState(1);
@@ -230,6 +215,19 @@ function ProductsPage() {
     setServerPage(1);
   }, [search, cat, serverVehicle]);
 
+  const allFilteredProducts = useMemo(() => {
+    return products.filter((p) => {
+      const matchCat = cat === "all" || p.category === cat;
+      const matchVeh =
+        serverVehicle === "" ||
+        p.vehicle === serverVehicle ||
+        (p.vehicles && p.vehicles.includes(serverVehicle)) ||
+        (p.vehicle && p.vehicle.includes(serverVehicle));
+      const matchSearch = matchProductSearch(p, search);
+      return matchCat && matchVeh && matchSearch;
+    });
+  }, [products, cat, serverVehicle, search]);
+
   // Sorting
   const { items: sortedProducts, sortConfig, requestSort } = useSortableData(pageItems);
 
@@ -243,14 +241,14 @@ function ProductsPage() {
     pageSize,
   };
   const pageIds = pg.paged.map((p) => p.id);
-  const allChecked = pageIds.length > 0 && pageIds.every((id) => sel.has(id));
+  const allFilteredIds = useMemo(() => allFilteredProducts.map((p) => p.id), [allFilteredProducts]);
+  const allChecked = allFilteredIds.length > 0 && allFilteredIds.every((id) => sel.has(id));
 
   const startEdit = (id: string) => {
     const p = products.find((x) => x.id === id);
     if (!p) return;
     setEditing(id);
     setBuyCurrency(p.buyPriceUsd && !p.buyPrice ? "USD" : "UZS");
-    setSellCurrency(p.sellPriceUsd && !p.sellPrice ? "USD" : "UZS");
     const a = p.attributes || {};
     const v = a.voltage || "12V";
     const isPreset = VOLTAGE_OPTIONS.includes(v);
@@ -260,28 +258,32 @@ function ProductsPage() {
     const sellUsd =
       p.sellPriceUsd ??
       (usdRate > 0 && p.sellPrice > 0 ? Number((p.sellPrice / usdRate).toFixed(2)) : 0);
+    const attrVehicles = (p.attributes as { vehicles?: string[] } | undefined)?.vehicles;
     const initialVehicles =
-      p.vehicles && p.vehicles.length > 0
+      Array.isArray(p.vehicles) && p.vehicles.length > 0
         ? p.vehicles
-        : p.vehicle
-          ? p.vehicle
-              .split(/,\s*/)
-              .map((s) => s.trim())
-              .filter(Boolean)
-          : [vehicleBrands[0] || ""];
+        : Array.isArray(attrVehicles) && attrVehicles.length > 0
+          ? attrVehicles
+          : p.vehicle
+            ? p.vehicle
+                .split(/,\s*/)
+                .map((s) => s.trim())
+                .filter(Boolean)
+            : vehicleBrands[0]
+              ? [vehicleBrands[0]]
+              : [];
     setForm({
       name: p.name,
-      barcode: p.barcode || "",
       vehicles: initialVehicles,
       vehicle: p.vehicle || initialVehicles.join(", "),
-      category: p.category,
+      category: p.category || categories[0] || "Dvigatel",
       buyPrice: p.buyPrice,
       buyPriceUsd: buyUsd,
-      sellPrice: p.sellPrice,
-      sellPriceUsd: sellUsd,
+      sellPrice: p.sellPrice || p.buyPrice,
+      sellPriceUsd: sellUsd || buyUsd,
       quantity: p.quantity,
       minQty: p.minQty,
-      unitBrand: a.unitBrand || "",
+      unitBrand: a.unitBrand || "Xitoy",
       amperage: a.amperage || "",
       voltage: isPreset ? v : "custom",
       customVoltage: isPreset ? "" : v,
@@ -289,80 +291,6 @@ function ProductsPage() {
       tireSeason: a.tireSeason || "Universal",
     });
     setOpen(true);
-  };
-
-  const generateBarcode = () => {
-    const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-    let code = "";
-    do {
-      const len = 5 + Math.floor(Math.random() * 4);
-      code = Array.from(
-        { length: len },
-        () => chars[Math.floor(Math.random() * chars.length)],
-      ).join("");
-    } while (products.some((p) => p.barcode === code));
-    setForm((f) => ({ ...f, barcode: code }));
-    toast.success(t("products.codeGenerated"));
-  };
-
-  const lookupBarcode = async () => {
-    const code = barcodeValue.trim().toUpperCase();
-    if (!code) {
-      toast.error(t("products.barcodeRequired"));
-      return;
-    }
-
-    setBarcodeLookupLoading(true);
-    setBarcodeProduct(null);
-    try {
-      const allProducts = await productsApi.getAll();
-      const match = allProducts.find((product) => product.barcode?.trim().toUpperCase() === code);
-      if (!match) {
-        toast.error(t("products.barcodeNotFound"));
-        return;
-      }
-      setBarcodeProduct(match);
-      setRestockQuantity("1");
-      setRestockBuyPrice(String(match.buyPrice));
-      setRestockSellPrice(String(match.sellPrice));
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : t("products.barcodeLookupFailed"));
-    } finally {
-      setBarcodeLookupLoading(false);
-    }
-  };
-
-  const saveBarcodeUpdate = () => {
-    if (!barcodeProduct) return;
-    const quantity = Number(restockQuantity);
-    const buyPrice = Number(restockBuyPrice);
-    const sellPrice = Number(restockSellPrice);
-    if (!Number.isInteger(quantity) || quantity < 1) {
-      toast.error(t("products.invalidQuantity"));
-      return;
-    }
-    if (
-      !restockBuyPrice.trim() ||
-      !restockSellPrice.trim() ||
-      !Number.isFinite(buyPrice) ||
-      !Number.isFinite(sellPrice) ||
-      buyPrice < 0 ||
-      sellPrice < 0
-    ) {
-      toast.error(t("products.invalidPrice"));
-      return;
-    }
-
-    updateProduct(barcodeProduct.id, {
-      quantity: barcodeProduct.quantity + quantity,
-      buyPrice,
-      sellPrice,
-    });
-    setServerPage(1);
-    toast.success(t("products.stockUpdated", { name: barcodeProduct.name, quantity }));
-    setBarcodeOpen(false);
-    setBarcodeProduct(null);
-    setBarcodeValue("");
   };
 
   const submit = () => {
@@ -374,17 +302,16 @@ function ProductsPage() {
       toast.error(t("products.categoriesNotLoaded"));
       return;
     }
-    if (vehicleBrands.length === 0) {
-      toast.error(t("products.brandsNotLoaded"));
-      return;
-    }
-    const category = categories.includes(form.category) ? form.category : categories[0];
+    const category = categories.includes(form.category)
+      ? form.category
+      : categories[0] || "Dvigatel";
     const selectedVehicles =
       form.vehicles.length > 0
-        ? form.vehicles.filter((v) => vehicleBrands.includes(v))
-        : [vehicleBrands[0] || "Barchasi"];
+        ? Array.from(new Set(form.vehicles.filter(Boolean)))
+        : vehicleBrands[0]
+          ? [vehicleBrands[0]]
+          : ["Barchasi"];
     const vehicleString = selectedVehicles.join(", ");
-    const bc = form.barcode.trim().toUpperCase();
     const attributes: ProductAttributes = {};
     if (form.unitBrand.trim()) attributes.unitBrand = form.unitBrand.trim();
     if (isBattery(category)) {
@@ -408,8 +335,8 @@ function ProductsPage() {
       attributes.tireSeason = form.tireSeason;
     }
     const payload = {
-      name: form.name,
-      barcode: bc,
+      name: form.name.trim(),
+      barcode: "",
       sku: "",
       vehicle: vehicleString,
       vehicles: selectedVehicles,
@@ -419,8 +346,8 @@ function ProductsPage() {
         : null,
       buyPrice: form.buyPrice,
       buyPriceUsd: form.buyPriceUsd,
-      sellPrice: form.sellPrice,
-      sellPriceUsd: form.sellPriceUsd,
+      sellPrice: form.sellPrice || form.buyPrice,
+      sellPriceUsd: form.sellPriceUsd || form.buyPriceUsd,
       quantity: form.quantity,
       minQty: form.minQty,
       attributes: Object.keys(attributes).length ? attributes : undefined,
@@ -435,7 +362,7 @@ function ProductsPage() {
     }
     setOpen(false);
     setEditing(null);
-    setForm(emptyForm(categories[0] || "", vehicleBrands[0] || ""));
+    setForm(emptyForm(categories[0] || "Dvigatel", vehicleBrands[0] || ""));
   };
 
   const removeOne = async (id: string, name: string) => {
@@ -474,46 +401,39 @@ function ProductsPage() {
 
   const exportHeaders = () => [
     { label: t("common.name"), key: "name" },
-    { label: t("products.boxCode"), key: "barcode" },
     { label: t("products.brandModel"), key: "vehicle" },
     { label: t("products.category"), key: "category" },
     { label: t("products.stockQty"), key: "quantity" },
     { label: t("products.buyPrice"), key: "buyPrice" },
-    { label: t("products.sellPriceLabel"), key: "sellPrice" },
   ];
 
   const handleExportCSV = () => {
+    const dataToExport = allFilteredProducts.length > 0 ? allFilteredProducts : products;
     exportToCSV(
-      pageItems,
+      dataToExport,
       exportHeaders(),
       `tovarlar_${new Date().toISOString().slice(0, 10)}.csv`,
     );
+    toast.success(`${dataToExport.length} ta tovar CSV formatida yuklab olindi`);
   };
 
   const handleExportExcel = () => {
+    const dataToExport = allFilteredProducts.length > 0 ? allFilteredProducts : products;
     const headers = exportHeaders().map((h, i) =>
-      i === 5
-        ? { ...h, label: t("products.buyPriceSom") }
-        : i === 6
-          ? { ...h, label: t("products.sellPriceSom") }
-          : h,
+      i === 4 ? { ...h, label: t("products.buyPriceSom") } : h,
     );
     exportToExcel(
-      pageItems,
+      dataToExport,
       headers,
       t("products.exportListTitle"),
       `tovarlar_${new Date().toISOString().slice(0, 10)}.xls`,
     );
+    toast.success(`${dataToExport.length} ta tovar Excel formatida yuklab olindi`);
   };
 
   return (
     <div className="space-y-5 animate-fade-in">
       {confirmNode}
-      <PriceHistoryDialog
-        product={historyProduct}
-        open={!!historyProduct}
-        onOpenChange={(v) => !v && setHistoryProduct(null)}
-      />
       <PageHeader
         title={t("products.title")}
         subtitle={`${products.length} ${t("products.count")}`}
@@ -529,147 +449,17 @@ function ProductsPage() {
               Excel
             </Button>
             <Button
-              variant="outline"
               size="sm"
-              onClick={() => navigate({ to: "/barcode" })}
-              className="gap-1.5"
-            >
-              <ScanBarcode className="h-4 w-4 text-primary" />
-              <span>Shtrix-kod skaner</span>
-            </Button>
-            <Dialog open={addModeOpen} onOpenChange={setAddModeOpen}>
-              <DialogTrigger asChild>
-                <Button size="sm">
-                  <Plus className="h-4 w-4 mr-1" />
-                  {t("products.new")}
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-lg bg-card border rounded-2xl shadow-elevated">
-                <DialogHeader>
-                  <DialogTitle>{t("products.addMethod")}</DialogTitle>
-                </DialogHeader>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="h-24 flex-col gap-2"
-                    onClick={() => {
-                      setAddModeOpen(false);
-                      setBarcodeValue("");
-                      setBarcodeProduct(null);
-                      setBarcodeOpen(true);
-                    }}
-                  >
-                    <ScanBarcode className="h-6 w-6" />
-                    {t("products.addByBarcode")}
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="h-24 flex-col gap-2"
-                    onClick={() => {
-                      setAddModeOpen(false);
-                      setEditing(null);
-                      setBuyCurrency("UZS");
-                      setSellCurrency("UZS");
-                      setForm(emptyForm(categories[0] || "", vehicleBrands[0] || ""));
-                      setOpen(true);
-                    }}
-                  >
-                    <Plus className="h-6 w-6" />
-                    {t("products.addNewProduct")}
-                  </Button>
-                </div>
-              </DialogContent>
-            </Dialog>
-
-            <Dialog
-              open={barcodeOpen}
-              onOpenChange={(value) => {
-                setBarcodeOpen(value);
-                if (!value) setBarcodeProduct(null);
+              onClick={() => {
+                setEditing(null);
+                setBuyCurrency("UZS");
+                setForm(emptyForm(categories[0] || "Dvigatel", vehicleBrands[0] || ""));
+                setOpen(true);
               }}
             >
-              <DialogContent className="max-w-lg bg-card border rounded-2xl shadow-elevated">
-                <DialogHeader>
-                  <DialogTitle>{t("products.addByBarcode")}</DialogTitle>
-                </DialogHeader>
-                <div className="space-y-4">
-                  <div>
-                    <Label>{t("products.form.codeLabel")}</Label>
-                    <div className="mt-1 flex gap-2">
-                      <Input
-                        value={barcodeValue}
-                        onChange={(event) => {
-                          setBarcodeValue(event.target.value);
-                          setBarcodeProduct(null);
-                        }}
-                        onKeyDown={(event) => {
-                          if (event.key === "Enter") {
-                            event.preventDefault();
-                            void lookupBarcode();
-                          }
-                        }}
-                        placeholder={t("products.form.codePh")}
-                        className="font-mono uppercase"
-                        autoFocus
-                      />
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => void lookupBarcode()}
-                        disabled={barcodeLookupLoading}
-                      >
-                        <Search className="mr-1 h-4 w-4" />
-                        {barcodeLookupLoading ? t("common.loading") : t("products.findBarcode")}
-                      </Button>
-                    </div>
-                  </div>
-
-                  {barcodeProduct && (
-                    <>
-                      <div className="rounded-lg border bg-muted/30 p-3">
-                        <div className="font-semibold">{barcodeProduct.name}</div>
-                        <div className="mt-1 text-sm text-muted-foreground">
-                          {barcodeProduct.vehicle} · {barcodeProduct.category}
-                        </div>
-                        <div className="mt-2 text-sm">
-                          {t("products.currentStock", { quantity: barcodeProduct.quantity })}
-                        </div>
-                      </div>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <div>
-                          <Label>{t("products.stockToAdd")}</Label>
-                          <Input
-                            type="number"
-                            min="1"
-                            step="1"
-                            value={restockQuantity}
-                            onChange={(event) => setRestockQuantity(event.target.value)}
-                            className="mt-1"
-                          />
-                        </div>
-                        <div>
-                          <Label>{t("products.buyPrice")}</Label>
-                          <Input
-                            type="number"
-                            min="0"
-                            value={restockBuyPrice}
-                            onChange={(event) => setRestockBuyPrice(event.target.value)}
-                            className="mt-1"
-                          />
-                        </div>
-                      </div>
-                      <DialogFooter>
-                        <Button type="button" onClick={saveBarcodeUpdate}>
-                          {t("common.save")}
-                        </Button>
-                      </DialogFooter>
-                    </>
-                  )}
-                </div>
-              </DialogContent>
-            </Dialog>
+              <Plus className="h-4 w-4 mr-1" />
+              {t("products.new")}
+            </Button>
 
             <Dialog
               open={open}
@@ -677,54 +467,40 @@ function ProductsPage() {
                 setOpen(v);
                 if (!v) {
                   setEditing(null);
-                  setForm(emptyForm(categories[0] || "", vehicleBrands[0] || ""));
+                  setForm(emptyForm(categories[0] || "Dvigatel", vehicleBrands[0] || ""));
                 }
               }}
             >
               <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto bg-card border rounded-2xl shadow-elevated">
                 <DialogHeader>
-                  <DialogTitle>{editing ? t("products.edit") : t("products.new")}</DialogTitle>
+                  <DialogTitle className="text-xl font-bold">
+                    {editing ? "Tovarni tahrirlash" : "Yangi tovar"}
+                  </DialogTitle>
                 </DialogHeader>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 py-2">
-                  <div className="sm:col-span-2">
-                    <Label>{t("common.nameStar")}</Label>
+
+                <div className="space-y-4 py-2">
+                  {/* Nomi */}
+                  <div>
+                    <Label className="text-sm font-semibold text-foreground">Nomi *</Label>
                     <Input
                       value={form.name}
                       onChange={(e) => setForm({ ...form, name: e.target.value })}
-                      placeholder={t("products.form.namePh")}
+                      placeholder="Masalan: Tormoz kolodkasi"
+                      className="mt-1"
                     />
                   </div>
-                  <div className="sm:col-span-2">
-                    <Label>{t("products.form.codeLabel")}</Label>
-                    <div className="flex gap-2 mt-1">
-                      <Input
-                        value={form.barcode}
-                        onChange={(e) =>
-                          setForm({ ...form, barcode: e.target.value.toUpperCase() })
-                        }
-                        placeholder={t("products.form.codePh")}
-                        className="font-mono uppercase tracking-wider text-sm"
-                        autoFocus={!editing}
-                      />
-                      <Button type="button" variant="outline" onClick={generateBarcode}>
-                        <ScanBarcode className="h-4 w-4 mr-1" />
-                        {t("common.generate")}
-                      </Button>
-                    </div>
-                    <p className="text-[11px] text-muted-foreground mt-1">
-                      {t("products.form.codeHint")}
-                    </p>
-                  </div>
-                  <div className="sm:col-span-2 space-y-2 border rounded-xl p-3 bg-muted/20">
+
+                  {/* Mos keladigan avtomobillar */}
+                  <div className="space-y-2 border rounded-2xl p-4 bg-muted/10">
                     <div className="flex items-center justify-between">
-                      <Label className="font-semibold text-foreground text-xs uppercase tracking-wider">
-                        Mos keladigan avtomobillar (Mashinalarni tanlang) *
+                      <Label className="font-bold text-foreground text-xs uppercase tracking-wider">
+                        MOS KELADIGAN AVTOMOBILLAR (MASHINALARNI TANLANG) *
                       </Label>
                       <Button
                         type="button"
                         variant="ghost"
                         size="sm"
-                        className="h-6 text-[11px] px-2"
+                        className="h-6 text-xs font-semibold text-foreground hover:text-primary px-2"
                         onClick={() => {
                           if (form.vehicles.length === vehicleBrands.length) {
                             setForm((f) => ({ ...f, vehicles: [], vehicle: "" }));
@@ -742,7 +518,8 @@ function ProductsPage() {
                           : "Barchasini tanlash"}
                       </Button>
                     </div>
-                    <div className="flex flex-wrap gap-1.5 pt-1">
+
+                    <div className="flex flex-wrap gap-2 pt-2">
                       {vehicleBrands.map((b) => {
                         const isSelected = form.vehicles.includes(b);
                         return (
@@ -759,28 +536,25 @@ function ProductsPage() {
                                 vehicle: next.join(", "),
                               }));
                             }}
-                            className={`px-2.5 py-1 text-xs rounded-lg border transition-all flex items-center gap-1.5 ${
+                            className={`px-3 py-1.5 text-xs rounded-full border transition-all flex items-center gap-1.5 ${
                               isSelected
-                                ? "bg-primary text-primary-foreground border-primary font-medium shadow-sm"
-                                : "bg-background hover:bg-muted text-muted-foreground border-border"
+                                ? "bg-blue-600 hover:bg-blue-700 text-white border-blue-600 font-semibold shadow-sm"
+                                : "bg-background hover:bg-muted text-foreground border-border/80"
                             }`}
                           >
-                            <span
-                              className={`w-3.5 h-3.5 rounded-full border grid place-items-center text-[9px] ${
-                                isSelected
-                                  ? "border-primary-foreground bg-primary-foreground/20 font-bold"
-                                  : "border-muted-foreground"
-                              }`}
-                            >
-                              {isSelected ? "✓" : ""}
-                            </span>
-                            {b}
+                            {isSelected ? (
+                              <CheckCircle2 className="w-3.5 h-3.5 text-white fill-white/20" />
+                            ) : (
+                              <Circle className="w-3.5 h-3.5 text-muted-foreground" />
+                            )}
+                            <span>{b}</span>
                           </button>
                         );
                       })}
                     </div>
+
                     {form.vehicles.length > 0 && (
-                      <div className="text-[11px] text-muted-foreground pt-1 flex flex-wrap gap-1 items-center">
+                      <div className="text-xs text-muted-foreground pt-2 flex flex-wrap gap-1 items-center">
                         <span>Tanlangan mashinalar ({form.vehicles.length}):</span>
                         <span className="font-semibold text-foreground">
                           {form.vehicles.join(", ")}
@@ -788,37 +562,81 @@ function ProductsPage() {
                       </div>
                     )}
                   </div>
+
+                  {/* Kategoriya (Searchable Combobox) */}
                   <div>
-                    <Label>{t("products.category")}</Label>
-                    <Select
-                      value={form.category}
-                      onValueChange={(v) => setForm({ ...form, category: v })}
-                    >
-                      <SelectTrigger className="mt-1">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {categories.map((c) => (
-                          <SelectItem key={c} value={c}>
-                            {c}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <Label className="text-sm font-semibold text-foreground">Kategoriya</Label>
+                    <Popover open={categoryComboOpen} onOpenChange={setCategoryComboOpen}>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          role="combobox"
+                          aria-expanded={categoryComboOpen}
+                          className="w-full justify-between mt-1 h-9 px-3 text-left font-normal bg-card hover:bg-muted/40 border-border"
+                        >
+                          <span className="truncate">
+                            {form.category || "Kategoriyani tanlang..."}
+                          </span>
+                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent
+                        className="w-[--radix-popover-trigger-width] min-w-[240px] p-0"
+                        align="start"
+                      >
+                        <Command>
+                          <CommandInput placeholder="Kategoriya qidirish..." autoFocus />
+                          <CommandList className="max-h-60 overflow-y-auto">
+                            <CommandEmpty className="py-3 text-center text-xs text-muted-foreground">
+                              Kategoriya topilmadi
+                            </CommandEmpty>
+                            <CommandGroup>
+                              {sortedCategories.map((c) => (
+                                <CommandItem
+                                  key={c}
+                                  value={c}
+                                  onSelect={() => {
+                                    setForm({ ...form, category: c });
+                                    setCategoryComboOpen(false);
+                                  }}
+                                  className="cursor-pointer hover:bg-accent/40 flex items-center justify-between py-2 px-3 text-sm"
+                                >
+                                  <span className="font-medium">{c}</span>
+                                  <Check
+                                    className={cn(
+                                      "h-4 w-4 text-primary ml-2",
+                                      form.category === c ? "opacity-100" : "opacity-0",
+                                    )}
+                                  />
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
                   </div>
-                  <div className="sm:col-span-2">
-                    <Label>{t("products.form.unitBrand")}</Label>
+
+                  {/* Mahsulot brendi */}
+                  <div>
+                    <Label className="text-sm font-semibold text-foreground">
+                      Mahsulot brendi (ixtiyoriy)
+                    </Label>
                     <Input
                       value={form.unitBrand}
                       onChange={(e) => setForm({ ...form, unitBrand: e.target.value })}
-                      placeholder={t("products.form.unitBrandPh")}
+                      placeholder="Xitoy"
                       className="mt-1"
                     />
                   </div>
+
+                  {/* Akkumulyator yoki Shina xususiyatlari */}
                   {isBattery(form.category) && (
-                    <>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 border rounded-xl bg-muted/10">
                       <div>
-                        <Label>{t("products.form.amperage")}</Label>
+                        <Label className="text-sm font-semibold">
+                          {t("products.form.amperage")}
+                        </Label>
                         <Input
                           value={form.amperage}
                           onChange={(e) => setForm({ ...form, amperage: e.target.value })}
@@ -827,7 +645,9 @@ function ProductsPage() {
                         />
                       </div>
                       <div>
-                        <Label>{t("products.form.voltage")}</Label>
+                        <Label className="text-sm font-semibold">
+                          {t("products.form.voltage")}
+                        </Label>
                         <Select
                           value={form.voltage}
                           onValueChange={(v) => setForm({ ...form, voltage: v })}
@@ -853,12 +673,15 @@ function ProductsPage() {
                           />
                         )}
                       </div>
-                    </>
+                    </div>
                   )}
+
                   {isTire(form.category) && (
-                    <>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 border rounded-xl bg-muted/10">
                       <div>
-                        <Label>{t("products.form.tireSize")}</Label>
+                        <Label className="text-sm font-semibold">
+                          {t("products.form.tireSize")}
+                        </Label>
                         <Input
                           value={form.tireSize}
                           onChange={(e) => setForm({ ...form, tireSize: e.target.value })}
@@ -867,7 +690,7 @@ function ProductsPage() {
                         />
                       </div>
                       <div>
-                        <Label>{t("products.form.season")}</Label>
+                        <Label className="text-sm font-semibold">{t("products.form.season")}</Label>
                         <Select
                           value={form.tireSeason}
                           onValueChange={(v) => setForm({ ...form, tireSeason: v })}
@@ -884,99 +707,112 @@ function ProductsPage() {
                           </SelectContent>
                         </Select>
                       </div>
-                    </>
+                    </div>
                   )}
-                  <div>
-                    <Label>{t("products.qty")}</Label>
-                    <Input
-                      type="number"
-                      min="0"
-                      value={form.quantity || ""}
-                      placeholder="0"
-                      onChange={(e) =>
-                        setForm({
-                          ...form,
-                          quantity: e.target.value === "" ? 0 : Math.max(0, +e.target.value),
-                        })
-                      }
-                      className="mt-1"
-                    />
-                  </div>
-                  <div>
-                    <Label>{t("common.minQty")}</Label>
-                    <Input
-                      type="number"
-                      min="0"
-                      value={form.minQty || ""}
-                      placeholder="0"
-                      onChange={(e) =>
-                        setForm({
-                          ...form,
-                          minQty: e.target.value === "" ? 0 : Math.max(0, +e.target.value),
-                        })
-                      }
-                      className="mt-1"
-                    />
-                  </div>
-                  <div className="col-span-full border rounded-xl p-3 bg-muted/20 space-y-3 mt-1">
-                    <div className="flex items-center justify-between text-xs text-muted-foreground border-b pb-2">
-                      <span className="font-semibold text-foreground flex items-center gap-1.5">
-                        <DollarSign className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />{" "}
-                        Narxlar (So'm va Dollar $)
-                      </span>
+
+                  {/* Miqdor va Eslatma (Min. miqdor) */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <Label className="text-sm font-semibold text-foreground">Miqdor</Label>
+                      <Input
+                        type="number"
+                        min="0"
+                        value={form.quantity || ""}
+                        placeholder="0"
+                        onChange={(e) =>
+                          setForm({
+                            ...form,
+                            quantity: e.target.value === "" ? 0 : Math.max(0, +e.target.value),
+                          })
+                        }
+                        className="mt-1"
+                      />
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      {/* Olish narxi */}
-                      <div className="space-y-1.5">
-                        <Label className="text-xs font-semibold">{t("products.buyPrice")}</Label>
-                        <div className="flex items-center gap-2">
-                          <Input
-                            type="number"
-                            step={buyCurrency === "USD" ? "0.01" : "1"}
-                            min="0"
-                            value={
-                              buyCurrency === "UZS" ? form.buyPrice || "" : form.buyPriceUsd || ""
+                    <div>
+                      <Label className="text-sm font-semibold text-foreground">
+                        Eslatma (Min. miqdor)
+                      </Label>
+                      <Input
+                        type="number"
+                        min="0"
+                        value={form.minQty || ""}
+                        placeholder="0"
+                        onChange={(e) =>
+                          setForm({
+                            ...form,
+                            minQty: e.target.value === "" ? 0 : Math.max(0, +e.target.value),
+                          })
+                        }
+                        className="mt-1"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Narxlar (Faqat Sotib olish) */}
+                  <div className="border rounded-2xl p-4 bg-muted/10 space-y-3">
+                    <div className="flex items-center gap-1.5 text-sm font-bold text-foreground">
+                      <span className="text-emerald-600 font-bold">$</span>
+                      <span>Narxlar (So'm va Dollar $)</span>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-semibold text-foreground">Sotib olish</Label>
+                      <div className="flex items-center gap-2">
+                        <Input
+                          type="number"
+                          step={buyCurrency === "USD" ? "0.01" : "1"}
+                          min="0"
+                          value={
+                            buyCurrency === "UZS" ? form.buyPrice || "" : form.buyPriceUsd || ""
+                          }
+                          onChange={(e) => {
+                            const val = Math.max(0, +e.target.value);
+                            if (buyCurrency === "UZS") {
+                              setForm((f) => ({
+                                ...f,
+                                buyPrice: val,
+                                buyPriceUsd: usdRate > 0 ? Number((val / usdRate).toFixed(2)) : 0,
+                                sellPrice: val,
+                                sellPriceUsd: usdRate > 0 ? Number((val / usdRate).toFixed(2)) : 0,
+                              }));
+                            } else {
+                              setForm((f) => ({
+                                ...f,
+                                buyPriceUsd: val,
+                                buyPrice: Math.round(val * usdRate),
+                                sellPriceUsd: val,
+                                sellPrice: Math.round(val * usdRate),
+                              }));
                             }
-                            onChange={(e) => {
-                              const val = Math.max(0, +e.target.value);
-                              if (buyCurrency === "UZS") {
-                                setForm((f) => ({
-                                  ...f,
-                                  buyPrice: val,
-                                  buyPriceUsd: usdRate > 0 ? Number((val / usdRate).toFixed(2)) : 0,
-                                }));
-                              } else {
-                                setForm((f) => ({
-                                  ...f,
-                                  buyPriceUsd: val,
-                                  buyPrice: Math.round(val * usdRate),
-                                }));
-                              }
-                            }}
-                            placeholder="0"
-                            className="flex-1"
-                          />
-                          <Select
-                            value={buyCurrency}
-                            onValueChange={(v: "UZS" | "USD") => setBuyCurrency(v)}
-                          >
-                            <SelectTrigger className="w-[110px] text-xs shrink-0">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="UZS">So'm (UZS)</SelectItem>
-                              <SelectItem value="USD">Dollar ($)</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
+                          }}
+                          placeholder="0"
+                          className="flex-1"
+                        />
+                        <Select
+                          value={buyCurrency}
+                          onValueChange={(v: "UZS" | "USD") => setBuyCurrency(v)}
+                        >
+                          <SelectTrigger className="w-[130px] shrink-0 font-medium">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="UZS">So'm (UZS)</SelectItem>
+                            <SelectItem value="USD">Dollar ($)</SelectItem>
+                          </SelectContent>
+                        </Select>
                       </div>
                     </div>
                   </div>
                 </div>
 
-                <DialogFooter>
-                  <Button onClick={submit}>{t("common.save")}</Button>
+                <DialogFooter className="mt-3">
+                  <Button
+                    onClick={submit}
+                    className="bg-blue-600 hover:bg-blue-700 text-white font-medium px-6 py-2 rounded-xl"
+                  >
+                    Saqlash
+                  </Button>
                 </DialogFooter>
               </DialogContent>
             </Dialog>
@@ -1050,7 +886,7 @@ function ProductsPage() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">{t("products.allCategories")}</SelectItem>
-              {categories.map((c) => (
+              {sortedCategories.map((c) => (
                 <SelectItem key={c} value={c}>
                   {c}
                 </SelectItem>
@@ -1073,7 +909,7 @@ function ProductsPage() {
                 <TableHead className="w-10">
                   <Checkbox
                     checked={allChecked}
-                    onCheckedChange={(v) => sel.toggleAll(pageIds, !!v)}
+                    onCheckedChange={(v) => sel.toggleAll(allFilteredIds, !!v)}
                     aria-label={t("common.selectAll")}
                   />
                 </TableHead>
@@ -1081,14 +917,6 @@ function ProductsPage() {
                   <SortButton
                     label={t("common.name")}
                     sortKey="name"
-                    sortConfig={sortConfig}
-                    onSort={requestSort}
-                  />
-                </TableHead>
-                <TableHead className="hidden md:table-cell">
-                  <SortButton
-                    label={t("common.code")}
-                    sortKey="barcode"
                     sortConfig={sortConfig}
                     onSort={requestSort}
                   />
@@ -1136,7 +964,7 @@ function ProductsPage() {
             <TableBody>
               {pg.paged.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={10} className="text-center py-10 text-muted-foreground">
+                  <TableCell colSpan={8} className="text-center py-10 text-muted-foreground">
                     {t("products.notFound")}
                   </TableCell>
                 </TableRow>
@@ -1183,13 +1011,6 @@ function ProductsPage() {
                       </div>
                     </div>
                   </TableCell>
-                  <TableCell className="hidden md:table-cell text-xs font-mono uppercase text-muted-foreground">
-                    {p.barcode ? (
-                      p.barcode
-                    ) : (
-                      <span className="italic normal-case font-sans">{t("products.noCode")}</span>
-                    )}
-                  </TableCell>
                   <TableCell className="hidden sm:table-cell font-medium">
                     <div className="flex flex-wrap gap-1 max-w-[220px]">
                       {(p.vehicles && p.vehicles.length > 0
@@ -1209,7 +1030,7 @@ function ProductsPage() {
                         ))}
                       {(p.vehicles || (p.vehicle ? p.vehicle.split(/,\s*/) : [])).length > 3 && (
                         <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-primary/10 text-primary">
-                          +{(p.vehicles || p.vehicle.split(/,\s*/)).length - 3}
+                          +{(p.vehicles || (p.vehicle ? p.vehicle.split(/,\s*/) : [])).length - 3}
                         </span>
                       )}
                     </div>
@@ -1225,15 +1046,6 @@ function ProductsPage() {
                     <StatusBadge qty={p.quantity} min={p.minQty} />
                   </TableCell>
                   <TableCell className="sticky right-0 z-10 whitespace-nowrap bg-background text-right pr-4 group-hover/row:bg-muted/40">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      title={t("products.priceHistory")}
-                      onClick={() => setHistoryProduct(p)}
-                      className="h-8 w-8"
-                    >
-                      <History className="h-4 w-4 text-muted-foreground hover:text-primary" />
-                    </Button>
                     <Button
                       variant="ghost"
                       size="icon"

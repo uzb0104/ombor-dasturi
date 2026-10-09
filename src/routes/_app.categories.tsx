@@ -28,7 +28,7 @@ import {
   Wrench,
   Tags,
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { toast } from "sonner";
 import { useT } from "@/lib/i18n";
 
@@ -49,6 +49,10 @@ export const Route = createFileRoute("/_app/categories")({ component: Categories
 function CategoriesPage() {
   const t = useT();
   const { products, categories, addCategory, updateCategory, deleteCategory } = useStore();
+  const sortedCategories = useMemo(
+    () => [...categories].sort((a, b) => a.localeCompare(b, "uz", { sensitivity: "base" })),
+    [categories],
+  );
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<string | null>(null);
   const [name, setName] = useState("");
@@ -144,7 +148,7 @@ function CategoriesPage() {
       />
 
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
-        {categories.map((c) => {
+        {sortedCategories.map((c: string) => {
           const Icon = ICONS[c] || Tags;
           const count = products.filter((p) => p.category === c).length;
           return (

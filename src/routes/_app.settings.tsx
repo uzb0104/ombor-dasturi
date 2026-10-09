@@ -32,7 +32,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useStore } from "@/lib/store";
-import type { AppUser } from "@/lib/types";
+import type { AppUser, Product } from "@/lib/types";
 import { ROLES, PERMISSION_MODULES, ALL_PERMISSIONS } from "@/lib/constants";
 import { toast } from "sonner";
 import {
@@ -669,7 +669,7 @@ function BrandsManagement({
   remove,
 }: {
   brands: string[];
-  products: { vehicle: string }[];
+  products: Product[];
   add: (b: string) => void;
   update: (oldName: string, newName: string) => void;
   remove: (b: string) => void;
@@ -708,7 +708,12 @@ function BrandsManagement({
   };
 
   const removeBrand = async (b: string) => {
-    const count = products.filter((p) => p.vehicle === b).length;
+    const count = products.filter(
+      (p) =>
+        p.vehicle === b ||
+        (p.vehicles && p.vehicles.includes(b)) ||
+        (p.vehicle && p.vehicle.includes(b)),
+    ).length;
     const desc =
       count > 0
         ? t("settings.brandDeleteLinked", { name: b, n: count })
@@ -745,7 +750,12 @@ function BrandsManagement({
       </div>
       <div className="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
         {brands.map((b) => {
-          const count = products.filter((p) => p.vehicle === b).length;
+          const count = products.filter(
+            (p) =>
+              p.vehicle === b ||
+              (p.vehicles && p.vehicles.includes(b)) ||
+              (p.vehicle && p.vehicle.includes(b)),
+          ).length;
           const isEditing = editing === b;
           return (
             <div key={b} className="flex items-center gap-2 rounded-lg border p-2 bg-card">

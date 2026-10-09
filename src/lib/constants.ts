@@ -1,21 +1,36 @@
 // Uzbek labels and constants
 export const DEFAULT_VEHICLE_BRANDS = [
+  "Shineray T50",
+  "T3",
+  "Shineray T30 sepli",
+  "Shineray T30 Reminli",
+  "Donfeng 2007",
+  "CH69",
+  "JAC M4",
+  "JAC M3",
+  "Joilon",
+  "Ch-Porter",
+  "Donfeng D50",
+  "X-30",
+  "CH-98",
+  "Sunaray",
+  "Foton TM1",
+  "Foton Miler",
+  "niva",
+  "Jac X-200",
+  "Hayfi 2014",
+  "M7",
+  "CHangan GDI",
+  "CH-plus",
+  "Dongfeng hamer bashara",
   "Shineray T30",
   "JAC",
   "FAW",
-  "ISUZU",
-  "Chevrolet",
-  "Hyundai",
-  "Kia",
-  "Toyota",
-  "Nexia",
-  "Damas",
-  "Labo",
 ] as const;
 export const VEHICLE_BRANDS = DEFAULT_VEHICLE_BRANDS; // backward compat
 export type VehicleBrand = string;
 
-export const DEFAULT_CATEGORIES = ["Dvigatel", "Shinalar (Balon)", "Akkumulyator"] as const;
+export const DEFAULT_CATEGORIES = ["Akkumulyator", "Dvigatel", "Shinalar (Balon)"] as const;
 export const CATEGORIES = DEFAULT_CATEGORIES;
 export type Category = string;
 
@@ -26,6 +41,8 @@ export type Warehouse = string;
 export const ROLES = ["Admin", "Sotuvchi", "Omborchi"] as const;
 export type Role = (typeof ROLES)[number];
 
+export const DEFAULT_INCOMING_CATEGORIES: readonly string[] = [] as const;
+
 export const NAV = [
   { to: "/dashboard", labelKey: "nav.dashboard", icon: "LayoutDashboard" },
   {
@@ -35,9 +52,14 @@ export const NAV = [
     children: [
       { to: "/products", labelKey: "nav.products", icon: "Package" },
       { to: "/categories", labelKey: "nav.categories", icon: "Tags" },
-      { to: "/incoming", labelKey: "nav.incoming", icon: "PackagePlus" },
-      { to: "/used-batteries", labelKey: "nav.usedBatteries", icon: "BatteryCharging" },
+      // { to: "/used-batteries", labelKey: "nav.usedBatteries", icon: "BatteryCharging" },
     ],
+  },
+  {
+    to: "/incoming",
+    labelKey: "nav.incoming",
+    icon: "PackagePlus",
+    children: [{ to: "/incoming-categories", labelKey: "nav.incomingCategories", icon: "Tags" }],
   },
   {
     to: "/sales",
@@ -45,9 +67,10 @@ export const NAV = [
     icon: "ShoppingCart",
     children: [{ to: "/debts", labelKey: "nav.debts", icon: "Wallet" }],
   },
-  { to: "/customers", labelKey: "nav.customers", icon: "Users" },
-  { to: "/employees", labelKey: "nav.employees", icon: "UserCog" },
-  { to: "/expenses", labelKey: "nav.expenses", icon: "Receipt" },
+  // Kelajakda ochish uchun komentga olindi:
+  // { to: "/customers", labelKey: "nav.customers", icon: "Users" },
+  // { to: "/employees", labelKey: "nav.employees", icon: "UserCog" },
+  // { to: "/expenses", labelKey: "nav.expenses", icon: "Receipt" },
   { to: "/reports", labelKey: "nav.reports", icon: "BarChart3" },
   { to: "/audit", labelKey: "nav.audit", icon: "FileClock" },
   { to: "/settings", labelKey: "nav.settings", icon: "Settings" },

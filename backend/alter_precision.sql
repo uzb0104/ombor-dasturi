@@ -13,6 +13,9 @@ ALTER TABLE products ALTER COLUMN buy_price TYPE NUMERIC(20, 2);
 ALTER TABLE products ALTER COLUMN sell_price TYPE NUMERIC(20, 2);
 ALTER TABLE products ALTER COLUMN quantity TYPE NUMERIC(15, 2);
 ALTER TABLE products ALTER COLUMN min_qty TYPE NUMERIC(15, 2);
+-- Bir nechta mashinalarni biriktirish uchun foreign key cheklovini olib tashlash va TEXT qilish:
+ALTER TABLE products DROP CONSTRAINT IF EXISTS products_vehicle_fkey;
+ALTER TABLE products ALTER COLUMN vehicle TYPE TEXT;
 
 -- EMPLOYEES
 ALTER TABLE employees ALTER COLUMN salary TYPE NUMERIC(20, 2);

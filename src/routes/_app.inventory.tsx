@@ -70,7 +70,12 @@ function InventoryPage() {
   const brandStats = useMemo(
     () =>
       vehicleBrands.map((b: string) => {
-        const items = products.filter((p) => p.vehicle === b);
+        const items = products.filter(
+          (p) =>
+            p.vehicle === b ||
+            (p.vehicles && p.vehicles.includes(b)) ||
+            (p.vehicle && p.vehicle.includes(b)),
+        );
         return {
           brand: b,
           count: items.length,
@@ -86,10 +91,13 @@ function InventoryPage() {
     if (!selected) return [];
     const s = search.toLowerCase();
     return products
-      .filter((p) => p.vehicle === selected)
       .filter(
-        (p) => !search || p.name.toLowerCase().includes(s) || (p.barcode || "").includes(search),
-      );
+        (p) =>
+          p.vehicle === selected ||
+          (p.vehicles && p.vehicles.includes(selected)) ||
+          (p.vehicle && p.vehicle.includes(selected)),
+      )
+      .filter((p) => !search || p.name.toLowerCase().includes(s));
   }, [products, selected, search]);
 
   const pg = usePagination(brandProducts, 12);
@@ -150,7 +158,12 @@ function InventoryPage() {
   };
 
   const handleRemoveBrand = async (brandName: string) => {
-    const count = products.filter((p) => p.vehicle === brandName).length;
+    const count = products.filter(
+      (p) =>
+        p.vehicle === brandName ||
+        (p.vehicles && p.vehicles.includes(brandName)) ||
+        (p.vehicle && p.vehicle.includes(brandName)),
+    ).length;
     const desc =
       count > 0
         ? `"${brandName}" avto modeliga ${count} ta tovar biriktirilgan. Rostdan ham o'chirilsinmi?`
@@ -374,7 +387,12 @@ function InventoryPage() {
 
             <div className="max-h-[350px] overflow-y-auto space-y-2 pr-1">
               {vehicleBrands.map((b) => {
-                const count = products.filter((p) => p.vehicle === b).length;
+                const count = products.filter(
+                  (p) =>
+                    p.vehicle === b ||
+                    (p.vehicles && p.vehicles.includes(b)) ||
+                    (p.vehicle && p.vehicle.includes(b)),
+                ).length;
                 const isEditing = editingBrand === b;
                 return (
                   <div

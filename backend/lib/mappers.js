@@ -6,11 +6,18 @@ export function toDbProduct(p) {
   if (p.name !== undefined) dbObj.name = p.name;
   if (p.sku !== undefined) dbObj.sku = p.sku || null;
   if (p.barcode !== undefined) dbObj.barcode = p.barcode || null;
-  // vehicles array ni vehicle string sifatida saqlaydi (Supabase da vehicles ustuni yo'q)
+  const attrs = { ...(p.attributes || {}) };
   if (p.vehicles !== undefined && Array.isArray(p.vehicles) && p.vehicles.length > 0) {
     dbObj.vehicle = p.vehicles.join(", ");
+    attrs.vehicles = p.vehicles;
   } else if (p.vehicle !== undefined) {
     dbObj.vehicle = p.vehicle || null;
+    if (p.vehicle) {
+      attrs.vehicles = p.vehicle
+        .split(/,\s*/)
+        .map((s) => s.trim())
+        .filter(Boolean);
+    }
   }
   if (p.category !== undefined) dbObj.category = p.category || null;
   if (p.supplierId !== undefined) dbObj.supplier_id = p.supplierId || null;
@@ -23,26 +30,34 @@ export function toDbProduct(p) {
   if (p.minQty !== undefined) dbObj.min_qty = p.minQty;
   if (p.image !== undefined) dbObj.image = p.image || null;
   if (p.description !== undefined) dbObj.description = p.description || null;
-  if (p.attributes !== undefined) dbObj.attributes = p.attributes;
+  if (Object.keys(attrs).length > 0 || p.attributes !== undefined) dbObj.attributes = attrs;
   if (p.branchStock !== undefined) dbObj.branch_stock = p.branchStock;
   return dbObj;
 }
 
 export function toFeProduct(p) {
   if (!p) return null;
-  // vehicle string ni massivga parse qilish (vergul bilan ajratilgan)
-  const vehicles = p.vehicle
-    ? p.vehicle
-        .split(/,\s*/)
-        .map((s) => s.trim())
-        .filter(Boolean)
-    : [];
+  const attrVehicles =
+    p.attributes?.vehicles &&
+    Array.isArray(p.attributes.vehicles) &&
+    p.attributes.vehicles.length > 0
+      ? p.attributes.vehicles
+      : null;
+  const vehicles =
+    attrVehicles ||
+    (p.vehicle
+      ? p.vehicle
+          .split(/,\s*/)
+          .map((s) => s.trim())
+          .filter(Boolean)
+      : []);
+  const vehicleStr = p.vehicle || (vehicles.length > 0 ? vehicles.join(", ") : "");
   return {
     id: p.id,
     name: p.name,
     sku: p.sku,
     barcode: p.barcode,
-    vehicle: p.vehicle || "",
+    vehicle: vehicleStr,
     vehicles,
     category: p.category,
     supplierId: p.supplier_id,

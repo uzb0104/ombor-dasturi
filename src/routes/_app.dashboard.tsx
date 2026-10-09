@@ -61,11 +61,14 @@ function Dashboard() {
 
   const filtered = useMemo(() => {
     if (vehicleFilter === "all") return { products, sales };
-    const productIds = new Set(
-      products.filter((p) => p.vehicle === vehicleFilter).map((p) => p.id),
-    );
+    const matchVehicle = (p: { vehicle?: string; vehicles?: string[] }) =>
+      p.vehicle === vehicleFilter ||
+      (p.vehicles && p.vehicles.includes(vehicleFilter)) ||
+      (p.vehicle && p.vehicle.includes(vehicleFilter));
+
+    const productIds = new Set(products.filter(matchVehicle).map((p) => p.id));
     return {
-      products: products.filter((p) => p.vehicle === vehicleFilter),
+      products: products.filter(matchVehicle),
       sales: sales.filter((s) => s.items.some((i) => productIds.has(i.productId))),
     };
   }, [products, sales, vehicleFilter]);
@@ -224,6 +227,7 @@ function Dashboard() {
           accent="success"
           onClick={() => setDetail("profit")}
         />
+        {/* Kelajakda ochish uchun komentga olindi:
         <StatCard
           label={t("dashboard.expenses")}
           value={formatSom(totalExpenses)}
@@ -238,6 +242,7 @@ function Dashboard() {
           accent="primary"
           onClick={() => setDetail("salary")}
         />
+        */}
         <StatCard
           label={t("dashboard.netProfit")}
           value={formatSom(netProfit)}
@@ -252,6 +257,7 @@ function Dashboard() {
           accent="destructive"
           onClick={() => setDetail("debt")}
         />
+        {/* Kelajakda ochish uchun komentga olindi:
         <StatCard
           label="Eski Akkumulyatorlar (Lom)"
           value={`${batteryBalansKg} kg`}
@@ -259,6 +265,7 @@ function Dashboard() {
           accent="primary"
           onClick={() => setDetail("battery")}
         />
+        */}
       </div>
 
       <DetailDialog
@@ -507,6 +514,7 @@ function DetailDialog({
           )}
           {kind === "debt" && (
             <>
+              {/* Kelajakda ochish uchun komentga olindi:
               <div className="font-semibold">{t("dashboard.customerDebt")}</div>
               <List
                 rows={ctx.customers
@@ -519,7 +527,8 @@ function DetailDialog({
                     tone: "destructive" as const,
                   }))}
               />
-              <div className="font-semibold pt-2">{t("dashboard.supplierDebt")}</div>
+              */}
+              <div className="font-semibold">{t("dashboard.supplierDebt")}</div>
               <List
                 rows={ctx.suppliers
                   .filter((s) => s.debt > 0)

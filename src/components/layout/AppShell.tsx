@@ -60,6 +60,7 @@ import {
 import { useEffect, useState } from "react";
 import { useLang, LANG_LABELS, UI_LANGS, type Lang } from "@/lib/i18n";
 import { Languages } from "lucide-react";
+import { NotificationModal } from "@/components/notifications/NotificationModal";
 
 const ICONS = {
   LayoutDashboard,
@@ -98,6 +99,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const path = useRouterState({ select: (s) => s.location.pathname });
   const [mobileOpen, setMobileOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [notifModalOpen, setNotifModalOpen] = useState(false);
   const [now, setNow] = useState(new Date());
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({
     "/inventory": true,
@@ -303,62 +305,20 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               {theme === "light" ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
             </Button>
 
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="relative">
-                  <Bell className="h-4 w-4" />
-                  {totalNotifications > 0 && (
-                    <Badge className="absolute -top-1 -right-1 h-4 min-w-4 px-1 text-[10px] bg-destructive text-destructive-foreground">
-                      {totalNotifications}
-                    </Badge>
-                  )}
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-80">
-                <DropdownMenuLabel>{t("nav.notifications")}</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                {totalNotifications === 0 ? (
-                  <div className="p-4 text-center text-sm text-muted-foreground">
-                    {t("nav.noNotifications")}
-                  </div>
-                ) : (
-                  <div className="max-h-[75vh] overflow-y-auto">
-                    {outStock.slice(0, 5).map((p) => (
-                      <DropdownMenuItem
-                        key={`out-${p.id}`}
-                        onClick={() => navigate({ to: "/products" })}
-                        className="cursor-pointer"
-                      >
-                        <div className="flex flex-col gap-1 w-full">
-                          <span className="font-medium text-destructive">
-                            {t("nav.outOfStock")}
-                          </span>
-                          <span className="text-xs text-muted-foreground">
-                            {p.name} ({p.vehicle})
-                          </span>
-                        </div>
-                      </DropdownMenuItem>
-                    ))}
-                    {lowStock.slice(0, 5).map((p) => (
-                      <DropdownMenuItem
-                        key={`low-${p.id}`}
-                        onClick={() => navigate({ to: "/products" })}
-                        className="cursor-pointer"
-                      >
-                        <div className="flex flex-col gap-1 w-full">
-                          <span className="font-medium text-warning-foreground">
-                            {t("nav.lowStock")}: {p.quantity} ta
-                          </span>
-                          <span className="text-xs text-muted-foreground">
-                            {p.name} ({p.vehicle})
-                          </span>
-                        </div>
-                      </DropdownMenuItem>
-                    ))}
-                  </div>
-                )}
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="relative"
+              onClick={() => setNotifModalOpen(true)}
+              title={t("nav.notifications")}
+            >
+              <Bell className="h-4 w-4" />
+              {totalNotifications > 0 && (
+                <Badge className="absolute -top-1 -right-1 h-4 min-w-4 px-1 text-[10px] bg-destructive text-destructive-foreground animate-pulse">
+                  {totalNotifications}
+                </Badge>
+              )}
+            </Button>
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -435,6 +395,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               </CommandItem>
             ))}
           </CommandGroup>
+          {/* Kelajakda ochish uchun komentga olindi:
           <CommandGroup heading={t("nav.customersTop")}>
             {customers.slice(0, 5).map((c) => (
               <CommandItem
@@ -450,8 +411,16 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               </CommandItem>
             ))}
           </CommandGroup>
+          */}
         </CommandList>
       </CommandDialog>
+
+      <NotificationModal
+        open={notifModalOpen}
+        onOpenChange={setNotifModalOpen}
+        products={productList}
+        onNavigate={(p) => navigate({ to: p })}
+      />
     </div>
   );
 }

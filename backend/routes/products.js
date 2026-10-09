@@ -154,6 +154,66 @@ router.get("/", authenticateToken, requirePermission("/products"), async (req, r
   }
 });
 
+async function safeSupabaseProductUpsert(operation, id, dbObj) {
+  let curObj = { ...dbObj };
+  // 1-urinish: to'liq ma'lumotlar bilan
+  let res =
+    operation === "insert"
+      ? await supabaseClient.from("products").insert([curObj]).select().single()
+      : await supabaseClient.from("products").update(curObj).eq("id", id).select().single();
+
+  if (!res.error) return res;
+
+  console.warn(`⚠️ [Products ${operation}] 1-urinish xatosi:`, res.error.message);
+
+  // 1. Agar xatolik vehicle foreign key yoki vehicle constraint bilan bog'liq bo'lsa
+  if (
+    res.error &&
+    (res.error.message?.includes("foreign key") ||
+      res.error.message?.includes("products_vehicle") ||
+      res.error.message?.includes("vehicle_brands") ||
+      res.error.message?.includes("vehicle"))
+  ) {
+    console.warn("⚠️ Vehicle constraint xatosi, vehicle=null qilib qayta urinilmoqda...");
+    curObj = { ...curObj, vehicle: null };
+    res =
+      operation === "insert"
+        ? await supabaseClient.from("products").insert([curObj]).select().single()
+        : await supabaseClient.from("products").update(curObj).eq("id", id).select().single();
+    if (!res.error) return res;
+  }
+
+  // 2. Agar xatolik mavjud bo'lmagan ustunlar bilan bog'liq bo'lsa
+  const nonStandardCols = [
+    "buy_price_usd",
+    "sell_price_usd",
+    "currency",
+    "vehicles",
+    "branch_stock",
+  ];
+  for (const col of nonStandardCols) {
+    delete curObj[col];
+  }
+
+  res =
+    operation === "insert"
+      ? await supabaseClient.from("products").insert([curObj]).select().single()
+      : await supabaseClient.from("products").update(curObj).eq("id", id).select().single();
+
+  if (!res.error) return res;
+
+  // 3. Oxirgi xavfsiz urinish: vehicle ni ham null qilish
+  if (curObj.vehicle !== null) {
+    curObj.vehicle = null;
+    res =
+      operation === "insert"
+        ? await supabaseClient.from("products").insert([curObj]).select().single()
+        : await supabaseClient.from("products").update(curObj).eq("id", id).select().single();
+  }
+
+  return res;
+}
+
 router.post(
   "/",
   authenticateToken,
@@ -163,29 +223,10 @@ router.post(
     const p = req.body;
     try {
       if (isSupabaseConfigured) {
-        const dbObj = toDbProduct(p);
+        let dbObj = toDbProduct(p);
         console.log("📦 [Products POST] Ma'lumot:", JSON.stringify(dbObj, null, 2));
-        let { data, error } = await supabaseClient
-          .from("products")
-          .insert([dbObj])
-          .select()
-          .single();
-        if (
-          error &&
-          (error.message?.includes("buy_price_usd") ||
-            error.message?.includes("sell_price_usd") ||
-            error.message?.includes("vehicles") ||
-            error.message?.includes("schema cache"))
-        ) {
-          console.warn("⚠️ Column missing on DB, retrying insert without problematic columns...");
-          delete dbObj.buy_price_usd;
-          delete dbObj.sell_price_usd;
-          delete dbObj.currency;
-          delete dbObj.vehicles;
-          const retry = await supabaseClient.from("products").insert([dbObj]).select().single();
-          data = retry.data;
-          error = retry.error;
-        }
+        const { data, error } = await safeSupabaseProductUpsert("insert", null, dbObj);
+
         if (error) {
           console.error(
             "❌ [Products POST] Supabase xatolik:",
@@ -228,36 +269,11 @@ router.put(
           .select("*")
           .eq("id", id)
           .single();
-        const dbObj = toDbProduct(updates);
+        let dbObj = toDbProduct(updates);
         delete dbObj.id;
         console.log(`📦 [Products PUT] ID: ${id}, Ma'lumot:`, JSON.stringify(dbObj, null, 2));
-        let { data, error } = await supabaseClient
-          .from("products")
-          .update(dbObj)
-          .eq("id", id)
-          .select()
-          .single();
-        if (
-          error &&
-          (error.message?.includes("buy_price_usd") ||
-            error.message?.includes("sell_price_usd") ||
-            error.message?.includes("vehicles") ||
-            error.message?.includes("schema cache"))
-        ) {
-          console.warn("⚠️ Column missing on DB, retrying update without problematic columns...");
-          delete dbObj.buy_price_usd;
-          delete dbObj.sell_price_usd;
-          delete dbObj.currency;
-          delete dbObj.vehicles;
-          const retry = await supabaseClient
-            .from("products")
-            .update(dbObj)
-            .eq("id", id)
-            .select()
-            .single();
-          data = retry.data;
-          error = retry.error;
-        }
+        const { data, error } = await safeSupabaseProductUpsert("update", id, dbObj);
+
         if (error) {
           console.error(
             "❌ [Products PUT] Supabase xatolik:",
@@ -377,9 +393,21 @@ router.post("/import", authenticateToken, requirePermission("/products"), async 
         return toDbProduct(product);
       });
       for (let index = 0; index < rows.length; index += 500) {
-        const { error } = await supabaseClient
-          .from("products")
-          .upsert(rows.slice(index, index + 500), { onConflict: "id" });
+        let chunk = rows.slice(index, index + 500);
+        let { error } = await supabaseClient.from("products").upsert(chunk, { onConflict: "id" });
+        if (
+          error &&
+          (error.message?.includes("foreign key") ||
+            error.message?.includes("products_vehicle") ||
+            error.message?.includes("vehicle_brands"))
+        ) {
+          console.warn(
+            "⚠️ Foreign key error during bulk upsert, retrying without vehicle string...",
+          );
+          chunk = chunk.map((r) => ({ ...r, vehicle: null }));
+          const retryFk = await supabaseClient.from("products").upsert(chunk, { onConflict: "id" });
+          error = retryFk.error;
+        }
         if (error) throw error;
       }
       await clearCached("cache:products");
