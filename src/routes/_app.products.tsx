@@ -147,7 +147,7 @@ function ProductsPage() {
   const [veh, setVeh] = useState<string>("all");
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<string | null>(null);
-  const [buyCurrency, setBuyCurrency] = useState<"UZS" | "USD">("UZS");
+  const [buyCurrency, setBuyCurrency] = useState<"UZS" | "USD">("USD");
   const [categoryComboOpen, setCategoryComboOpen] = useState(false);
   const sortedCategories = useMemo(
     () => [...categories].sort((a, b) => a.localeCompare(b, "uz", { sensitivity: "base" })),
@@ -248,7 +248,7 @@ function ProductsPage() {
     const p = products.find((x) => x.id === id);
     if (!p) return;
     setEditing(id);
-    setBuyCurrency(p.buyPriceUsd && !p.buyPrice ? "USD" : "UZS");
+    setBuyCurrency(p.currency === "UZS" && !p.buyPriceUsd ? "UZS" : "USD");
     const a = p.attributes || {};
     const v = a.voltage || "12V";
     const isPreset = VOLTAGE_OPTIONS.includes(v);
@@ -452,7 +452,7 @@ function ProductsPage() {
               size="sm"
               onClick={() => {
                 setEditing(null);
-                setBuyCurrency("UZS");
+                setBuyCurrency("USD");
                 setForm(emptyForm(categories[0] || "Dvigatel", vehicleBrands[0] || ""));
                 setOpen(true);
               }}
@@ -753,7 +753,7 @@ function ProductsPage() {
                   <div className="border rounded-2xl p-4 bg-muted/10 space-y-3">
                     <div className="flex items-center gap-1.5 text-sm font-bold text-foreground">
                       <span className="text-emerald-600 font-bold">$</span>
-                      <span>Narxlar (So'm va Dollar $)</span>
+                      <span>Narxlar (Dollar $ va So'm)</span>
                     </div>
 
                     <div className="space-y-1.5">
@@ -764,25 +764,25 @@ function ProductsPage() {
                           step={buyCurrency === "USD" ? "0.01" : "1"}
                           min="0"
                           value={
-                            buyCurrency === "UZS" ? form.buyPrice || "" : form.buyPriceUsd || ""
+                            buyCurrency === "USD" ? form.buyPriceUsd || "" : form.buyPrice || ""
                           }
                           onChange={(e) => {
                             const val = Math.max(0, +e.target.value);
-                            if (buyCurrency === "UZS") {
-                              setForm((f) => ({
-                                ...f,
-                                buyPrice: val,
-                                buyPriceUsd: usdRate > 0 ? Number((val / usdRate).toFixed(2)) : 0,
-                                sellPrice: val,
-                                sellPriceUsd: usdRate > 0 ? Number((val / usdRate).toFixed(2)) : 0,
-                              }));
-                            } else {
+                            if (buyCurrency === "USD") {
                               setForm((f) => ({
                                 ...f,
                                 buyPriceUsd: val,
                                 buyPrice: Math.round(val * usdRate),
                                 sellPriceUsd: val,
                                 sellPrice: Math.round(val * usdRate),
+                              }));
+                            } else {
+                              setForm((f) => ({
+                                ...f,
+                                buyPrice: val,
+                                buyPriceUsd: usdRate > 0 ? Number((val / usdRate).toFixed(2)) : 0,
+                                sellPrice: val,
+                                sellPriceUsd: usdRate > 0 ? Number((val / usdRate).toFixed(2)) : 0,
                               }));
                             }
                           }}
@@ -797,11 +797,21 @@ function ProductsPage() {
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="UZS">So'm (UZS)</SelectItem>
                             <SelectItem value="USD">Dollar ($)</SelectItem>
+                            <SelectItem value="UZS">So'm (UZS)</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
+                      {buyCurrency === "USD" && form.buyPriceUsd > 0 && usdRate > 0 && (
+                        <div className="text-[11px] text-muted-foreground font-medium">
+                          ≈ {formatSom(form.buyPrice)} (kurs: {formatSom(usdRate)})
+                        </div>
+                      )}
+                      {buyCurrency === "UZS" && form.buyPrice > 0 && usdRate > 0 && (
+                        <div className="text-[11px] text-muted-foreground font-medium">
+                          ≈ ${form.buyPriceUsd} USD (kurs: {formatSom(usdRate)})
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
