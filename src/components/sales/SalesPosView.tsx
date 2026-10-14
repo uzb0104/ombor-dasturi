@@ -1,6 +1,5 @@
 import { useState, useMemo, useRef, useEffect } from "react";
 import {
-  ScanBarcode,
   Search,
   ShoppingCart,
   Trash2,
@@ -366,10 +365,10 @@ export function SalesPosView() {
         {/* Search & Barcode Header */}
         <Card className="p-4 rounded-2xl border-border/70 shadow-sm bg-card/70 backdrop-blur-sm space-y-3">
           <div className="relative">
-            <ScanBarcode className="absolute left-3.5 top-1/2 -translate-y-1/2 h-5 w-5 text-primary animate-pulse" />
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
             <Input
               ref={searchInputRef}
-              placeholder="Tovar nomi, artikul yoki shtrix-kodni skanerlang (Enter)..."
+              placeholder="Qidirish..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               onKeyDown={handleSearchKeyDown}
