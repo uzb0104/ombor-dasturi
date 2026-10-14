@@ -225,6 +225,45 @@ router.post(
       if (isSupabaseConfigured) {
         let dbObj = toDbProduct(p);
         console.log("📦 [Products POST] Ma'lumot:", JSON.stringify(dbObj, null, 2));
+
+        // Bir xil nom va modeldagi tovar mavjudligini tekshiramiz
+        let existing = null;
+        if (dbObj.name) {
+          let query = supabaseClient.from("products").select("*").ilike("name", dbObj.name.trim());
+          if (dbObj.vehicle) {
+            query = query.eq("vehicle", dbObj.vehicle);
+          }
+          const { data: matched } = await query.limit(1).maybeSingle();
+          existing = matched;
+        }
+
+        if (existing) {
+          const oldQty = Number(existing.quantity) || 0;
+          const addedQty = Number(dbObj.quantity) || 0;
+          const newQty = oldQty + addedQty;
+
+          const updateObj = {
+            quantity: newQty,
+            buy_price: dbObj.buy_price > 0 ? dbObj.buy_price : existing.buy_price,
+            buy_price_usd:
+              (dbObj.buy_price_usd || 0) > 0 ? dbObj.buy_price_usd : existing.buy_price_usd,
+            sell_price: dbObj.sell_price > 0 ? dbObj.sell_price : existing.sell_price,
+            sell_price_usd:
+              (dbObj.sell_price_usd || 0) > 0 ? dbObj.sell_price_usd : existing.sell_price_usd,
+          };
+
+          const { data: updated, error: uErr } = await safeSupabaseProductUpsert(
+            "update",
+            existing.id,
+            updateObj,
+          );
+          if (uErr) throw uErr;
+
+          await recordPriceChanges(existing.id, existing.name, existing, updateObj, req.user);
+          await clearCached("cache:products");
+          return res.json(toFeProduct(updated));
+        }
+
         const { data, error } = await safeSupabaseProductUpsert("insert", null, dbObj);
 
         if (error) {
@@ -241,6 +280,28 @@ router.post(
         res.json(toFeProduct(data));
       } else {
         const db = readLocalDb();
+        const pName = (p.name || "").trim().toLowerCase();
+        const pVeh = (p.vehicle || "").trim().toLowerCase();
+        const existingIdx = db.products.findIndex(
+          (item) =>
+            (item.name || "").trim().toLowerCase() === pName &&
+            (item.vehicle || "").trim().toLowerCase() === pVeh,
+        );
+
+        if (existingIdx !== -1) {
+          const ext = db.products[existingIdx];
+          const oldQty = Number(ext.quantity) || 0;
+          const addedQty = Number(p.quantity) || 0;
+          ext.quantity = oldQty + addedQty;
+          if (p.buyPrice > 0) ext.buyPrice = p.buyPrice;
+          if (p.buyPriceUsd > 0) ext.buyPriceUsd = p.buyPriceUsd;
+          if (p.sellPrice > 0) ext.sellPrice = p.sellPrice;
+          if (p.sellPriceUsd > 0) ext.sellPriceUsd = p.sellPriceUsd;
+          writeLocalDb(db);
+          await recordPriceChanges(ext.id, ext.name, null, toDbProduct(ext), req.user);
+          return res.json(ext);
+        }
+
         db.products.unshift(p);
         writeLocalDb(db);
         const dbObj = toDbProduct(p);

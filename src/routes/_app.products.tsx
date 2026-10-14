@@ -46,6 +46,7 @@ import {
   Circle,
   Check,
   ChevronsUpDown,
+  AlertCircle,
 } from "lucide-react";
 import { useT } from "@/lib/i18n";
 import { ProductImportDialog } from "@/components/ProductImportDialog";
@@ -244,6 +245,23 @@ function ProductsPage() {
   const allFilteredIds = useMemo(() => allFilteredProducts.map((p) => p.id), [allFilteredProducts]);
   const allChecked = allFilteredIds.length > 0 && allFilteredIds.every((id) => sel.has(id));
 
+  const duplicateMatch = useMemo(() => {
+    if (editing || !form.name.trim()) return null;
+    const normName = form.name.trim().toLowerCase();
+    const currentVehs = form.vehicles.filter(Boolean);
+    const normVehStr = currentVehs.join(", ").toLowerCase();
+
+    return products.find((p) => {
+      const pName = (p.name || "").trim().toLowerCase();
+      if (pName !== normName) return false;
+      if (currentVehs.length > 0) {
+        const pVehStr = (p.vehicle || "").trim().toLowerCase();
+        return pVehStr === normVehStr;
+      }
+      return true;
+    });
+  }, [editing, form.name, form.vehicles, products]);
+
   const startEdit = (id: string) => {
     const p = products.find((x) => x.id === id);
     if (!p) return;
@@ -356,9 +374,45 @@ function ProductsPage() {
       updateProduct(editing, payload);
       toast.success(t("products.updated"));
     } else {
-      addProduct({ id: `prd_${Math.random().toString(36).slice(2, 9)}`, ...payload });
-      setServerPage(1);
-      toast.success(t("products.created"));
+      const normName = payload.name.trim().toLowerCase();
+      const normVeh = (payload.vehicle || "").trim().toLowerCase();
+
+      // Bir xil nom va bir xil mashina modeliga ega tovar bormi tekshiramiz
+      const existingProduct = products.find((p) => {
+        const pName = (p.name || "").trim().toLowerCase();
+        const pVeh = (p.vehicle || "").trim().toLowerCase();
+        if (pName !== normName) return false;
+        if (normVeh && pVeh && normVeh !== pVeh) return false;
+        return true;
+      });
+
+      if (existingProduct) {
+        const addedQty = Number(payload.quantity) || 0;
+        const oldQty = Number(existingProduct.quantity) || 0;
+        const newTotalQty = oldQty + addedQty;
+
+        const updatedPayload: Partial<Product> = {
+          ...existingProduct,
+          quantity: newTotalQty,
+          buyPrice: payload.buyPrice > 0 ? payload.buyPrice : existingProduct.buyPrice,
+          buyPriceUsd:
+            (payload.buyPriceUsd || 0) > 0 ? payload.buyPriceUsd : existingProduct.buyPriceUsd,
+          sellPrice: payload.sellPrice > 0 ? payload.sellPrice : existingProduct.sellPrice,
+          sellPriceUsd:
+            (payload.sellPriceUsd || 0) > 0 ? payload.sellPriceUsd : existingProduct.sellPriceUsd,
+          minQty: payload.minQty > 0 ? payload.minQty : existingProduct.minQty,
+        };
+
+        updateProduct(existingProduct.id, updatedPayload);
+        toast.success(
+          `"${existingProduct.name}" bazada mavjud ekan! Yangi qator ochilmadi, qoldig'i ${oldQty} tadan ${newTotalQty} taga oshirildi.`,
+          { duration: 5000 },
+        );
+      } else {
+        addProduct({ id: `prd_${Math.random().toString(36).slice(2, 9)}`, ...payload });
+        setServerPage(1);
+        toast.success(t("products.created"));
+      }
     }
     setOpen(false);
     setEditing(null);
@@ -488,6 +542,17 @@ function ProductsPage() {
                       placeholder="Masalan: Tormoz kolodkasi"
                       className="mt-1"
                     />
+                    {duplicateMatch && (
+                      <div className="mt-2 flex items-start gap-2 p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-900 dark:text-amber-200 text-xs animate-in fade-in duration-200">
+                        <AlertCircle className="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400 mt-0.5" />
+                        <div>
+                          <span className="font-semibold">Bazada mavjud tovar!</span> Hozir omborda{" "}
+                          <span className="font-bold underline">{duplicateMatch.quantity} ta</span>{" "}
+                          bor. Saqlaganingizda yangi qator ochilmaydi, kiritgan miqdoringiz
+                          avtomatik mavjud qoldiqqa qo'shiladi.
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   {/* Mos keladigan avtomobillar */}
