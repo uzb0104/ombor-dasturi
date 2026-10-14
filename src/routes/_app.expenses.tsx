@@ -43,7 +43,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Plus, Receipt, Edit, Trash2, Calendar, CalendarDays, Search, X } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { useT } from "@/lib/i18n";
+import { useT, useLang } from "@/lib/i18n";
 import { EXPENSE_CAT_VALUES, expenseCategoryLabel } from "@/lib/i18n/expense-cats";
 
 export const Route = createFileRoute("/_app/expenses")({ component: ExpensesPage });
@@ -53,6 +53,7 @@ const empty = (): Form => ({ category: EXPENSE_CAT_VALUES[0]!, amount: 0, note: 
 
 function ExpensesPage() {
   const t = useT();
+  const { lang } = useLang();
   const { expenses, addExpense, updateExpense, deleteExpense } = useStore();
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<string | null>(null);
@@ -88,11 +89,12 @@ function ExpensesPage() {
   );
 
   const getDateFilterLabel = () => {
-    if (dateMode === "ALL") return "Sana bo'yicha";
-    if (dateMode === "DAY") return `Kun: ${selectedDay}`;
-    if (dateMode === "MONTH") return `Oy: ${selectedMonth}`;
-    if (dateMode === "YEAR") return `Yil: ${selectedYear}`;
-    return "Sana";
+    if (dateMode === "ALL") return lang === "ru" ? "По дате" : "Sana bo'yicha";
+    if (dateMode === "DAY") return lang === "ru" ? `День: ${selectedDay}` : `Kun: ${selectedDay}`;
+    if (dateMode === "MONTH")
+      return lang === "ru" ? `Месяц: ${selectedMonth}` : `Oy: ${selectedMonth}`;
+    if (dateMode === "YEAR") return lang === "ru" ? `Год: ${selectedYear}` : `Yil: ${selectedYear}`;
+    return lang === "ru" ? "Дата" : "Sana";
   };
 
   const filteredExpenses = useMemo(() => {
@@ -276,7 +278,7 @@ function ExpensesPage() {
           <div className="relative w-full sm:w-64">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Xarajatlarni qidirish..."
+              placeholder={lang === "ru" ? "Поиск расходов..." : "Xarajatlarni qidirish..."}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="pl-8 h-9 text-xs"
@@ -287,10 +289,10 @@ function ExpensesPage() {
             {/* Category Filter Select */}
             <Select value={categoryFilter} onValueChange={(v) => setCategoryFilter(v)}>
               <SelectTrigger className="h-9 w-[150px] text-xs">
-                <SelectValue placeholder="Kategoriya" />
+                <SelectValue placeholder={lang === "ru" ? "Категория" : "Kategoriya"} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="ALL">Barcha turlar</SelectItem>
+                <SelectItem value="ALL">{lang === "ru" ? "Все виды" : "Barcha turlar"}</SelectItem>
                 {EXPENSE_CAT_VALUES.map((c) => (
                   <SelectItem key={c} value={c}>
                     {expenseCategoryLabel(t, c)}
@@ -326,7 +328,7 @@ function ExpensesPage() {
                 <div className="font-semibold text-sm flex items-center justify-between">
                   <span className="flex items-center gap-1.5">
                     <CalendarDays className="h-4 w-4 text-primary" />
-                    Sana bo'yicha saralash
+                    {lang === "ru" ? "Сортировка по дате" : "Sana bo'yicha saralash"}
                   </span>
                   {dateMode !== "ALL" && (
                     <Button
@@ -335,7 +337,7 @@ function ExpensesPage() {
                       className="h-7 text-xs text-muted-foreground hover:text-destructive p-1"
                       onClick={() => setDateMode("ALL")}
                     >
-                      Tozalash
+                      {lang === "ru" ? "Очистить" : "Tozalash"}
                     </Button>
                   )}
                 </div>
@@ -351,7 +353,7 @@ function ExpensesPage() {
                     }`}
                     onClick={() => setDateMode("ALL")}
                   >
-                    Barchasi
+                    {lang === "ru" ? "Все" : "Barchasi"}
                   </button>
                   <button
                     type="button"
@@ -362,7 +364,7 @@ function ExpensesPage() {
                     }`}
                     onClick={() => setDateMode("DAY")}
                   >
-                    Kunlik
+                    {lang === "ru" ? "День" : "Kunlik"}
                   </button>
                   <button
                     type="button"
@@ -373,7 +375,7 @@ function ExpensesPage() {
                     }`}
                     onClick={() => setDateMode("MONTH")}
                   >
-                    Oylik
+                    {lang === "ru" ? "Месяц" : "Oylik"}
                   </button>
                   <button
                     type="button"
@@ -384,14 +386,16 @@ function ExpensesPage() {
                     }`}
                     onClick={() => setDateMode("YEAR")}
                   >
-                    Yillik
+                    {lang === "ru" ? "Год" : "Yillik"}
                   </button>
                 </div>
 
                 {/* Dynamic Inputs based on mode */}
                 {dateMode === "DAY" && (
                   <div className="space-y-1.5">
-                    <Label className="text-xs">Kungi sanani tanlang:</Label>
+                    <Label className="text-xs">
+                      {lang === "ru" ? "Выберите дату:" : "Kungi sanani tanlang:"}
+                    </Label>
                     <Input
                       type="date"
                       value={selectedDay}
@@ -403,7 +407,9 @@ function ExpensesPage() {
 
                 {dateMode === "MONTH" && (
                   <div className="space-y-1.5">
-                    <Label className="text-xs">Oyni tanlang:</Label>
+                    <Label className="text-xs">
+                      {lang === "ru" ? "Выберите месяц:" : "Oyni tanlang:"}
+                    </Label>
                     <Input
                       type="month"
                       value={selectedMonth}
@@ -415,7 +421,9 @@ function ExpensesPage() {
 
                 {dateMode === "YEAR" && (
                   <div className="space-y-1.5">
-                    <Label className="text-xs">Yilni tanlang:</Label>
+                    <Label className="text-xs">
+                      {lang === "ru" ? "Выберите год:" : "Yilni tanlang:"}
+                    </Label>
                     <Input
                       type="number"
                       min="2020"

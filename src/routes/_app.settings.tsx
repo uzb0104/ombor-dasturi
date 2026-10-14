@@ -293,66 +293,85 @@ function SettingsPage() {
         <TabsContent value="security" className="mt-5">
           <Card className="p-6 rounded-2xl space-y-4 max-w-2xl">
             <h3 className="font-semibold">{t("settings.changePassword")}</h3>
-            <div className="grid grid-cols-1 gap-3">
-              <div>
-                <Label>{t("settings.currentPassword")}</Label>
-                <div className="relative mt-1">
-                  <Input
-                    type={showCurrentPass ? "text" : "password"}
-                    value={passwords.current}
-                    onChange={(e) => setPasswords({ ...passwords, current: e.target.value })}
-                    className="pr-10"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowCurrentPass(!showCurrentPass)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors p-1"
-                    tabIndex={-1}
-                  >
-                    {showCurrentPass ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </button>
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                handlePasswordChange();
+              }}
+              className="space-y-4"
+            >
+              <div className="grid grid-cols-1 gap-3">
+                <div>
+                  <Label>{t("settings.currentPassword")}</Label>
+                  <div className="relative mt-1">
+                    <Input
+                      type={showCurrentPass ? "text" : "password"}
+                      value={passwords.current}
+                      onChange={(e) => setPasswords({ ...passwords, current: e.target.value })}
+                      className="pr-10"
+                      autoComplete="current-password"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowCurrentPass(!showCurrentPass)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors p-1"
+                      tabIndex={-1}
+                    >
+                      {showCurrentPass ? (
+                        <EyeOff className="h-4 w-4" />
+                      ) : (
+                        <Eye className="h-4 w-4" />
+                      )}
+                    </button>
+                  </div>
+                </div>
+                <div>
+                  <Label>{t("settings.newPassword")}</Label>
+                  <div className="relative mt-1">
+                    <Input
+                      type={showNewPass ? "text" : "password"}
+                      value={passwords.new}
+                      onChange={(e) => setPasswords({ ...passwords, new: e.target.value })}
+                      className="pr-10"
+                      autoComplete="new-password"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowNewPass(!showNewPass)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors p-1"
+                      tabIndex={-1}
+                    >
+                      {showNewPass ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                </div>
+                <div>
+                  <Label>{t("settings.confirmPassword")}</Label>
+                  <div className="relative mt-1">
+                    <Input
+                      type={showConfirmPass ? "text" : "password"}
+                      value={passwords.confirm}
+                      onChange={(e) => setPasswords({ ...passwords, confirm: e.target.value })}
+                      className="pr-10"
+                      autoComplete="new-password"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirmPass(!showConfirmPass)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors p-1"
+                      tabIndex={-1}
+                    >
+                      {showConfirmPass ? (
+                        <EyeOff className="h-4 w-4" />
+                      ) : (
+                        <Eye className="h-4 w-4" />
+                      )}
+                    </button>
+                  </div>
                 </div>
               </div>
-              <div>
-                <Label>{t("settings.newPassword")}</Label>
-                <div className="relative mt-1">
-                  <Input
-                    type={showNewPass ? "text" : "password"}
-                    value={passwords.new}
-                    onChange={(e) => setPasswords({ ...passwords, new: e.target.value })}
-                    className="pr-10"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowNewPass(!showNewPass)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors p-1"
-                    tabIndex={-1}
-                  >
-                    {showNewPass ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </button>
-                </div>
-              </div>
-              <div>
-                <Label>{t("settings.confirmPassword")}</Label>
-                <div className="relative mt-1">
-                  <Input
-                    type={showConfirmPass ? "text" : "password"}
-                    value={passwords.confirm}
-                    onChange={(e) => setPasswords({ ...passwords, confirm: e.target.value })}
-                    className="pr-10"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowConfirmPass(!showConfirmPass)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors p-1"
-                    tabIndex={-1}
-                  >
-                    {showConfirmPass ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </button>
-                </div>
-              </div>
-            </div>
-            <Button onClick={handlePasswordChange}>{t("common.change")}</Button>
+              <Button type="submit">{t("common.change")}</Button>
+            </form>
           </Card>
         </TabsContent>
 

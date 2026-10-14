@@ -195,9 +195,13 @@ export const ruBase: Record<string, string> = {
   "expenses.bulk": "расходов выбрано",
   "expenses.notFound": "Расходы не найдены",
 
+  "nav.usedBatteries": "Старые аккумуляторы (Лом)",
+
   "reports.excelDownloaded": "Excel-отчёт загружен",
   "reports.calendarSubtitle": "Просмотр и экспорт продаж за день, месяц и год",
   "reports.date": "Дата",
+  "reports.time": "Время",
+  "reports.dayTitle": "Отчёт за {date}",
   "reports.noSales": "Продаж нет",
   "reports.saleCount": "Продаж: {count}",
   "reports.exportMonth": "Экспорт месяца",

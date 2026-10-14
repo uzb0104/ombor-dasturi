@@ -39,6 +39,7 @@ import {
 } from "@/components/ui/dialog";
 import { formatSom } from "@/lib/constants";
 import { useStore } from "@/lib/store";
+import { useT, useLang } from "@/lib/i18n";
 import type { Product, Sale, Customer } from "@/lib/types";
 import { ReceiptModal } from "./ReceiptModal";
 import { toast } from "sonner";
@@ -55,6 +56,8 @@ export interface CartItem {
 }
 
 export function SalesPosView() {
+  const t = useT();
+  const { lang } = useLang();
   const { products, customers, addCustomer, employees, user, vehicleBrands, categories, addSale } =
     useStore();
 
@@ -116,7 +119,9 @@ export function SalesPosView() {
   // Cart operations
   const addToCart = (product: Product) => {
     if (product.quantity <= 0) {
-      toast.error(`"${product.name}" omborda qolmagan!`);
+      toast.error(
+        lang === "ru" ? `«${product.name}» нет на складе!` : `"${product.name}" omborda qolmagan!`,
+      );
       return;
     }
 
@@ -124,7 +129,11 @@ export function SalesPosView() {
       const existing = prev.find((item) => item.productId === product.id);
       if (existing) {
         if (existing.qty >= product.quantity) {
-          toast.warning(`Omborda faqat ${product.quantity} ta mavjud!`);
+          toast.warning(
+            lang === "ru"
+              ? `На складе только ${product.quantity} шт.!`
+              : `Omborda faqat ${product.quantity} ta mavjud!`,
+          );
           return prev;
         }
         return prev.map((item) =>
@@ -146,7 +155,12 @@ export function SalesPosView() {
       ];
     });
 
-    toast.success(`"${product.name}" savatga qo'shildi`, { duration: 1500 });
+    toast.success(
+      lang === "ru"
+        ? `«${product.name}» добавлено в корзину`
+        : `"${product.name}" savatga qo'shildi`,
+      { duration: 1500 },
+    );
   };
 
   // Handle barcode scanning or Enter in search
@@ -178,7 +192,11 @@ export function SalesPosView() {
           const nextQty = item.qty + delta;
           if (nextQty <= 0) return null;
           if (nextQty > item.availableStock) {
-            toast.warning(`Omborda faqat ${item.availableStock} ta mavjud!`);
+            toast.warning(
+              lang === "ru"
+                ? `На складе только ${item.availableStock} шт.!`
+                : `Omborda faqat ${item.availableStock} ta mavjud!`,
+            );
             return item;
           }
           return { ...item, qty: nextQty };
@@ -193,7 +211,11 @@ export function SalesPosView() {
       prev.map((item) => {
         if (item.productId !== productId) return item;
         if (qty > item.availableStock) {
-          toast.warning(`Omborda faqat ${item.availableStock} ta mavjud!`);
+          toast.warning(
+            lang === "ru"
+              ? `На складе только ${item.availableStock} шт.!`
+              : `Omborda faqat ${item.availableStock} ta mavjud!`,
+          );
           return { ...item, qty: item.availableStock };
         }
         return { ...item, qty };
@@ -222,7 +244,11 @@ export function SalesPosView() {
   // Submit Sale
   const handleCheckout = () => {
     if (cart.length === 0) {
-      toast.error("Savat bo'sh! Kamida bitta mahsulot qo'shing.");
+      toast.error(
+        lang === "ru"
+          ? "Корзина пуста! Добавьте хотя бы один товар."
+          : "Savat bo'sh! Kamida bitta mahsulot qo'shing.",
+      );
       return;
     }
 
@@ -255,7 +281,9 @@ export function SalesPosView() {
     setLastSale(salePayload);
     setReceiptOpen(true);
     clearCart();
-    toast.success("Savdo muvaffaqiyatli yakunlandi!");
+    toast.success(
+      lang === "ru" ? "Продажа успешно завершена!" : "Savdo muvaffaqiyatli yakunlandi!",
+    );
   };
 
   // Selected existing debt customer
@@ -281,7 +309,7 @@ export function SalesPosView() {
   // Debt Sale Confirm Handler (Debts sahifasi bilan integratsiya)
   const handleConfirmDebtSale = () => {
     if (cart.length === 0) {
-      toast.error("Savat bo'sh!");
+      toast.error(lang === "ru" ? "Корзина пуста!" : "Savat bo'sh!");
       return;
     }
 
@@ -290,19 +318,27 @@ export function SalesPosView() {
 
     if (customerMode === "existing") {
       if (!selectedDebtCustId) {
-        toast.error("Iltimos, ro'yxatdan mijozni tanlang!");
+        toast.error(
+          lang === "ru"
+            ? "Пожалуйста, выберите клиента из списка!"
+            : "Iltimos, ro'yxatdan mijozni tanlang!",
+        );
         return;
       }
       const found = customers.find((c) => c.id === selectedDebtCustId);
       if (!found) {
-        toast.error("Tanlangan mijoz topilmadi!");
+        toast.error(lang === "ru" ? "Выбранный клиент не найден!" : "Tanlangan mijoz topilmadi!");
         return;
       }
       targetCustId = found.id;
       targetCustName = found.name;
     } else {
       if (!newDebtCustName.trim()) {
-        toast.error("Iltimos, yangi mijoz ismini kiriting!");
+        toast.error(
+          lang === "ru"
+            ? "Пожалуйста, введите имя нового клиента!"
+            : "Iltimos, yangi mijoz ismini kiriting!",
+        );
         return;
       }
       targetCustId = `cust_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
@@ -353,7 +389,9 @@ export function SalesPosView() {
     clearCart();
     setDebtDialogOpen(false);
     toast.success(
-      `Qarzga sotuv rasmiylashtirildi! ${formatSom(remainingDebt)} Qarzlar (Debts) bo'limiga qo'shildi.`,
+      lang === "ru"
+        ? `Продажа в долг оформлена! ${formatSom(remainingDebt)} добавлено в раздел Задолженность.`
+        : `Qarzga sotuv rasmiylashtirildi! ${formatSom(remainingDebt)} Qarzlar bo'limiga qo'shildi.`,
       { duration: 4000 },
     );
   };
@@ -368,7 +406,7 @@ export function SalesPosView() {
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
             <Input
               ref={searchInputRef}
-              placeholder="Qidirish..."
+              placeholder={lang === "ru" ? "Поиск..." : "Qidirish..."}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               onKeyDown={handleSearchKeyDown}
@@ -390,10 +428,12 @@ export function SalesPosView() {
               <Car className="h-4 w-4 text-muted-foreground shrink-0" />
               <Select value={selectedVehicle} onValueChange={setSelectedVehicle}>
                 <SelectTrigger className="h-7 border-0 bg-transparent shadow-none p-0 focus:ring-0 text-xs font-medium">
-                  <SelectValue placeholder="Mashina brendi" />
+                  <SelectValue placeholder={lang === "ru" ? "Марка авто" : "Mashina brendi"} />
                 </SelectTrigger>
                 <SelectContent className="max-h-64">
-                  <SelectItem value="all">Barcha mashinalar</SelectItem>
+                  <SelectItem value="all">
+                    {lang === "ru" ? "Все автомобили" : "Barcha mashinalar"}
+                  </SelectItem>
                   {vehicleBrands.map((b) => (
                     <SelectItem key={b} value={b}>
                       {b}
@@ -407,10 +447,12 @@ export function SalesPosView() {
               <Layers className="h-4 w-4 text-muted-foreground shrink-0" />
               <Select value={selectedCategory} onValueChange={setSelectedCategory}>
                 <SelectTrigger className="h-7 border-0 bg-transparent shadow-none p-0 focus:ring-0 text-xs font-medium">
-                  <SelectValue placeholder="Kategoriya" />
+                  <SelectValue placeholder={lang === "ru" ? "Категория" : "Kategoriya"} />
                 </SelectTrigger>
                 <SelectContent className="max-h-64">
-                  <SelectItem value="all">Barcha kategoriyalar</SelectItem>
+                  <SelectItem value="all">
+                    {lang === "ru" ? "Все категории" : "Barcha kategoriyalar"}
+                  </SelectItem>
                   {categories.map((c) => (
                     <SelectItem key={c} value={c}>
                       {c}
@@ -426,8 +468,9 @@ export function SalesPosView() {
         <div className="space-y-2">
           <div className="flex items-center justify-between text-xs text-muted-foreground px-1">
             <span>
-              Topilgan mahsulotlar:{" "}
-              <strong className="text-foreground">{filteredProducts.length}</strong> ta
+              {lang === "ru" ? "Найдено товаров:" : "Topilgan mahsulotlar:"}{" "}
+              <strong className="text-foreground">{filteredProducts.length}</strong>{" "}
+              {lang === "ru" ? "шт." : "ta"}
             </span>
 
             {/* View Mode Switcher (List is default) */}
@@ -440,10 +483,10 @@ export function SalesPosView() {
                     ? "bg-background text-foreground shadow-xs"
                     : "text-muted-foreground hover:text-foreground"
                 }`}
-                title="Ro'yxat shaklida ko'rish"
+                title={lang === "ru" ? "Вид списком" : "Ro'yxat shaklida ko'rish"}
               >
                 <LayoutList className="h-3.5 w-3.5" />
-                <span>Ro'yxat</span>
+                <span>{lang === "ru" ? "Список" : "Ro'yxat"}</span>
               </button>
               <button
                 type="button"
@@ -453,10 +496,10 @@ export function SalesPosView() {
                     ? "bg-background text-foreground shadow-xs"
                     : "text-muted-foreground hover:text-foreground"
                 }`}
-                title="Kataklar shaklida ko'rish"
+                title={lang === "ru" ? "Вид сеткой" : "Kataklar shaklida ko'rish"}
               >
                 <LayoutGrid className="h-3.5 w-3.5" />
-                <span>Kataklar</span>
+                <span>{lang === "ru" ? "Сетка" : "Kataklar"}</span>
               </button>
             </div>
           </div>
@@ -464,9 +507,13 @@ export function SalesPosView() {
           {filteredProducts.length === 0 ? (
             <Card className="p-12 text-center border-dashed rounded-2xl">
               <Package className="h-10 w-10 text-muted-foreground mx-auto mb-2 opacity-50" />
-              <h3 className="font-semibold text-sm text-foreground">Hech qanday tovar topilmadi</h3>
+              <h3 className="font-semibold text-sm text-foreground">
+                {lang === "ru" ? "Товары не найдены" : "Hech qanday tovar topilmadi"}
+              </h3>
               <p className="text-xs text-muted-foreground mt-1">
-                Qidiruv so'zini yoki filtrlarni o'zgartirib ko'ring.
+                {lang === "ru"
+                  ? "Попробуйте изменить поисковый запрос или фильтры."
+                  : "Qidiruv so'zini yoki filtrlarni o'zgartirib ko'ring."}
               </p>
             </Card>
           ) : viewMode === "list" ? (
@@ -530,10 +577,14 @@ export function SalesPosView() {
                       <div className="text-right">
                         <span className="text-[11px] text-muted-foreground block">
                           {isOutOfStock ? (
-                            <span className="text-destructive font-semibold">Tugagan</span>
+                            <span className="text-destructive font-semibold">
+                              {lang === "ru" ? "Нет в наличии" : "Tugagan"}
+                            </span>
                           ) : (
                             <span>
-                              Qoldiq: <strong className="text-foreground">{p.quantity}</strong> ta
+                              {lang === "ru" ? "Остаток:" : "Qoldiq:"}{" "}
+                              <strong className="text-foreground">{p.quantity}</strong>{" "}
+                              {lang === "ru" ? "шт." : "ta"}
                             </span>
                           )}
                         </span>
@@ -589,7 +640,7 @@ export function SalesPosView() {
                         </Badge>
                         {inCart && (
                           <Badge className="h-5 px-1.5 text-[10px] font-bold bg-primary text-primary-foreground">
-                            {inCart.qty} ta
+                            {inCart.qty} {lang === "ru" ? "шт." : "ta"}
                           </Badge>
                         )}
                       </div>
@@ -609,9 +660,14 @@ export function SalesPosView() {
                       <div>
                         <span className="text-[10px] text-muted-foreground block">
                           {isOutOfStock ? (
-                            <span className="text-destructive font-medium">Tugagan</span>
+                            <span className="text-destructive font-medium">
+                              {lang === "ru" ? "Нет в наличии" : "Tugagan"}
+                            </span>
                           ) : (
-                            <span>Qoldiq: {p.quantity} ta</span>
+                            <span>
+                              {lang === "ru" ? "Остаток:" : "Qoldiq:"} {p.quantity}{" "}
+                              {lang === "ru" ? "шт." : "ta"}
+                            </span>
                           )}
                         </span>
                         <span className="font-bold text-xs sm:text-sm text-foreground tabular-nums">
@@ -646,9 +702,15 @@ export function SalesPosView() {
                 <ShoppingCart className="h-4 w-4" />
               </div>
               <div className="min-w-0">
-                <h3 className="font-bold text-sm text-foreground truncate">Kassa Savati</h3>
+                <h3 className="font-bold text-sm text-foreground truncate">
+                  {lang === "ru" ? "Корзина кассы" : "Kassa Savati"}
+                </h3>
                 <p className="text-[11px] text-muted-foreground">
-                  {cart.length === 0 ? "Savat bo'sh" : `${cart.length} xil mahsulot`}
+                  {cart.length === 0
+                    ? lang === "ru"
+                      ? "Корзина пуста"
+                      : "Savat bo'sh"
+                    : `${cart.length} ${lang === "ru" ? "поз." : "xil mahsulot"}`}
                 </p>
               </div>
             </div>
@@ -661,10 +723,14 @@ export function SalesPosView() {
                 size="sm"
                 onClick={handleOpenDebtDialog}
                 className="h-8 px-2.5 text-xs font-bold border-amber-500/50 text-amber-600 hover:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/40 shadow-xs transition-colors cursor-pointer"
-                title="Savatdagi mahsulotlarni qarzga rasmiylashtirish"
+                title={
+                  lang === "ru"
+                    ? "Оформить товары в корзине в долг"
+                    : "Savatdagi mahsulotlarni qarzga rasmiylashtirish"
+                }
               >
                 <HandCoins className="h-3.5 w-3.5 mr-1 text-amber-500" />
-                Qarzga sotuv
+                {lang === "ru" ? "В долг" : "Qarzga sotuv"}
               </Button>
 
               {cart.length > 0 && (
@@ -675,7 +741,7 @@ export function SalesPosView() {
                   className="h-8 px-2 text-xs text-muted-foreground hover:text-destructive hover:bg-destructive/10"
                 >
                   <Trash2 className="h-3.5 w-3.5 mr-1" />
-                  Tozalash
+                  {lang === "ru" ? "Очистить" : "Tozalash"}
                 </Button>
               )}
             </div>
@@ -686,9 +752,13 @@ export function SalesPosView() {
             {cart.length === 0 ? (
               <div className="py-12 text-center text-muted-foreground space-y-2">
                 <ShoppingCart className="h-10 w-10 mx-auto opacity-30 stroke-1" />
-                <p className="text-xs">Savat hozircha bo'sh</p>
+                <p className="text-xs">
+                  {lang === "ru" ? "Корзина пока пуста" : "Savat hozircha bo'sh"}
+                </p>
                 <p className="text-[11px] text-muted-foreground max-w-[200px] mx-auto">
-                  Chap tarafdan tovarlarni tanlang yoki shtrix kodni skanerlang.
+                  {lang === "ru"
+                    ? "Выберите товары слева или отсканируйте штрих-код."
+                    : "Chap tarafdan tovarlarni tanlang yoki shtrix kodni skanerlang."}
                 </p>
               </div>
             ) : (
@@ -708,7 +778,8 @@ export function SalesPosView() {
                         </h5>
                       </div>
                       <span className="text-[10px] text-muted-foreground">
-                        Omborda: {item.availableStock} ta
+                        {lang === "ru" ? "На складе:" : "Omborda:"} {item.availableStock}{" "}
+                        {lang === "ru" ? "шт." : "ta"}
                       </span>
                     </div>
 
@@ -769,10 +840,20 @@ export function SalesPosView() {
           <div className="p-4 border-t border-border/70 bg-muted/15 space-y-3.5">
             {/* Payment Method Selector (Naqd, Karta, O'tkazma - No Qarz) */}
             <div className="space-y-1.5">
-              <Label className="text-xs font-semibold">To'lov usuli</Label>
+              <Label className="text-xs font-semibold">
+                {lang === "ru" ? "Способ оплаты" : "To'lov usuli"}
+              </Label>
               <div className="grid grid-cols-3 gap-1.5">
                 {(["Naqd", "Karta", "O'tkazma"] as const).map((type) => {
                   const isActive = paymentType === type;
+                  const label =
+                    lang === "ru"
+                      ? type === "Naqd"
+                        ? "Наличные"
+                        : type === "Karta"
+                          ? "Карта"
+                          : "Перевод"
+                      : type;
                   return (
                     <button
                       key={type}
@@ -784,7 +865,7 @@ export function SalesPosView() {
                           : "bg-background border-border/70 text-foreground hover:bg-muted/50"
                       }`}
                     >
-                      {type}
+                      {label}
                     </button>
                   );
                 })}
@@ -794,7 +875,9 @@ export function SalesPosView() {
             {/* Totals Summary */}
             <div className="space-y-1.5 pt-2 border-t border-border/60">
               <div className="flex justify-between items-baseline pt-1">
-                <span className="text-sm font-bold text-foreground">JAMI TO'LOV:</span>
+                <span className="text-sm font-bold text-foreground">
+                  {lang === "ru" ? "ИТОГО К ОПЛАТЕ:" : "JAMI TO'LOV:"}
+                </span>
                 <span className="text-xl font-black text-primary tabular-nums tracking-tight">
                   {formatSom(subtotal)}
                 </span>
@@ -809,7 +892,7 @@ export function SalesPosView() {
               className="w-full h-12 rounded-xl text-sm font-bold shadow-md bg-emerald-600 hover:bg-emerald-700 text-white transition-all duration-200"
             >
               <Banknote className="h-5 w-5 mr-2" />
-              Savdoni yakunlash
+              {lang === "ru" ? "Завершить продажу" : "Savdoni yakunlash"}
             </Button>
           </div>
         </Card>
@@ -823,7 +906,7 @@ export function SalesPosView() {
               <div className="h-8 w-8 rounded-lg bg-amber-500/15 text-amber-600 flex items-center justify-center">
                 <HandCoins className="h-4 w-4" />
               </div>
-              Qarzga sotuv rasmiylashtirish
+              {lang === "ru" ? "Оформление продажи в долг" : "Qarzga sotuv rasmiylashtirish"}
             </DialogTitle>
           </DialogHeader>
 
@@ -832,20 +915,30 @@ export function SalesPosView() {
             {cart.length === 0 && (
               <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-800 dark:text-amber-300 text-xs flex items-center gap-2">
                 <AlertCircle className="h-4 w-4 shrink-0" />
-                <span>Savat hozircha bo'sh! Chap tarafdan tovarlarni tanlang.</span>
+                <span>
+                  {lang === "ru"
+                    ? "Корзина пока пуста! Выберите товары слева."
+                    : "Savat hozircha bo'sh! Chap tarafdan tovarlarni tanlang."}
+                </span>
               </div>
             )}
 
             {/* Savat summasi */}
             <div className="p-3 rounded-xl bg-muted/40 border border-border/60 flex items-center justify-between">
               <div>
-                <span className="text-[11px] text-muted-foreground block">Jami xarid summasi:</span>
+                <span className="text-[11px] text-muted-foreground block">
+                  {lang === "ru" ? "Общая сумма покупки:" : "Jami xarid summasi:"}
+                </span>
                 <span className="text-base font-black text-foreground tabular-nums">
                   {formatSom(subtotal)}
                 </span>
               </div>
               <Badge variant="outline" className="text-xs">
-                {cart.length === 0 ? "Savat bo'sh" : `${cart.length} xil tovar`}
+                {cart.length === 0
+                  ? lang === "ru"
+                    ? "Корзина пуста"
+                    : "Savat bo'sh"
+                  : `${cart.length} ${lang === "ru" ? "поз." : "xil tovar"}`}
               </Badge>
             </div>
 
@@ -854,7 +947,7 @@ export function SalesPosView() {
               <div className="flex items-center justify-between">
                 <Label className="text-xs font-semibold flex items-center gap-1.5">
                   <User className="h-3.5 w-3.5 text-primary" />
-                  Qarzdor mijoz
+                  {lang === "ru" ? "Клиент-должник" : "Qarzdor mijoz"}
                 </Label>
                 <div className="flex items-center gap-1 bg-muted/50 p-0.5 rounded-lg border border-border/60 text-[11px]">
                   <button
@@ -866,7 +959,7 @@ export function SalesPosView() {
                         : "text-muted-foreground hover:text-foreground"
                     }`}
                   >
-                    Mavjud mijoz
+                    {lang === "ru" ? "Существующий клиент" : "Mavjud mijoz"}
                   </button>
                   <button
                     type="button"
@@ -877,7 +970,7 @@ export function SalesPosView() {
                         : "text-muted-foreground hover:text-foreground"
                     }`}
                   >
-                    + Yangi mijoz
+                    {lang === "ru" ? "+ Новый клиент" : "+ Yangi mijoz"}
                   </button>
                 </div>
               </div>
@@ -886,19 +979,35 @@ export function SalesPosView() {
                 <div className="space-y-1">
                   {customers.length === 0 ? (
                     <div className="p-3 rounded-xl border border-dashed border-border/80 text-xs text-muted-foreground text-center bg-muted/20">
-                      Bazada mijozlar mavjud emas. Yuqoridagi{" "}
-                      <strong className="text-foreground">+ Yangi mijoz</strong> tugmasini bosing.
+                      {lang === "ru" ? (
+                        <>
+                          В базе нет клиентов. Нажмите кнопку выше{" "}
+                          <strong className="text-foreground">+ Новый клиент</strong>.
+                        </>
+                      ) : (
+                        <>
+                          Bazada mijozlar mavjud emas. Yuqoridagi{" "}
+                          <strong className="text-foreground">+ Yangi mijoz</strong> tugmasini
+                          bosing.
+                        </>
+                      )}
                     </div>
                   ) : (
                     <Select value={selectedDebtCustId} onValueChange={setSelectedDebtCustId}>
                       <SelectTrigger className="h-10 text-xs bg-background">
-                        <SelectValue placeholder="Mijozni tanlang..." />
+                        <SelectValue
+                          placeholder={lang === "ru" ? "Выберите клиента..." : "Mijozni tanlang..."}
+                        />
                       </SelectTrigger>
                       <SelectContent className="max-h-56 z-[100]">
                         {customers.map((c) => (
                           <SelectItem key={c.id} value={c.id}>
                             {c.name} {c.phone ? `(${c.phone})` : ""}
-                            {c.debt > 0 ? ` — Eskidan qarz: ${formatSom(c.debt)}` : ""}
+                            {c.debt > 0
+                              ? lang === "ru"
+                                ? ` — Прежний долг: ${formatSom(c.debt)}`
+                                : ` — Eskidan qarz: ${formatSom(c.debt)}`
+                              : ""}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -906,10 +1015,14 @@ export function SalesPosView() {
                   )}
                   {selectedDebtCust && (
                     <div className="flex items-center justify-between text-[11px] px-1 pt-1 text-muted-foreground">
-                      <span>Tel: {selectedDebtCust.phone || "yo'q"}</span>
+                      <span>
+                        {lang === "ru" ? "Тел:" : "Tel:"}{" "}
+                        {selectedDebtCust.phone || (lang === "ru" ? "нет" : "yo'q")}
+                      </span>
                       {selectedDebtCust.debt > 0 && (
                         <span className="text-destructive font-semibold">
-                          Mavjud qarzi: {formatSom(selectedDebtCust.debt)}
+                          {lang === "ru" ? "Текущий долг:" : "Mavjud qarzi:"}{" "}
+                          {formatSom(selectedDebtCust.debt)}
                         </span>
                       )}
                     </div>
@@ -919,7 +1032,11 @@ export function SalesPosView() {
                 <div className="space-y-2">
                   <div>
                     <Input
-                      placeholder="Mijoz ismi va familiyasi (masalan: Rustam Akramov)"
+                      placeholder={
+                        lang === "ru"
+                          ? "Имя и фамилия клиента (например: Рустам Акрамов)"
+                          : "Mijoz ismi va familiyasi (masalan: Rustam Akramov)"
+                      }
                       value={newDebtCustName}
                       onChange={(e) => setNewDebtCustName(e.target.value)}
                       className="h-9 text-xs bg-background"
@@ -927,7 +1044,11 @@ export function SalesPosView() {
                   </div>
                   <div>
                     <Input
-                      placeholder="Telefon raqami (masalan: +998 90 123 45 67)"
+                      placeholder={
+                        lang === "ru"
+                          ? "Номер телефона (например: +998 90 123 45 67)"
+                          : "Telefon raqami (masalan: +998 90 123 45 67)"
+                      }
                       value={newDebtCustPhone}
                       onChange={(e) => setNewDebtCustPhone(e.target.value)}
                       className="h-9 text-xs bg-background"
@@ -942,7 +1063,7 @@ export function SalesPosView() {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <Label className="text-[11px] font-medium text-muted-foreground">
-                    Hozir to'lanadi (so'm)
+                    {lang === "ru" ? "Оплачивается сейчас (сум)" : "Hozir to'lanadi (so'm)"}
                   </Label>
                   <Input
                     type="number"
@@ -956,7 +1077,7 @@ export function SalesPosView() {
                 </div>
                 <div>
                   <span className="text-[11px] font-medium text-muted-foreground block">
-                    Qarzga yoziladi
+                    {lang === "ru" ? "Записывается в долг" : "Qarzga yoziladi"}
                   </span>
                   <div className="h-9 mt-1 flex items-center px-3 rounded-md bg-destructive/10 border border-destructive/20 text-xs font-bold text-destructive tabular-nums">
                     {formatSom(Math.max(0, subtotal - (Number(debtInitialPaid) || 0)))}
@@ -964,8 +1085,18 @@ export function SalesPosView() {
                 </div>
               </div>
               <p className="text-[10px] text-muted-foreground">
-                ℹ️ Ushbu qarz avtomatik ravishda <strong>Qarzlar (Debts)</strong> bo'limiga tushadi
-                va mijoz hisobiga yoziladi.
+                ℹ️{" "}
+                {lang === "ru" ? (
+                  <>
+                    Этот долг автоматически поступит в раздел <strong>Задолженность</strong> и
+                    запишется на клиента.
+                  </>
+                ) : (
+                  <>
+                    Ushbu qarz avtomatik ravishda <strong>Qarzlar</strong> bo'limiga tushadi va
+                    mijoz hisobiga yoziladi.
+                  </>
+                )}
               </p>
             </div>
           </div>
@@ -977,7 +1108,7 @@ export function SalesPosView() {
               onClick={() => setDebtDialogOpen(false)}
               className="text-xs"
             >
-              Bekor qilish
+              {lang === "ru" ? "Отмена" : "Bekor qilish"}
             </Button>
             <Button
               type="button"
@@ -986,7 +1117,13 @@ export function SalesPosView() {
               className="text-xs font-bold bg-amber-600 hover:bg-amber-700 text-white disabled:opacity-50"
             >
               <Check className="h-4 w-4 mr-1.5" />
-              {cart.length === 0 ? "Savat bo'sh" : "Qarzga sotishni tasdiqlash"}
+              {cart.length === 0
+                ? lang === "ru"
+                  ? "Корзина пуста"
+                  : "Savat bo'sh"
+                : lang === "ru"
+                  ? "Подтвердить продажу в долг"
+                  : "Qarzga sotishni tasdiqlash"}
             </Button>
           </DialogFooter>
         </DialogContent>

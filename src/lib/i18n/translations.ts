@@ -39,6 +39,8 @@ const uz: Dict = {
   "nav.searchEmpty": "Hech narsa topilmadi.",
   "nav.searchPlaceholder": "Sahifa, tovar yoki mijoz qidirish...",
   "nav.pcs": "dona",
+  "common.pcs": "dona",
+  "common.pcsUnit": "dona",
 
   "common.save": "Saqlash",
   "common.cancel": "Bekor qilish",
@@ -188,6 +190,7 @@ const uz: Dict = {
   "products.qty": "Miqdor",
   "products.created": "Tovar qo'shildi",
   "products.updated": "Tovar yangilandi",
+  "products.deleteDesc": "Ushbu tovarni o'chirishga ishonchingiz komilmi?",
 
   "categories.title": "Kategoriyalar",
   "categories.subtitle": "Avtomobil ehtiyot qismlari turlari",
@@ -195,6 +198,7 @@ const uz: Dict = {
   "categories.edit": "Kategoriyani tahrirlash",
   "categories.nameRequired": "Nom majburiy",
   "categories.added": "Qo'shildi",
+  "categories.deleteSimple": "Kategoriyani o'chirish",
 
   "sales.title": "Sotuvlar",
   "sales.subtitle": "{n} ta tranzaksiya",
@@ -285,6 +289,7 @@ const uz: Dict = {
   "debts.amountInvalid": "To'lov summasi 0 dan katta bo'lishi kerak",
   "debts.amountTooMuch": "To'lov summasi qarzdan ko'p bo'lishi mumkin emas",
   "debts.paymentSuccess": "To'lov muvaffaqiyatli amalga oshirildi",
+  "debts.paymentRecorded": "To'lov qabul qilindi",
   "debts.cash": "Naqd",
   "debts.card": "Karta",
 
@@ -373,6 +378,8 @@ const uz: Dict = {
   "settings.branchMin": "Kamida 1 ta filial bo'lishi kerak",
   "settings.brandExists": "Bu brend allaqachon mavjud",
   "settings.branchExists": "Bunday filial bor",
+  "settings.brandDelete": "Brendni o'chirish",
+  "settings.branchDelete": "Filialni o'chirish",
   "settings.nameEmpty": "Ism bo'sh bo'lishi mumkin emas",
   "settings.emailNameRequired": "Ism va email majburiy",
   "settings.permissions": "Ruxsatlar",
@@ -437,6 +444,9 @@ const ruCore: Dict = {
   "nav.searchEmpty": "Ничего не найдено.",
   "nav.searchPlaceholder": "Поиск страницы, товара или клиента...",
   "nav.pcs": "шт.",
+  "common.pcs": "шт.",
+  "common.pcsUnit": "шт.",
+  "debts.paymentRecorded": "Оплата принята",
 
   "common.save": "Сохранить",
   "common.cancel": "Отмена",
@@ -559,6 +569,9 @@ const uz_cyr: Dict = {
   "nav.settings": "Созламалар",
   "common.save": "Сақлаш",
   "common.delete": "Ўчириш",
+  "common.pcs": "дона",
+  "common.pcsUnit": "дона",
+  "debts.paymentRecorded": "Тўлов қабул қилинди",
   "products.title": "Товарлар",
   "products.priceHistory": "Нarx тарихи",
   "pos.title": "Мобил POS",

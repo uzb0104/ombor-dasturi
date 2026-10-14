@@ -158,7 +158,9 @@ export function ReportsPrintDialog({
                         <td className="p-2 tabular-nums">
                           {new Date(sale.date).toLocaleDateString("uz-UZ")}
                         </td>
-                        <td className="p-2 font-medium">{customer?.name || "Umumiy mijoz"}</td>
+                        <td className="p-2 font-medium">
+                          {customer?.name || t("common.generalCustomer")}
+                        </td>
                         <td className="p-2 text-right text-red-600 tabular-nums">
                           {sale.discount > 0 ? `−${formatSom(sale.discount)}` : "—"}
                         </td>

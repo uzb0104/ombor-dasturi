@@ -20,6 +20,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { formatSom } from "@/lib/constants";
 import { useStore } from "@/lib/store";
+import { useT, useLang } from "@/lib/i18n";
 import { downloadSaleReceiptPdf } from "@/lib/receipt-pdf";
 import type { Sale } from "@/lib/types";
 import { toast } from "sonner";
@@ -39,6 +40,8 @@ export function ReceiptModal({
   onNewSale,
   isNewSaleSuccess = false,
 }: ReceiptModalProps) {
+  const t = useT();
+  const { lang } = useLang();
   const { products, customers, employees } = useStore();
   const receiptRef = useRef<HTMLDivElement>(null);
 
@@ -60,11 +63,24 @@ export function ReceiptModal({
   const handleDownloadPdf = async () => {
     try {
       await downloadSaleReceiptPdf(sale, { products, customers, employees });
-      toast.success("Chek PDF formatida yuklandi");
+      toast.success(lang === "ru" ? "Чек загружен в формате PDF" : "Chek PDF formatida yuklandi");
     } catch (err) {
-      toast.error("PDF yuklashda xatolik yuz berdi");
+      toast.error(lang === "ru" ? "Ошибка при загрузке PDF" : "PDF yuklashda xatolik yuz berdi");
     }
   };
+
+  const paymentLabel =
+    sale.paymentType === "Qarz"
+      ? lang === "ru"
+        ? "Долг"
+        : "Qarz"
+      : sale.paymentType === "Karta"
+        ? lang === "ru"
+          ? "Карта"
+          : "Karta"
+        : lang === "ru"
+          ? "Наличные"
+          : "Naqd";
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -83,7 +99,13 @@ export function ReceiptModal({
               )}
               <div>
                 <DialogTitle className="text-base font-bold">
-                  {isNewSaleSuccess ? "Savdo muvaffaqiyatli yakunlandi!" : "Sotuv cheki"}
+                  {isNewSaleSuccess
+                    ? lang === "ru"
+                      ? "Продажа успешно завершена!"
+                      : "Savdo muvaffaqiyatli yakunlandi!"
+                    : lang === "ru"
+                      ? "Чек продажи"
+                      : "Sotuv cheki"}
                 </DialogTitle>
                 <p className="text-xs text-muted-foreground">
                   ID: #{sale.id.slice(-8).toUpperCase()}
@@ -99,7 +121,7 @@ export function ReceiptModal({
                     : "default"
               }
             >
-              {sale.paymentType}
+              {paymentLabel}
             </Badge>
           </div>
         </DialogHeader>
@@ -117,42 +139,52 @@ export function ReceiptModal({
                 AutoERP Pro
               </h2>
               <p className="text-[11px] text-muted-foreground">
-                Avto ehtiyot qismlari & Akkumulyatorlar
+                {lang === "ru"
+                  ? "Автозапчасти и аккумуляторы"
+                  : "Avto ehtiyot qismlari & Akkumulyatorlar"}
               </p>
               <div className="text-[10px] text-muted-foreground flex items-center justify-center gap-2 pt-1">
-                <span>Chek: #{sale.id.slice(-8).toUpperCase()}</span>
+                <span>
+                  {lang === "ru" ? "Чек" : "Chek"}: #{sale.id.slice(-8).toUpperCase()}
+                </span>
                 <span>•</span>
-                <span>{new Date(sale.date).toLocaleString("uz-UZ")}</span>
+                <span>{new Date(sale.date).toLocaleString(lang === "ru" ? "ru-RU" : "uz-UZ")}</span>
               </div>
             </div>
 
             {/* Meta info */}
             <div className="grid grid-cols-2 gap-2 text-[11px] border-b border-dashed border-border/80 pb-3">
               <div>
-                <span className="text-muted-foreground block text-[10px]">Mijoz:</span>
+                <span className="text-muted-foreground block text-[10px]">
+                  {lang === "ru" ? "Клиент:" : "Mijoz:"}
+                </span>
                 <span className="font-semibold text-foreground">
-                  {customer ? customer.name : "Umumiy mijoz"}
+                  {customer ? customer.name : lang === "ru" ? "Общий клиент" : "Umumiy mijoz"}
                 </span>
                 {customer?.phone && (
                   <span className="text-[10px] text-muted-foreground block">{customer.phone}</span>
                 )}
               </div>
               <div className="text-right">
-                <span className="text-muted-foreground block text-[10px]">Sotuvchi:</span>
-                <span className="font-semibold text-foreground">{seller?.name || "Kassir"}</span>
+                <span className="text-muted-foreground block text-[10px]">
+                  {lang === "ru" ? "Продавец:" : "Sotuvchi:"}
+                </span>
+                <span className="font-semibold text-foreground">
+                  {seller?.name || (lang === "ru" ? "Кассир" : "Kassir")}
+                </span>
               </div>
             </div>
 
             {/* Items Table */}
             <div className="space-y-1.5 border-b border-dashed border-border/80 pb-3">
               <div className="grid grid-cols-12 text-[10px] font-bold text-muted-foreground uppercase pb-1 border-b border-border/40">
-                <span className="col-span-6">Mahsulot</span>
-                <span className="col-span-2 text-center">Soni</span>
-                <span className="col-span-4 text-right">Summa</span>
+                <span className="col-span-6">{lang === "ru" ? "Товар" : "Mahsulot"}</span>
+                <span className="col-span-2 text-center">{lang === "ru" ? "Кол-во" : "Soni"}</span>
+                <span className="col-span-4 text-right">{lang === "ru" ? "Сумма" : "Summa"}</span>
               </div>
               {sale.items.map((item, idx) => {
                 const p = products.find((prod) => prod.id === item.productId);
-                const name = p?.name || item.productName || "Mahsulot";
+                const name = p?.name || item.productName || (lang === "ru" ? "Товар" : "Mahsulot");
                 const rowTotal = item.qty * item.price;
                 return (
                   <div key={idx} className="grid grid-cols-12 items-center py-1 text-[11px]">
@@ -176,30 +208,30 @@ export function ReceiptModal({
             {/* Calculations */}
             <div className="space-y-1.5 text-[11px] pt-1">
               <div className="flex justify-between text-muted-foreground">
-                <span>Oraliq summa:</span>
+                <span>{lang === "ru" ? "Промежуточный итог:" : "Oraliq summa:"}</span>
                 <span className="tabular-nums">{formatSom(subtotal)}</span>
               </div>
               {discount > 0 && (
                 <div className="flex justify-between text-emerald-600 font-medium">
-                  <span>Chegirma:</span>
+                  <span>{lang === "ru" ? "Скидка:" : "Chegirma:"}</span>
                   <span className="tabular-nums">-{formatSom(discount)}</span>
                 </div>
               )}
               <div className="flex justify-between text-sm font-black text-foreground pt-1 border-t border-border/80">
-                <span>JAMI TO'LOV:</span>
+                <span>{lang === "ru" ? "ИТОГО К ОПЛАТЕ:" : "JAMI TO'LOV:"}</span>
                 <span className="tabular-nums text-primary">{formatSom(sale.total)}</span>
               </div>
 
               {isDebt && (
                 <div className="pt-2 border-t border-dashed border-border/80 space-y-1">
                   <div className="flex justify-between text-muted-foreground">
-                    <span>Hozir to'langan:</span>
+                    <span>{lang === "ru" ? "Оплачено сейчас:" : "Hozir to'langan:"}</span>
                     <span className="font-semibold text-foreground tabular-nums">
                       {formatSom(paidAmount)}
                     </span>
                   </div>
                   <div className="flex justify-between text-destructive font-bold">
-                    <span>Qolgan qarz:</span>
+                    <span>{lang === "ru" ? "Остаток долга:" : "Qolgan qarz:"}</span>
                     <span className="tabular-nums">{formatSom(remainingDebt)}</span>
                   </div>
                 </div>
@@ -208,8 +240,14 @@ export function ReceiptModal({
 
             {/* Footer notice */}
             <div className="text-center text-[10px] text-muted-foreground pt-3 border-t border-dashed border-border/80 space-y-0.5">
-              <p className="font-medium">Xaridingiz uchun rahmat!</p>
-              <p>Kafolat — chek taqdim etilganda amal qiladi.</p>
+              <p className="font-medium">
+                {lang === "ru" ? "Спасибо за покупку!" : "Xaridingiz uchun rahmat!"}
+              </p>
+              <p>
+                {lang === "ru"
+                  ? "Гарантия действует при наличии чека."
+                  : "Kafolat — chek taqdim etilganda amal qiladi."}
+              </p>
             </div>
           </div>
         </div>
@@ -232,7 +270,7 @@ export function ReceiptModal({
               className="flex-1 sm:flex-initial"
             >
               <Printer className="h-4 w-4 mr-1.5" />
-              Chop etish
+              {lang === "ru" ? "Печать" : "Chop etish"}
             </Button>
           </div>
 
@@ -246,7 +284,7 @@ export function ReceiptModal({
               }}
               className="w-full sm:w-auto bg-primary text-primary-foreground hover:bg-primary/90"
             >
-              Yangi savdo boshlash
+              {lang === "ru" ? "Начать новую продажу" : "Yangi savdo boshlash"}
             </Button>
           ) : (
             <Button
@@ -255,7 +293,7 @@ export function ReceiptModal({
               onClick={() => onOpenChange(false)}
               className="w-full sm:w-auto"
             >
-              Yopish
+              {lang === "ru" ? "Закрыть" : "Yopish"}
             </Button>
           )}
         </DialogFooter>

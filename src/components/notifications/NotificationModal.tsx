@@ -337,7 +337,9 @@ export function NotificationModal({
                             <span className="font-semibold text-sm leading-snug">{p.name}</span>
                             {(p.sku || p.barcode) && (
                               <span className="text-[11px] font-mono text-muted-foreground mt-0.5">
-                                {p.sku && `SKU: ${p.sku}`} {p.barcode && `| Barcode: ${p.barcode}`}
+                                {p.sku && `SKU: ${p.sku}`}{" "}
+                                {p.barcode &&
+                                  `| ${lang === "ru" ? "Штрихкод" : "Barkod"}: ${p.barcode}`}
                               </span>
                             )}
                           </div>
@@ -361,7 +363,7 @@ export function NotificationModal({
                               {p.quantity} {t("common.pcs")}
                             </span>
                             <span className="text-[10px] text-muted-foreground">
-                              (Min: {p.minQty ?? 5} {t("common.pcs")})
+                              ({lang === "ru" ? "Мин" : "Min"}: {p.minQty ?? 5} {t("common.pcs")})
                             </span>
                           </div>
                         </TableCell>
@@ -382,7 +384,7 @@ export function NotificationModal({
                               className="gap-1 font-medium text-[11px] px-2 py-0.5 bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30"
                             >
                               <AlertTriangle className="h-3 w-3" />
-                              <span>{lang === "ru" ? "Kam qolgan" : "Kam qoldi"}</span>
+                              <span>{lang === "ru" ? "Мало" : "Kam qoldi"}</span>
                             </Badge>
                           )}
                         </TableCell>

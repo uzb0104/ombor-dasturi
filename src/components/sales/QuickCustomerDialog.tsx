@@ -18,6 +18,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useStore } from "@/lib/store";
+import { useT, useLang } from "@/lib/i18n";
 import { customersApi } from "@/lib/api";
 import type { Customer } from "@/lib/types";
 import { toast } from "sonner";
@@ -29,6 +30,8 @@ interface QuickCustomerDialogProps {
 }
 
 export function QuickCustomerDialog({ open, onOpenChange, onSuccess }: QuickCustomerDialogProps) {
+  const t = useT();
+  const { lang } = useLang();
   const { vehicleBrands } = useStore();
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
@@ -39,11 +42,13 @@ export function QuickCustomerDialog({ open, onOpenChange, onSuccess }: QuickCust
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) {
-      toast.error("Mijoz ism-familiyasini kiriting");
+      toast.error(
+        lang === "ru" ? "Введите имя и фамилию клиента" : "Mijoz ism-familiyasini kiriting",
+      );
       return;
     }
     if (!phone.trim()) {
-      toast.error("Telefon raqamini kiriting");
+      toast.error(lang === "ru" ? "Введите номер телефона" : "Telefon raqamini kiriting");
       return;
     }
 
@@ -64,7 +69,11 @@ export function QuickCustomerDialog({ open, onOpenChange, onSuccess }: QuickCust
         customers: [saved || newCustomer, ...state.customers],
       }));
 
-      toast.success(`Mijoz "${newCustomer.name}" qo'shildi`);
+      toast.success(
+        lang === "ru"
+          ? `Клиент «${newCustomer.name}» добавлен`
+          : `Mijoz "${newCustomer.name}" qo'shildi`,
+      );
       onSuccess(saved || newCustomer);
       onOpenChange(false);
       setName("");
@@ -72,7 +81,13 @@ export function QuickCustomerDialog({ open, onOpenChange, onSuccess }: QuickCust
       setAddress("");
       setVehicle("Universal");
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Mijozni saqlashda xatolik");
+      toast.error(
+        err instanceof Error
+          ? err.message
+          : lang === "ru"
+            ? "Ошибка при сохранении клиента"
+            : "Mijozni saqlashda xatolik",
+      );
     } finally {
       setLoading(false);
     }
@@ -86,16 +101,20 @@ export function QuickCustomerDialog({ open, onOpenChange, onSuccess }: QuickCust
             <div className="h-8 w-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
               <UserPlus className="h-4 w-4" />
             </div>
-            <DialogTitle>Yangi mijoz qo'shish</DialogTitle>
+            <DialogTitle>
+              {lang === "ru" ? "Добавить нового клиента" : "Yangi mijoz qo'shish"}
+            </DialogTitle>
           </div>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-3.5 py-2">
           <div>
-            <Label htmlFor="cust-name">Ism-familiya *</Label>
+            <Label htmlFor="cust-name">
+              {lang === "ru" ? "Имя и фамилия *" : "Ism-familiya *"}
+            </Label>
             <Input
               id="cust-name"
-              placeholder="Masalan: Jamshid Aliyev"
+              placeholder={lang === "ru" ? "Например: Жамшид Алиев" : "Masalan: Jamshid Aliyev"}
               value={name}
               onChange={(e) => setName(e.target.value)}
               autoFocus
@@ -103,7 +122,9 @@ export function QuickCustomerDialog({ open, onOpenChange, onSuccess }: QuickCust
           </div>
 
           <div>
-            <Label htmlFor="cust-phone">Telefon raqam *</Label>
+            <Label htmlFor="cust-phone">
+              {lang === "ru" ? "Номер телефона *" : "Telefon raqam *"}
+            </Label>
             <Input
               id="cust-phone"
               type="tel"
@@ -114,23 +135,27 @@ export function QuickCustomerDialog({ open, onOpenChange, onSuccess }: QuickCust
           </div>
 
           <div>
-            <Label htmlFor="cust-address">Manzil / Mo'ljal</Label>
+            <Label htmlFor="cust-address">
+              {lang === "ru" ? "Адрес / Ориентир" : "Manzil / Mo'ljal"}
+            </Label>
             <Input
               id="cust-address"
-              placeholder="Shahar, tuman, mahalla..."
+              placeholder={lang === "ru" ? "Город, район, улица..." : "Shahar, tuman, mahalla..."}
               value={address}
               onChange={(e) => setAddress(e.target.value)}
             />
           </div>
 
           <div>
-            <Label>Avtomobil markasi</Label>
+            <Label>{lang === "ru" ? "Марка автомобиля" : "Avtomobil markasi"}</Label>
             <Select value={vehicle} onValueChange={setVehicle}>
               <SelectTrigger>
-                <SelectValue placeholder="Mashina tanlang" />
+                <SelectValue placeholder={lang === "ru" ? "Выберите марку" : "Mashina tanlang"} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="Universal">Universal / Barchasi</SelectItem>
+                <SelectItem value="Universal">
+                  {lang === "ru" ? "Универсальный / Все" : "Universal / Barchasi"}
+                </SelectItem>
                 {vehicleBrands.map((b) => (
                   <SelectItem key={b} value={b}>
                     {b}
@@ -147,10 +172,16 @@ export function QuickCustomerDialog({ open, onOpenChange, onSuccess }: QuickCust
               onClick={() => onOpenChange(false)}
               disabled={loading}
             >
-              Bekor qilish
+              {lang === "ru" ? "Отмена" : "Bekor qilish"}
             </Button>
             <Button type="submit" disabled={loading}>
-              {loading ? "Saqlanmoqda..." : "Mijozni saqlash"}
+              {loading
+                ? lang === "ru"
+                  ? "Сохранение..."
+                  : "Saqlanmoqda..."
+                : lang === "ru"
+                  ? "Сохранить клиента"
+                  : "Mijozni saqlash"}
             </Button>
           </DialogFooter>
         </form>
