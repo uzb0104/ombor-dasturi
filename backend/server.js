@@ -45,7 +45,7 @@ const allowedOrigins = [
 function isOriginAllowed(origin) {
   if (!origin) return true;
   if (allowedOrigins.includes(origin)) return true;
-  if (origin.endsWith(".vercel.app")) return true;
+  if (origin.endsWith(".vercel.app") || origin.includes("vercel.app")) return true;
   if (process.env.ALLOWED_ORIGINS) {
     const extraOrigins = process.env.ALLOWED_ORIGINS.split(",").map((s) => s.trim());
     if (extraOrigins.includes(origin)) return true;
@@ -53,18 +53,21 @@ function isOriginAllowed(origin) {
   return false;
 }
 
-app.use(
-  cors({
-    origin: function (origin, callback) {
-      if (isOriginAllowed(origin)) {
-        callback(null, true);
-      } else {
-        callback(null, false);
-      }
-    },
-    credentials: true,
-  }),
-);
+const corsOptions = {
+  origin: function (origin, callback) {
+    if (isOriginAllowed(origin)) {
+      callback(null, true);
+    } else {
+      callback(null, false);
+    }
+  },
+  credentials: true,
+  methods: ["GET", "HEAD", "PUT", "PATCH", "POST", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With", "Accept"],
+};
+
+app.use(cors(corsOptions));
+app.options("*", cors(corsOptions));
 
 app.use(express.json());
 
@@ -167,6 +170,12 @@ app.use("/api", constantsRouter); // mount constant endpoints under root /api
 app.use("/api/incoming", incomingRouter);
 app.use("/api/sales", salesRouter);
 app.use("/api/used-batteries", usedBatteriesRouter);
+
+// Global xatoliklarni ushlab, JSON va CORS bilan qaytarish
+app.use((err, _req, res, _next) => {
+  console.error("Global API Error:", err);
+  res.status(err.status || 500).json({ error: err.message || "Ichki server xatosi yuz berdi" });
+});
 
 // Serverni ishga tushirish (test va vercel serverless rejimida port tinglanmaydi)
 if (process.env.NODE_ENV !== "test" && !process.env.VERCEL) {

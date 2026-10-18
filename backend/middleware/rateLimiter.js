@@ -5,6 +5,7 @@ export const apiLimiter = rateLimit({
   max: 1200, // Limit each IP to 1200 requests per window
   standardHeaders: true,
   legacyHeaders: false,
+  skip: (req) => req.method === "OPTIONS",
   message: {
     error:
       "Haddan tashqari ko'p so'rov yuborildi. Iltimos, 15 daqiqadan so'ng qayta urinib ko'ring.",
@@ -16,6 +17,7 @@ export const authLimiter = rateLimit({
   max: 30, // Limit each IP to 30 authentication requests per window
   standardHeaders: true,
   legacyHeaders: false,
+  skip: (req) => req.method === "OPTIONS",
   message: {
     error: "Kirish urinishlari ko'payib ketdi. Iltimos, 15 daqiqadan so'ng qayta urinib ko'ring.",
   },
