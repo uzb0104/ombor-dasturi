@@ -8,62 +8,19 @@ import {
   setCached,
   clearCached,
 } from "../lib/db.js";
-import { toFeProduct, toDbProduct, toFePriceHistory } from "../lib/mappers.js";
+import { toFeProduct, toDbProduct } from "../lib/mappers.js";
 import { validate, productSchema } from "../lib/validators.js";
 import { authenticateToken, requirePermission } from "../middleware/auth.js";
+import { recordPriceChanges, fetchPriceHistory } from "../services/priceHistoryService.js";
+import {
+  safeSupabaseProductUpsert,
+  findExistingProduct,
+  bulkImportProducts,
+} from "../services/productService.js";
 
 const router = express.Router();
 
-// ─────────────── NARX TARIXI METODLARI ───────────────
-async function insertPriceHistoryEntries(entries) {
-  if (!entries.length) return;
-  if (isSupabaseConfigured) {
-    const { error } = await supabaseClient.from("price_history").insert(entries);
-    if (error) console.error("❌ price_history insert:", error.message);
-  } else {
-    const db = readLocalDb();
-    if (!db.price_history) db.price_history = [];
-    for (const e of entries) {
-      db.price_history.unshift({
-        id: `ph_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
-        ...e,
-        created_at: new Date().toISOString(),
-      });
-    }
-    if (db.price_history.length > 5000) db.price_history = db.price_history.slice(0, 5000);
-    writeLocalDb(db);
-  }
-}
-
-async function recordPriceChanges(productId, productName, before, afterDbObj, user) {
-  const uid = user?.id || "system";
-  const uname = user?.name || "Tizim";
-  const entries = [];
-  const pairs = [
-    ["buy_price", before?.buy_price, afterDbObj.buy_price],
-    ["sell_price", before?.sell_price, afterDbObj.sell_price],
-  ];
-  for (const [field, oldRaw, newRaw] of pairs) {
-    if (newRaw === undefined) continue;
-    const oldNum = oldRaw != null && oldRaw !== "" ? Number(oldRaw) : null;
-    const newNum = Number(newRaw);
-    if (oldNum === newNum) continue;
-    if (!before && newNum === 0) continue;
-    entries.push({
-      product_id: productId,
-      product_name: productName,
-      field,
-      old_value: oldNum,
-      new_value: newNum,
-      changed_by_id: uid,
-      changed_by_name: uname,
-    });
-  }
-  await insertPriceHistoryEntries(entries);
-}
-
-// ─────────────── ROUTES ───────────────
-
+// ─────────────── GET PRODUCTS (with pagination & filters) ───────────────
 router.get("/", authenticateToken, requirePermission("/products"), async (req, res) => {
   const page = Math.max(Number(req.query.page) || 1, 1);
   const limit = Math.min(Math.max(Number(req.query.limit) || 50, 1), 200);
@@ -154,66 +111,7 @@ router.get("/", authenticateToken, requirePermission("/products"), async (req, r
   }
 });
 
-async function safeSupabaseProductUpsert(operation, id, dbObj) {
-  let curObj = { ...dbObj };
-  // 1-urinish: to'liq ma'lumotlar bilan
-  let res =
-    operation === "insert"
-      ? await supabaseClient.from("products").insert([curObj]).select().single()
-      : await supabaseClient.from("products").update(curObj).eq("id", id).select().single();
-
-  if (!res.error) return res;
-
-  console.warn(`⚠️ [Products ${operation}] 1-urinish xatosi:`, res.error.message);
-
-  // 1. Agar xatolik vehicle foreign key yoki vehicle constraint bilan bog'liq bo'lsa
-  if (
-    res.error &&
-    (res.error.message?.includes("foreign key") ||
-      res.error.message?.includes("products_vehicle") ||
-      res.error.message?.includes("vehicle_brands") ||
-      res.error.message?.includes("vehicle"))
-  ) {
-    console.warn("⚠️ Vehicle constraint xatosi, vehicle=null qilib qayta urinilmoqda...");
-    curObj = { ...curObj, vehicle: null };
-    res =
-      operation === "insert"
-        ? await supabaseClient.from("products").insert([curObj]).select().single()
-        : await supabaseClient.from("products").update(curObj).eq("id", id).select().single();
-    if (!res.error) return res;
-  }
-
-  // 2. Agar xatolik mavjud bo'lmagan ustunlar bilan bog'liq bo'lsa
-  const nonStandardCols = [
-    "buy_price_usd",
-    "sell_price_usd",
-    "currency",
-    "vehicles",
-    "branch_stock",
-  ];
-  for (const col of nonStandardCols) {
-    delete curObj[col];
-  }
-
-  res =
-    operation === "insert"
-      ? await supabaseClient.from("products").insert([curObj]).select().single()
-      : await supabaseClient.from("products").update(curObj).eq("id", id).select().single();
-
-  if (!res.error) return res;
-
-  // 3. Oxirgi xavfsiz urinish: vehicle ni ham null qilish
-  if (curObj.vehicle !== null) {
-    curObj.vehicle = null;
-    res =
-      operation === "insert"
-        ? await supabaseClient.from("products").insert([curObj]).select().single()
-        : await supabaseClient.from("products").update(curObj).eq("id", id).select().single();
-  }
-
-  return res;
-}
-
+// ─────────────── POST CREATE PRODUCT ───────────────
 router.post(
   "/",
   authenticateToken,
@@ -224,18 +122,7 @@ router.post(
     try {
       if (isSupabaseConfigured) {
         let dbObj = toDbProduct(p);
-        console.log("📦 [Products POST] Ma'lumot:", JSON.stringify(dbObj, null, 2));
-
-        // Bir xil nom va modeldagi tovar mavjudligini tekshiramiz
-        let existing = null;
-        if (dbObj.name) {
-          let query = supabaseClient.from("products").select("*").ilike("name", dbObj.name.trim());
-          if (dbObj.vehicle) {
-            query = query.eq("vehicle", dbObj.vehicle);
-          }
-          const { data: matched } = await query.limit(1).maybeSingle();
-          existing = matched;
-        }
+        const existing = await findExistingProduct(dbObj.name, dbObj.vehicle);
 
         if (existing) {
           const oldQty = Number(existing.quantity) || 0;
@@ -315,6 +202,7 @@ router.post(
   },
 );
 
+// ─────────────── PUT UPDATE PRODUCT ───────────────
 router.put(
   "/:id",
   authenticateToken,
@@ -332,7 +220,6 @@ router.put(
           .single();
         let dbObj = toDbProduct(updates);
         delete dbObj.id;
-        console.log(`📦 [Products PUT] ID: ${id}, Ma'lumot:`, JSON.stringify(dbObj, null, 2));
         const { data, error } = await safeSupabaseProductUpsert("update", id, dbObj);
 
         if (error) {
@@ -365,6 +252,7 @@ router.put(
   },
 );
 
+// ─────────────── DELETE PRODUCT ───────────────
 router.delete("/:id", authenticateToken, requirePermission("/products"), async (req, res) => {
   const { id } = req.params;
   try {
@@ -384,57 +272,26 @@ router.delete("/:id", authenticateToken, requirePermission("/products"), async (
   }
 });
 
-// Narx tarixi (barcha yoki filtr bilan)
+// ─────────────── PRICE HISTORY ROUTES ───────────────
 router.get("/price-history", authenticateToken, async (req, res) => {
-  const productId = req.query.productId;
-  const limit = Math.min(Number(req.query.limit) || 100, 500);
   try {
-    if (isSupabaseConfigured) {
-      let q = supabaseClient
-        .from("price_history")
-        .select("*")
-        .order("created_at", { ascending: false })
-        .limit(limit);
-      if (productId) q = q.eq("product_id", productId);
-      const { data, error } = await q;
-      if (error) throw error;
-      res.json((data || []).map(toFePriceHistory));
-    } else {
-      const db = readLocalDb();
-      let rows = db.price_history || [];
-      if (productId) rows = rows.filter((r) => r.product_id === productId);
-      res.json(rows.slice(0, limit).map(toFePriceHistory));
-    }
+    const list = await fetchPriceHistory(req.query.productId, req.query.limit);
+    res.json(list);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
 
-// Muayyan tovar narx tarixi
 router.get("/:id/price-history", authenticateToken, async (req, res) => {
-  const productId = req.params.id;
-  const limit = Math.min(Number(req.query.limit) || 100, 500);
   try {
-    if (isSupabaseConfigured) {
-      const { data, error } = await supabaseClient
-        .from("price_history")
-        .select("*")
-        .eq("product_id", productId)
-        .order("created_at", { ascending: false })
-        .limit(limit);
-      if (error) throw error;
-      res.json((data || []).map(toFePriceHistory));
-    } else {
-      const db = readLocalDb();
-      const rows = (db.price_history || []).filter((r) => r.product_id === productId);
-      res.json(rows.slice(0, limit).map(toFePriceHistory));
-    }
+    const list = await fetchPriceHistory(req.params.id, req.query.limit);
+    res.json(list);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
 
-// Tovarlarni ommaviy import qilish
+// ─────────────── BULK IMPORT ───────────────
 router.post("/import", authenticateToken, requirePermission("/products"), async (req, res) => {
   const items = Array.isArray(req.body.items) ? req.body.items : [];
   if (!items.length) return res.status(400).json({ error: "Import ro'yxati bo'sh" });
@@ -444,69 +301,7 @@ router.post("/import", authenticateToken, requirePermission("/products"), async 
       .json({ error: "Bir importda ko'pi bilan 20000 ta mahsulot yuborish mumkin" });
   }
 
-  const result = { created: 0, failed: 0, errors: [] };
-
-  if (isSupabaseConfigured) {
-    try {
-      const rows = items.map((raw) => {
-        const product = { ...raw, id: raw.id || `prd_${Math.random().toString(36).slice(2, 9)}` };
-        if (!product.name) throw new Error("Nomi majburiy");
-        return toDbProduct(product);
-      });
-      for (let index = 0; index < rows.length; index += 500) {
-        let chunk = rows.slice(index, index + 500);
-        let { error } = await supabaseClient.from("products").upsert(chunk, { onConflict: "id" });
-        if (
-          error &&
-          (error.message?.includes("foreign key") ||
-            error.message?.includes("products_vehicle") ||
-            error.message?.includes("vehicle_brands"))
-        ) {
-          console.warn(
-            "⚠️ Foreign key error during bulk upsert, retrying without vehicle string...",
-          );
-          chunk = chunk.map((r) => ({ ...r, vehicle: null }));
-          const retryFk = await supabaseClient.from("products").upsert(chunk, { onConflict: "id" });
-          error = retryFk.error;
-        }
-        if (error) throw error;
-      }
-      await clearCached("cache:products");
-      return res.json({ created: rows.length, failed: 0, errors: [] });
-    } catch (error) {
-      return res
-        .status(400)
-        .json({ created: 0, failed: items.length, errors: [{ error: error.message }] });
-    }
-  }
-
-  for (const raw of items) {
-    try {
-      const p = { ...raw };
-      if (!p.id) p.id = `prd_${Math.random().toString(36).slice(2, 9)}`;
-      if (!p.name) throw new Error("Nomi majburiy");
-
-      {
-        const db = readLocalDb();
-        const idx = db.products.findIndex((x) => x.id === p.id);
-        if (idx >= 0) {
-          const beforeDb = toDbProduct(db.products[idx]);
-          db.products[idx] = { ...db.products[idx], ...p };
-          await recordPriceChanges(p.id, p.name, beforeDb, toDbProduct(p), req.user);
-        } else {
-          db.products.unshift(p);
-          await recordPriceChanges(p.id, p.name, null, toDbProduct(p), req.user);
-        }
-        writeLocalDb(db);
-      }
-      result.created++;
-    } catch (e) {
-      result.failed++;
-      result.errors.push({ name: raw.name || raw.id, error: e.message });
-    }
-  }
-
-  await clearCached("cache:products");
+  const result = await bulkImportProducts(items, req.user);
   res.json(result);
 });
 

@@ -64,7 +64,7 @@ function EmployeesPage() {
   });
   const { confirm, confirmNode } = useConfirm();
   const sel = useSelection();
-  const pg = usePagination(employees, 10);
+  const pg = usePagination(employees, 50);
   const pageIds = pg.paged.map((p) => p.id);
   const allChecked = pageIds.length > 0 && pageIds.every((id) => sel.has(id));
 

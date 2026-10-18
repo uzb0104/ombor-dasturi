@@ -85,7 +85,7 @@ function AuditPage() {
     [auditLog, q, actionF, userF],
   );
 
-  const pg = usePagination(filtered, 20);
+  const pg = usePagination(filtered, 50);
 
   if (!isAdmin) {
     return (

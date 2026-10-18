@@ -95,8 +95,12 @@ export const incomingSchema = z.object({
   supplierId: z.string().nullable().optional(),
   productId: z.string().min(1, "Tovar ID kiritilishi shart"),
   qty: z.number().positive("Miqdor musbat bo'lishi shart"),
-  buyPrice: z.number().positive("Sotib olish narxi musbat bo'lishi shart"),
+  buyPrice: z.number().nonnegative("Sotib olish narxi 0 dan kam bo'lmasligi kerak"),
+  buyPriceUsd: z.number().nonnegative().optional(),
+  currency: z.enum(["UZS", "USD"]).optional(),
   invoice: z.string().optional().default(""),
+  region: z.string().nullable().optional(),
+  status: z.enum(["pending", "applied"]).optional(),
 });
 
 export const saleItemSchema = z.object({

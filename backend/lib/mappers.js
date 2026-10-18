@@ -170,12 +170,45 @@ export function toDbIncoming(i) {
   if (i.productId !== undefined) dbObj.product_id = i.productId || null;
   if (i.qty !== undefined) dbObj.qty = i.qty;
   if (i.buyPrice !== undefined) dbObj.buy_price = i.buyPrice;
-  if (i.invoice !== undefined) dbObj.invoice = i.invoice;
+  if (i.region !== undefined) dbObj.region = i.region || null;
+  if (i.status !== undefined) dbObj.status = i.status;
+
+  // Supabase incoming jadvalida buy_price_usd va currency ustunlari yo'qligi sababli
+  // ularni invoice maydoniga ixcham JSON qilib saqlaymiz.
+  const meta = {};
+  if (i.buyPriceUsd !== undefined && i.buyPriceUsd > 0) meta.usd = i.buyPriceUsd;
+  if (i.currency) meta.cur = i.currency;
+  if (i.invoice) meta.inv = i.invoice;
+
+  if (Object.keys(meta).length > 0) {
+    dbObj.invoice = JSON.stringify(meta);
+  } else if (i.invoice !== undefined) {
+    dbObj.invoice = i.invoice || null;
+  }
+
   return dbObj;
 }
 
 export function toFeIncoming(i) {
   if (!i) return null;
+  let usd =
+    i.buy_price_usd !== undefined && i.buy_price_usd !== null
+      ? Number(i.buy_price_usd)
+      : i.buyPriceUsd !== undefined && i.buyPriceUsd !== null
+        ? Number(i.buyPriceUsd)
+        : undefined;
+  let cur = i.currency || undefined;
+  let inv = i.invoice;
+
+  if (i.invoice && typeof i.invoice === "string" && i.invoice.trim().startsWith("{")) {
+    try {
+      const parsed = JSON.parse(i.invoice);
+      if (parsed.usd !== undefined) usd = Number(parsed.usd);
+      if (parsed.cur !== undefined) cur = parsed.cur;
+      inv = parsed.inv || "";
+    } catch (_) {}
+  }
+
   return {
     id: i.id,
     date: i.date,
@@ -183,7 +216,11 @@ export function toFeIncoming(i) {
     productId: i.product_id,
     qty: Number(i.qty || 0),
     buyPrice: Number(i.buy_price || 0),
-    invoice: i.invoice,
+    buyPriceUsd: usd,
+    currency: cur,
+    invoice: inv,
+    region: i.region || undefined,
+    status: i.status || "applied",
   };
 }
 

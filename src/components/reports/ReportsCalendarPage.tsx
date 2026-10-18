@@ -1,6 +1,16 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { ChevronLeft, ChevronRight, ChevronDown, Download, FileSpreadsheet } from "lucide-react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  ChevronDown,
+  FileSpreadsheet,
+  Wallet,
+  TrendingUp,
+  Percent,
+  ShoppingCart,
+} from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import {
@@ -11,8 +21,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { exportToExcel, PageHeader } from "@/components/ui-kit";
-import { formatSom } from "@/lib/constants";
+import { exportToExcel, PageHeader, StatCard } from "@/components/ui-kit";
+import { formatSom, formatUsd, formatDate, formatDateTime } from "@/lib/constants";
 import { paymentLabel } from "@/lib/i18n/helpers";
 import { useT } from "@/lib/i18n";
 import { useStore } from "@/lib/store";
@@ -42,7 +52,8 @@ const WEEKDAYS_UZ = ["Du", "Se", "Ch", "Pa", "Ju", "Sh", "Yak"];
 export function ReportsCalendarPage() {
   const t = useT();
   const navigate = useNavigate();
-  const { sales, products, customers } = useStore();
+  const { sales, products, customers, usdRate } = useStore();
+  const activeRate = usdRate > 0 ? usdRate : 12835;
   const today = new Date();
 
   const [monthDate, setMonthDate] = useState(
@@ -80,6 +91,17 @@ export function ReportsCalendarPage() {
     return map;
   }, [monthSales]);
 
+  // Monthly totals for KPI cards
+  const monthTotal = useMemo(() => monthSales.reduce((sum, s) => sum + s.total, 0), [monthSales]);
+  const monthProfit = useMemo(
+    () => monthSales.reduce((sum, s) => sum + (s.profit || 0), 0),
+    [monthSales],
+  );
+  const monthDiscount = useMemo(
+    () => monthSales.reduce((sum, s) => sum + (s.discount || 0), 0),
+    [monthSales],
+  );
+
   // Year range from 2024 to 2035
   const years = Array.from({ length: 2035 - 2024 + 1 }, (_, index) => 2024 + index);
   const monthDays = new Date(year, month + 1, 0).getDate();
@@ -92,34 +114,42 @@ export function ReportsCalendarPage() {
   const monthLabel = MONTH_NAMES_UZ[month];
 
   const exportReport = (rows: Sale[], title: string, filename: string) => {
+    let rowNum = 1;
     const data = rows.flatMap((sale) => {
       const customer = customers.find((item) => item.id === sale.customerId);
-      return sale.items.map((item, index) => ({
-        date: new Date(sale.date).toLocaleString("uz-UZ"),
-        customer: customer?.name || t("sales.generalCustomer"),
-        phone: customer?.phone || "",
-        product:
-          products.find((product) => product.id === item.productId)?.name ||
-          item.productName ||
-          t("sales.unknownProduct"),
-        quantity: item.qty,
-        price: item.price,
-        discount: index === 0 ? sale.discount : 0,
-        total: index === 0 ? sale.total : 0,
-        payment: paymentLabel(t, sale.paymentType),
-      }));
+      return sale.items.map((item, index) => {
+        const product = products.find((p) => p.id === item.productId);
+        const somTotal = index === 0 ? sale.total : 0;
+        return {
+          number: rowNum++,
+          date: formatDateTime(sale.date),
+          customer: customer?.name || t("sales.generalCustomer"),
+          phone: customer?.phone || "",
+          product: product?.name || item.productName || t("sales.unknownProduct"),
+          quantity: item.qty,
+          priceSom: item.price,
+          priceUsd: product?.sellPriceUsd || Number((item.price / activeRate).toFixed(2)),
+          discountSom: index === 0 ? sale.discount : 0,
+          totalSom: somTotal,
+          totalUsd: somTotal > 0 ? Number((somTotal / activeRate).toFixed(2)) : 0,
+          payment: paymentLabel(t, sale.paymentType),
+        };
+      });
     });
     exportToExcel(
       data,
       [
+        { label: "№", key: "number" },
         { label: t("reports.date"), key: "date" },
         { label: t("sales.customer"), key: "customer" },
         { label: t("common.phone"), key: "phone" },
         { label: t("common.product"), key: "product" },
         { label: t("products.qty"), key: "quantity" },
-        { label: t("sales.unitPrice"), key: "price" },
-        { label: t("sales.discount"), key: "discount" },
-        { label: t("common.total"), key: "total" },
+        { label: `${t("sales.unitPrice")} (so'm)`, key: "priceSom" },
+        { label: `${t("sales.unitPrice")} ($)`, key: "priceUsd" },
+        { label: `${t("sales.discount")} (so'm)`, key: "discountSom" },
+        { label: `${t("common.total")} (so'm)`, key: "totalSom" },
+        { label: `${t("common.total")} ($)`, key: "totalUsd" },
         { label: t("sales.payment"), key: "payment" },
       ],
       title,
@@ -131,10 +161,11 @@ export function ReportsCalendarPage() {
   const exportMonth = () =>
     exportReport(
       monthSales,
-      `${monthLabel} ${year}`,
+      `Oylik Hisobot - ${monthLabel} ${year}`,
       `oylik_${year}-${String(month + 1).padStart(2, "0")}.xls`,
     );
-  const exportYear = () => exportReport(yearSales, String(year), `yillik_${year}.xls`);
+  const exportYear = () =>
+    exportReport(yearSales, `Yillik Hisobot - ${year}`, `yillik_${year}.xls`);
 
   const moveMonth = (delta: number) => {
     const next = new Date(year, month + delta, 1);
@@ -146,9 +177,15 @@ export function ReportsCalendarPage() {
     <div className="space-y-5 animate-fade-in">
       <PageHeader
         title={t("reports.title")}
-        subtitle={t("reports.calendarSubtitle")}
+        subtitle={`${monthLabel} ${year} - Hisobotlar kalendari`}
         actions={
           <div className="flex items-center gap-2">
+            <Badge
+              variant="outline"
+              className="px-3 py-1 font-mono text-xs border-primary/30 bg-primary/5 text-primary"
+            >
+              1 $ = {formatSom(activeRate)}
+            </Badge>
             <Button
               variant="outline"
               className="bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 border-emerald-500/30 font-medium text-xs h-9"
@@ -156,7 +193,7 @@ export function ReportsCalendarPage() {
               disabled={!monthSales.length}
             >
               <FileSpreadsheet className="mr-1.5 h-4 w-4 text-emerald-600 dark:text-emerald-400" />
-              Oylik Excel hisobot ({monthLabel})
+              Oylik Excel ({monthLabel})
             </Button>
             <Button
               variant="outline"
@@ -165,12 +202,49 @@ export function ReportsCalendarPage() {
               disabled={!yearSales.length}
             >
               <FileSpreadsheet className="mr-1.5 h-4 w-4 text-emerald-600 dark:text-emerald-400" />
-              Yillik Excel hisobot ({year})
+              Yillik Excel ({year})
             </Button>
           </div>
         }
       />
-      <div>
+
+      <div className="space-y-4">
+        {/* Monthly KPI Stat Cards */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <StatCard
+            label="Oylik jami sotuv"
+            value={formatSom(monthTotal)}
+            subValue={formatUsd(monthTotal / activeRate)}
+            icon={Wallet}
+            accent="primary"
+          />
+          <StatCard
+            label="Oylik sof foyda"
+            value={formatSom(monthProfit)}
+            subValue={formatUsd(monthProfit / activeRate)}
+            icon={TrendingUp}
+            accent="success"
+          />
+          <StatCard
+            label="Oylik chegirmalar"
+            value={formatSom(monthDiscount)}
+            subValue={monthDiscount > 0 ? formatUsd(monthDiscount / activeRate) : undefined}
+            icon={Percent}
+            accent="warning"
+          />
+          <StatCard
+            label="Tranzaksiyalar"
+            value={`${monthSales.length} ta`}
+            subValue={
+              monthSales.length > 0
+                ? `O'rtacha: ${formatSom(monthTotal / monthSales.length)}`
+                : undefined
+            }
+            icon={ShoppingCart}
+            accent="info"
+          />
+        </div>
+
         <Card className="rounded-2xl card-elevated border-border/60">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
             <div className="flex items-center gap-2">
@@ -282,6 +356,8 @@ export function ReportsCalendarPage() {
                 const key = dayKey(new Date(year, month, day));
                 const rows = salesByDay.get(key) || [];
                 const amount = rows.reduce((sum, sale) => sum + sale.total, 0);
+                const amountUsd = amount / activeRate;
+
                 return (
                   <button
                     key={key}
@@ -297,6 +373,9 @@ export function ReportsCalendarPage() {
                         </span>
                         <span className="truncate text-[10px] font-semibold text-primary">
                           {formatSom(amount)}
+                        </span>
+                        <span className="truncate text-[9px] text-muted-foreground">
+                          {formatUsd(amountUsd)}
                         </span>
                       </>
                     )}

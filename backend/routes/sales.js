@@ -11,6 +11,7 @@ import {
 import { toFeSale, toDbSale } from "../lib/mappers.js";
 import { validate, saleSchema } from "../lib/validators.js";
 import { authenticateToken, requirePermission } from "../middleware/auth.js";
+import { createSaleDirectFallback, revertSaleInventoryAndDebt } from "../services/salesService.js";
 
 const router = express.Router();
 
@@ -50,11 +51,6 @@ router.get("/", authenticateToken, requirePermission("/sales"), async (req, res)
           supabaseError.message,
         );
       }
-    } else {
-      const db = readLocalDb();
-      const localSales = db.sales || [];
-      await setCached(cacheKey, localSales);
-      return res.json(localSales);
     }
 
     const db = readLocalDb();
@@ -73,7 +69,7 @@ router.post(
   requirePermission("/sales"),
   validate(saleSchema),
   async (req, res) => {
-    const sale = req.body; // { id, date, customerId, sellerId, items: [...], discount, paymentType, total, profit }
+    const sale = req.body;
     sale.id ||= `sale_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
     const { items, ...saleMeta } = sale;
 
@@ -99,61 +95,7 @@ router.post(
         }
 
         if (!transactionSuccess) {
-          // 1. To'g'ridan-to'g'ri sales jadvaliga yozish
-          const { error: saleInsertError } = await supabaseClient.from("sales").insert(dbSaleMeta);
-          if (saleInsertError) throw saleInsertError;
-
-          // 2. To'g'ridan-to'g'ri sale_items jadvaliga yozish
-          if (items && items.length > 0) {
-            const dbItems = items.map((item) => ({
-              sale_id: sale.id,
-              product_id: item.productId,
-              product_name: item.productName || null,
-              qty: item.qty,
-              price: item.price,
-              buy_price: item.buyPrice || 0,
-            }));
-            const { error: itemsInsertError } = await supabaseClient
-              .from("sale_items")
-              .insert(dbItems);
-            if (itemsInsertError)
-              console.warn("Failed to insert sale_items:", itemsInsertError.message);
-
-            // 3. Ombor qoldiqlarini yangilash
-            for (const item of items) {
-              const { data: prod } = await supabaseClient
-                .from("products")
-                .select("quantity")
-                .eq("id", item.productId)
-                .single();
-              if (prod) {
-                await supabaseClient
-                  .from("products")
-                  .update({ quantity: Math.max(0, (prod.quantity || 0) - item.qty) })
-                  .eq("id", item.productId);
-              }
-            }
-          }
-
-          // 4. Qarz va xarid hisobini yangilash
-          if (sale.customerId) {
-            const { data: c } = await supabaseClient
-              .from("customers")
-              .select("debt, total_purchases")
-              .eq("id", sale.customerId)
-              .single();
-            if (c) {
-              const debtDelta =
-                sale.paymentType === "Qarz" ? Math.max(0, sale.total - (sale.paid || 0)) : 0;
-              await supabaseClient
-                .from("customers")
-                .update({
-                  debt: (c.debt || 0) + debtDelta,
-                  total_purchases: (c.total_purchases || 0) + sale.total,
-                })
-                .eq("id", sale.customerId);
-            }
-          }
+          await createSaleDirectFallback(sale, items, dbSaleMeta);
         }
 
         const { data: createdSale, error: saleError } = await supabaseClient
@@ -178,13 +120,11 @@ router.post(
       } else {
         const db = readLocalDb();
 
-        // Tovar omborini kamaytirish
         db.products = db.products.map((p) => {
           const item = items.find((i) => i.productId === p.id);
           return item ? { ...p, quantity: Math.max(0, (p.quantity || 0) - item.qty) } : p;
         });
 
-        // Mijoz xarid summasi va qarzini yangilash
         if (sale.customerId) {
           db.customers = db.customers.map((c) => {
             if (c.id !== sale.customerId) return c;
@@ -217,7 +157,6 @@ router.put("/:id", authenticateToken, validate(saleSchema.partial()), async (req
 
   try {
     if (isSupabaseConfigured) {
-      // 1. Eski sotuv va uning tovarlarini olish
       const { data: oldSale, error: errOldSale } = await supabaseClient
         .from("sales")
         .select("*")
@@ -231,25 +170,10 @@ router.put("/:id", authenticateToken, validate(saleSchema.partial()), async (req
         .eq("sale_id", id);
       if (errOldItems) throw errOldItems;
 
-      // 2. Eski tovar zaxiralarini atomik tiklash
-      if (oldItems && oldItems.length > 0) {
-        for (const oi of oldItems) {
-          await supabaseClient.rpc("increment_product_qty", { p_id: oi.product_id, p_qty: oi.qty });
-        }
-      }
+      // 1. Eski tovar zaxiralarini va mijoz qarzini qayta tiklash
+      await revertSaleInventoryAndDebt(oldSale, oldItems);
 
-      // 3. Eski mijoz hisob-kitoblarini atomik tiklash
-      if (oldSale.customer_id) {
-        const oldDebtDelta =
-          oldSale.payment_type === "Qarz" ? Math.max(0, oldSale.total - (oldSale.paid || 0)) : 0;
-        await supabaseClient.rpc("decrement_customer_debt", {
-          c_id: oldSale.customer_id,
-          delta_debt: oldDebtDelta,
-          delta_purchases: oldSale.total,
-        });
-      }
-
-      // 4. Sotuv metama'lumotlarini yangilash
+      // 2. Sotuv metama'lumotlarini yangilash
       const dbSaleMeta = toDbSale(newMeta);
       delete dbSaleMeta.id;
       const { data: updatedSale, error: errUpdate } = await supabaseClient
@@ -260,7 +184,7 @@ router.put("/:id", authenticateToken, validate(saleSchema.partial()), async (req
         .single();
       if (errUpdate) throw errUpdate;
 
-      // 5. Eski sale_items ni o'chirib, yangilarini yozish (agar yangilari yuborilgan bo'lsa)
+      // 3. Eski sale_items ni o'chirib, yangilarini yozish (agar yangilari yuborilgan bo'lsa)
       let finalItems = oldItems;
       if (newItems && newItems.length > 0) {
         await supabaseClient.from("sale_items").delete().eq("sale_id", id);
@@ -279,7 +203,7 @@ router.put("/:id", authenticateToken, validate(saleSchema.partial()), async (req
         finalItems = itemsToInsert;
       }
 
-      // 6. Yangi tovar zaxiralarini atomik chegirish
+      // 4. Yangi tovar zaxiralarini atomik chegirish
       const activeItems =
         newItems && newItems.length > 0
           ? newItems
@@ -288,7 +212,7 @@ router.put("/:id", authenticateToken, validate(saleSchema.partial()), async (req
         await supabaseClient.rpc("decrement_product_qty", { p_id: ni.productId, p_qty: ni.qty });
       }
 
-      // 7. Yangi mijoz hisob-kitoblarini atomik qo'llash
+      // 5. Yangi mijoz hisob-kitoblarini atomik qo'llash
       const activeCustomerId =
         newMeta.customerId !== undefined ? newMeta.customerId : oldSale.customer_id;
       const activePaymentType =
@@ -380,23 +304,7 @@ router.delete("/:id", authenticateToken, async (req, res) => {
 
       const { data: items } = await supabaseClient.from("sale_items").select("*").eq("sale_id", id);
 
-      // Tovar miqdorini atomik tiklash
-      if (items) {
-        for (const i of items) {
-          await supabaseClient.rpc("increment_product_qty", { p_id: i.product_id, p_qty: i.qty });
-        }
-      }
-
-      // Mijoz hisobini atomik tiklash
-      if (sale.customer_id) {
-        const debtDelta =
-          sale.payment_type === "Qarz" ? Math.max(0, sale.total - (sale.paid || 0)) : 0;
-        await supabaseClient.rpc("decrement_customer_debt", {
-          c_id: sale.customer_id,
-          delta_debt: debtDelta,
-          delta_purchases: sale.total,
-        });
-      }
+      await revertSaleInventoryAndDebt(sale, items);
 
       await supabaseClient.from("sales").delete().eq("id", id);
 
@@ -412,13 +320,11 @@ router.delete("/:id", authenticateToken, async (req, res) => {
       const s = db.sales.find((x) => x.id === id);
       if (!s) return res.status(404).json({ error: "Sotuv topilmadi" });
 
-      // Tovar miqdorini tiklash
       db.products = db.products.map((p) => {
         const item = s.items.find((i) => i.productId === p.id);
         return item ? { ...p, quantity: p.quantity + item.qty } : p;
       });
 
-      // Mijoz hisobini tiklash
       db.customers = db.customers.map((c) => {
         if (c.id !== s.customerId) return c;
         const debtDelta = s.paymentType === "Qarz" ? Math.max(0, s.total - (s.paid || 0)) : 0;

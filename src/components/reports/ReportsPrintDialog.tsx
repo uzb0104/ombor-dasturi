@@ -6,22 +6,21 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Badge } from "@/components/ui/badge";
-import { formatSom } from "@/lib/constants";
+import { formatSom, formatUsd, formatDate, formatDateTime } from "@/lib/constants";
 import { paymentLabel } from "@/lib/i18n/helpers";
-import type { Expense, Sale, Product, Customer } from "@/lib/types";
+import type { Expense, Sale, Customer } from "@/lib/types";
 import { FileText, Printer } from "lucide-react";
 
 type Translate = (key: string, params?: Record<string, string | number>) => string;
 
-type ProductBreakdown = {
+export type ProductBreakdownItem = {
   productId: string;
   name: string;
   vehicle: string;
   totalQty: number;
   totalRevenue: number;
   totalProfit: number;
-  totalBuyValue: number;
+  totalBuyValue?: number;
 };
 
 type ReportsPrintDialogProps = {
@@ -31,10 +30,11 @@ type ReportsPrintDialogProps = {
   totalSales: number;
   totalDiscount: number;
   totalProfit: number;
-  productBreakdown: ProductBreakdown[];
+  productBreakdown: ProductBreakdownItem[];
   filteredSales: Sale[];
   filteredExpenses: Expense[];
   customers: Customer[];
+  usdRate?: number;
   t: Translate;
 };
 
@@ -48,8 +48,10 @@ export function ReportsPrintDialog({
   productBreakdown,
   filteredSales,
   customers,
+  usdRate = 12835,
   t,
 }: ReportsPrintDialogProps) {
+  const activeRate = usdRate > 0 ? usdRate : 12835;
   const periodLabel =
     period === "today"
       ? "KUNLIK"
@@ -79,7 +81,7 @@ export function ReportsPrintDialog({
             <div className="text-right">
               <h2 className="text-sm font-bold text-gray-700">{periodLabel} HISOBOT</h2>
               <p className="text-xs text-gray-500 mt-1">
-                Sana: {new Date().toLocaleDateString("uz-UZ")}
+                Sana: {formatDate(new Date())} | Kurs: 1$ = {formatSom(activeRate)}
               </p>
             </div>
           </div>
@@ -88,15 +90,23 @@ export function ReportsPrintDialog({
               Moliyaviy Ko'rsatkichlar
             </h3>
             <div className="grid grid-cols-3 gap-4">
-              <Metric label="Jami sotuv" value={formatSom(totalSales)} />
+              <Metric
+                label="Jami sotuv"
+                value={formatSom(totalSales)}
+                subValue={formatUsd(totalSales / activeRate)}
+              />
               <Metric
                 label="Jami chegirma"
                 value={`−${formatSom(totalDiscount)}`}
+                subValue={
+                  totalDiscount > 0 ? `−${formatUsd(totalDiscount / activeRate)}` : undefined
+                }
                 valueClass="text-red-600"
               />
               <Metric
                 label="Sof foyda"
                 value={`+${formatSom(totalProfit)}`}
+                subValue={`+${formatUsd(totalProfit / activeRate)}`}
                 valueClass="text-green-700"
               />
             </div>
@@ -108,6 +118,7 @@ export function ReportsPrintDialog({
             <table className="w-full text-left text-xs border">
               <thead>
                 <tr className="bg-gray-100 border-b font-bold">
+                  <th className="p-2 w-10 text-center">№</th>
                   <th className="p-2">Tovar</th>
                   <th className="p-2">Brend</th>
                   <th className="p-2 text-center">Soni</th>
@@ -116,16 +127,23 @@ export function ReportsPrintDialog({
                 </tr>
               </thead>
               <tbody>
-                {productBreakdown.map((product) => (
+                {productBreakdown.map((product, idx) => (
                   <tr key={product.productId} className="border-b last:border-0">
+                    <td className="p-2 text-center text-gray-500 font-mono">{idx + 1}</td>
                     <td className="p-2 font-medium">{product.name}</td>
-                    <td className="p-2 text-gray-600">{product.vehicle}</td>
+                    <td className="p-2 text-gray-600">{product.vehicle || "—"}</td>
                     <td className="p-2 text-center tabular-nums">{product.totalQty}</td>
                     <td className="p-2 text-right tabular-nums">
-                      {formatSom(product.totalRevenue)}
+                      <div>{formatSom(product.totalRevenue)}</div>
+                      <div className="text-[10px] text-gray-500">
+                        {formatUsd(product.totalRevenue / activeRate)}
+                      </div>
                     </td>
                     <td className="p-2 text-right text-green-700 font-semibold tabular-nums">
-                      +{formatSom(product.totalProfit)}
+                      <div>+{formatSom(product.totalProfit)}</div>
+                      <div className="text-[10px] text-gray-500">
+                        +{formatUsd(product.totalProfit / activeRate)}
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -139,25 +157,25 @@ export function ReportsPrintDialog({
             <table className="w-full text-left text-xs border">
               <thead>
                 <tr className="bg-gray-100 border-b font-bold">
+                  <th className="p-2 w-10 text-center">№</th>
                   <th className="p-2">Sana</th>
                   <th className="p-2">Mijoz</th>
                   <th className="p-2 text-right">Chegirma</th>
                   <th className="p-2 text-right">Jami</th>
                   <th className="p-2 text-right">Foyda</th>
-                  <th className="p-2">To'lov</th>
+                  <th className="p-2 text-center">To'lov</th>
                 </tr>
               </thead>
               <tbody>
                 {[...filteredSales]
                   .sort((a, b) => +new Date(b.date) - +new Date(a.date))
-                  .slice(0, 30)
-                  .map((sale) => {
+                  .slice(0, 50)
+                  .map((sale, idx) => {
                     const customer = customers.find((item) => item.id === sale.customerId);
                     return (
                       <tr key={sale.id} className="border-b last:border-0">
-                        <td className="p-2 tabular-nums">
-                          {new Date(sale.date).toLocaleDateString("uz-UZ")}
-                        </td>
+                        <td className="p-2 text-center text-gray-500 font-mono">{idx + 1}</td>
+                        <td className="p-2 tabular-nums">{formatDateTime(sale.date)}</td>
                         <td className="p-2 font-medium">
                           {customer?.name || t("common.generalCustomer")}
                         </td>
@@ -165,12 +183,18 @@ export function ReportsPrintDialog({
                           {sale.discount > 0 ? `−${formatSom(sale.discount)}` : "—"}
                         </td>
                         <td className="p-2 text-right font-semibold tabular-nums">
-                          {formatSom(sale.total)}
+                          <div>{formatSom(sale.total)}</div>
+                          <div className="text-[10px] text-gray-500">
+                            {formatUsd(sale.total / activeRate)}
+                          </div>
                         </td>
                         <td className="p-2 text-right text-green-700 font-semibold tabular-nums">
-                          +{formatSom(sale.profit)}
+                          <div>+{formatSom(sale.profit)}</div>
+                          <div className="text-[10px] text-gray-500">
+                            +{formatUsd(sale.profit / activeRate)}
+                          </div>
                         </td>
-                        <td className="p-2">{paymentLabel(t, sale.paymentType)}</td>
+                        <td className="p-2 text-center">{paymentLabel(t, sale.paymentType)}</td>
                       </tr>
                     );
                   })}
@@ -197,16 +221,21 @@ export function ReportsPrintDialog({
 function Metric({
   label,
   value,
+  subValue,
   valueClass = "text-gray-900",
 }: {
   label: string;
   value: string;
+  subValue?: string;
   valueClass?: string;
 }) {
   return (
     <div className="border p-3 rounded-lg bg-gray-50">
       <span className="text-[10px] text-gray-500 block uppercase font-medium">{label}</span>
       <span className={`text-base font-bold tabular-nums ${valueClass}`}>{value}</span>
+      {subValue && (
+        <span className="text-xs text-gray-500 block font-medium mt-0.5">{subValue}</span>
+      )}
     </div>
   );
 }

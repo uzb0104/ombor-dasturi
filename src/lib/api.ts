@@ -204,6 +204,11 @@ export const incomingApi = {
     request<{ success: boolean }>(`/api/incoming/${id}`, {
       method: "DELETE",
     }),
+  applyBatch: (ids: string[]) =>
+    request<{ success: boolean; count: number }>("/api/incoming/apply-batch", {
+      method: "POST",
+      body: JSON.stringify({ ids }),
+    }),
 };
 
 export const debtPaymentsApi = {

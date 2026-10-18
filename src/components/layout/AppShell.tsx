@@ -26,6 +26,7 @@ import {
   X,
   Smartphone,
   BatteryCharging,
+  MapPin,
 } from "lucide-react";
 import { useT } from "@/lib/i18n";
 import { NAV } from "@/lib/constants";
@@ -80,6 +81,7 @@ const ICONS = {
   FileClock,
   Smartphone,
   BatteryCharging,
+  MapPin,
 } as const;
 
 export function AppShell({ children }: { children: React.ReactNode }) {
@@ -152,7 +154,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           {t("nav.menu")}
         </div>
         {NAV.map((item) => {
-          const Icon = ICONS[item.icon as keyof typeof ICONS];
+          const Icon = (item.icon && ICONS[item.icon as keyof typeof ICONS]) || Package;
           const hasChildren =
             "children" in item &&
             Array.isArray((item as unknown as { children: unknown[] }).children);
@@ -207,7 +209,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 {isOpen && (
                   <div className="pl-4 space-y-0.5 ml-3 border-l-2 border-sidebar-border/60">
                     {children.map((child) => {
-                      const ChildIcon = ICONS[child.icon as keyof typeof ICONS];
+                      const ChildIcon =
+                        (child.icon && ICONS[child.icon as keyof typeof ICONS]) || Package;
                       const childActive =
                         path === child.to ||
                         (child.to !== "/dashboard" && path.startsWith(child.to));

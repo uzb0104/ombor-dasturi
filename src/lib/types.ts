@@ -106,7 +106,11 @@ export type IncomingStock = {
   productId: string;
   qty: number;
   buyPrice: number;
+  buyPriceUsd?: number;
+  currency?: "UZS" | "USD";
   invoice: string;
+  region?: string;
+  status?: "pending" | "applied";
 };
 
 export type AuditEntry = {

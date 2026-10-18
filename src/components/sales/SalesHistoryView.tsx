@@ -30,7 +30,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { StatCard, PaginationBar, usePagination, useConfirm } from "@/components/ui-kit";
-import { formatSom } from "@/lib/constants";
+import { formatSom, formatDate } from "@/lib/constants";
 import { useStore } from "@/lib/store";
 import type { Sale } from "@/lib/types";
 import { ReceiptModal } from "./ReceiptModal";
@@ -307,9 +307,7 @@ export function SalesHistoryView() {
 
                       {/* Sana */}
                       <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
-                        <div className="font-medium text-foreground">
-                          {new Date(sale.date).toLocaleDateString("uz-UZ")}
-                        </div>
+                        <div className="font-medium text-foreground">{formatDate(sale.date)}</div>
                         <div className="text-[10px] text-muted-foreground/70">
                           {new Date(sale.date).toLocaleTimeString("uz-UZ", {
                             hour: "2-digit",

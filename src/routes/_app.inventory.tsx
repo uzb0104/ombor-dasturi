@@ -100,7 +100,7 @@ function InventoryPage() {
       .filter((p) => !search || p.name.toLowerCase().includes(s));
   }, [products, selected, search]);
 
-  const pg = usePagination(brandProducts, 12);
+  const pg = usePagination(brandProducts, 50);
   const pageIds = pg.paged.map((p) => p.id);
   const allChecked = pageIds.length > 0 && pageIds.every((id) => sel.has(id));
 

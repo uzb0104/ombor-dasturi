@@ -11,6 +11,7 @@ import {
 import { toFeIncoming, toDbIncoming } from "../lib/mappers.js";
 import { validate, incomingSchema } from "../lib/validators.js";
 import { authenticateToken, requirePermission } from "../middleware/auth.js";
+import { applyIncomingBatch } from "../services/incomingService.js";
 
 const router = express.Router();
 
@@ -49,39 +50,55 @@ router.post(
   async (req, res) => {
     const i = req.body;
     i.id ||= `inc_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    i.status ||= "pending";
     try {
       if (isSupabaseConfigured) {
-        const dbObj = toDbIncoming(i);
-        const { error: transactionError } = await supabaseClient.rpc("create_incoming_atomic", {
-          p_incoming: dbObj,
-        });
-        if (transactionError) throw transactionError;
-        const { data, error } = await supabaseClient
-          .from("incoming")
-          .select("*")
-          .eq("id", i.id)
-          .single();
-        if (error) throw error;
+        let savedData = null;
+        if (i.status === "applied") {
+          const dbObj = toDbIncoming(i);
+          const { error: transactionError } = await supabaseClient.rpc("create_incoming_atomic", {
+            p_incoming: dbObj,
+          });
+          if (transactionError) throw transactionError;
+          const { data, error } = await supabaseClient
+            .from("incoming")
+            .select("*")
+            .eq("id", i.id)
+            .single();
+          if (error) throw error;
+          savedData = data;
+        } else {
+          // Status is 'pending' - saqlanadi, lekin tovarlar bazasiga hozircha qo'shilmaydi
+          const dbObj = toDbIncoming(i);
+          let { data, error } = await supabaseClient
+            .from("incoming")
+            .insert(dbObj)
+            .select()
+            .single();
+          if (error && (error.code === "42703" || error.code === "PGRST204")) {
+            delete dbObj.status;
+            delete dbObj.buy_price_usd;
+            delete dbObj.currency;
+            const retry = await supabaseClient.from("incoming").insert(dbObj).select().single();
+            if (retry.error) throw retry.error;
+            data = retry.data;
+          } else if (error) {
+            throw error;
+          }
+          savedData = data;
+        }
 
-        await Promise.all([
-          clearCached("cache:incoming"),
-          clearCached("cache:products"),
-          clearCached("cache:suppliers"),
-        ]);
+        await Promise.all([clearCached("cache:incoming"), clearCached("cache:products")]);
 
-        res.json(toFeIncoming(data));
+        const feItem = toFeIncoming(savedData);
+        if (i.status) feItem.status = i.status;
+        res.json(feItem);
       } else {
         const db = readLocalDb();
 
-        // 1. Tovar miqdorini yangilash
-        db.products = db.products.map((p) =>
-          p.id === i.productId ? { ...p, quantity: (p.quantity || 0) + i.qty } : p,
-        );
-
-        // 2. Supplier qarzini yangilash
-        if (i.supplierId) {
-          db.suppliers = db.suppliers.map((s) =>
-            s.id === i.supplierId ? { ...s, debt: (s.debt || 0) + i.qty * i.buyPrice } : s,
+        if (i.status === "applied") {
+          db.products = db.products.map((p) =>
+            p.id === i.productId ? { ...p, quantity: (p.quantity || 0) + i.qty } : p,
           );
         }
 
@@ -95,6 +112,21 @@ router.post(
   },
 );
 
+// POST APPLY BATCH (Tovarlar bazasiga o'tkazish / tasdiqlash)
+router.post("/apply-batch", authenticateToken, requirePermission("/incoming"), async (req, res) => {
+  const { ids } = req.body;
+  if (!Array.isArray(ids) || ids.length === 0) {
+    return res.status(400).json({ error: "Kirim IDlari tanlanmagan" });
+  }
+
+  try {
+    const count = await applyIncomingBatch(ids);
+    res.json({ success: true, count });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // PUT EDIT INCOMING
 router.put("/:id", authenticateToken, validate(incomingSchema.partial()), async (req, res) => {
   const { id } = req.params;
@@ -102,7 +134,6 @@ router.put("/:id", authenticateToken, validate(incomingSchema.partial()), async 
 
   try {
     if (isSupabaseConfigured) {
-      // 1. Eski ma'lumotlarni olish
       const { data: oldInc, error: selectErr } = await supabaseClient
         .from("incoming")
         .select("*")
@@ -112,80 +143,60 @@ router.put("/:id", authenticateToken, validate(incomingSchema.partial()), async 
 
       const oldFe = toFeIncoming(oldInc);
 
-      // 2. Kirimni tahrirlash
       const dbObj = toDbIncoming(updates);
       delete dbObj.id;
-      const { data: updatedInc, error: updateErr } = await supabaseClient
+      let { data: updatedInc, error: updateErr } = await supabaseClient
         .from("incoming")
         .update(dbObj)
         .eq("id", id)
         .select()
         .single();
-      if (updateErr) throw updateErr;
+      if (updateErr && (updateErr.code === "42703" || updateErr.code === "PGRST204")) {
+        delete dbObj.status;
+        delete dbObj.buy_price_usd;
+        delete dbObj.currency;
+        const retry = await supabaseClient
+          .from("incoming")
+          .update(dbObj)
+          .eq("id", id)
+          .select()
+          .single();
+        if (retry.error) throw retry.error;
+        updatedInc = retry.data;
+      } else if (updateErr) {
+        throw updateErr;
+      }
 
       const newFe = toFeIncoming(updatedInc);
 
-      // 3. Tovar zaxirasini atomik to'g'rilash
-      if (oldFe.productId === newFe.productId) {
-        const qtyDiff = newFe.qty - oldFe.qty;
-        if (qtyDiff > 0) {
+      // Tovar zaxirasini atomik to'g'rilash (faqat oldin bazaga qo'shilgan bo'lsa)
+      if (oldFe.status === "applied") {
+        if (oldFe.productId === newFe.productId) {
+          const qtyDiff = newFe.qty - oldFe.qty;
+          if (qtyDiff > 0) {
+            await supabaseClient.rpc("increment_product_qty", {
+              p_id: newFe.productId,
+              p_qty: qtyDiff,
+            });
+          } else if (qtyDiff < 0) {
+            await supabaseClient.rpc("decrement_product_qty", {
+              p_id: newFe.productId,
+              p_qty: Math.abs(qtyDiff),
+            });
+          }
+        } else {
+          await supabaseClient.rpc("decrement_product_qty", {
+            p_id: oldFe.productId,
+            p_qty: oldFe.qty,
+          });
           await supabaseClient.rpc("increment_product_qty", {
             p_id: newFe.productId,
-            p_qty: qtyDiff,
-          });
-        } else if (qtyDiff < 0) {
-          await supabaseClient.rpc("decrement_product_qty", {
-            p_id: newFe.productId,
-            p_qty: Math.abs(qtyDiff),
-          });
-        }
-      } else {
-        // Eski tovardan miqdorni ayiramiz
-        await supabaseClient.rpc("decrement_product_qty", {
-          p_id: oldFe.productId,
-          p_qty: oldFe.qty,
-        });
-        // Yangi tovarga miqdorni qo'shamiz
-        await supabaseClient.rpc("increment_product_qty", {
-          p_id: newFe.productId,
-          p_qty: newFe.qty,
-        });
-      }
-
-      // 4. Supplier qarzini atomik to'g'rilash
-      const oldCost = oldFe.qty * oldFe.buyPrice;
-      const newCost = newFe.qty * newFe.buyPrice;
-
-      if (oldFe.supplierId === newFe.supplierId) {
-        const costDiff = newCost - oldCost;
-        if (costDiff !== 0 && newFe.supplierId) {
-          await supabaseClient.rpc("adjust_supplier_debt", {
-            s_id: newFe.supplierId,
-            delta: costDiff,
-          });
-        }
-      } else {
-        // Eski supplierdan qarzni ayiramiz
-        if (oldFe.supplierId) {
-          await supabaseClient.rpc("adjust_supplier_debt", {
-            s_id: oldFe.supplierId,
-            delta: -oldCost,
-          });
-        }
-        // Yangi supplierga qarz qo'shamiz
-        if (newFe.supplierId) {
-          await supabaseClient.rpc("adjust_supplier_debt", {
-            s_id: newFe.supplierId,
-            delta: newCost,
+            p_qty: newFe.qty,
           });
         }
       }
 
-      await Promise.all([
-        clearCached("cache:incoming"),
-        clearCached("cache:products"),
-        clearCached("cache:suppliers"),
-      ]);
+      await Promise.all([clearCached("cache:incoming"), clearCached("cache:products")]);
 
       res.json(newFe);
     } else {
@@ -196,41 +207,22 @@ router.put("/:id", authenticateToken, validate(incomingSchema.partial()), async 
       const oldFe = db.incoming[oldIdx];
       const newFe = { ...oldFe, ...updates };
 
-      // 1. Tovar zaxirasini to'g'rilash
-      if (oldFe.productId === newFe.productId) {
-        const qtyDiff = newFe.qty - oldFe.qty;
-        db.products = db.products.map((p) =>
-          p.id === newFe.productId
-            ? { ...p, quantity: Math.max(0, (p.quantity || 0) + qtyDiff) }
-            : p,
-        );
-      } else {
-        db.products = db.products.map((p) => {
-          if (p.id === oldFe.productId)
-            return { ...p, quantity: Math.max(0, (p.quantity || 0) - oldFe.qty) };
-          if (p.id === newFe.productId) return { ...p, quantity: (p.quantity || 0) + newFe.qty };
-          return p;
-        });
-      }
-
-      // 2. Supplier qarzini to'g'rilash
-      const oldCost = oldFe.qty * oldFe.buyPrice;
-      const newCost = newFe.qty * newFe.buyPrice;
-
-      if (oldFe.supplierId === newFe.supplierId) {
-        const costDiff = newCost - oldCost;
-        if (costDiff !== 0 && newFe.supplierId) {
-          db.suppliers = db.suppliers.map((s) =>
-            s.id === newFe.supplierId ? { ...s, debt: Math.max(0, (s.debt || 0) + costDiff) } : s,
+      if (oldFe.status === "applied") {
+        if (oldFe.productId === newFe.productId) {
+          const qtyDiff = newFe.qty - oldFe.qty;
+          db.products = db.products.map((p) =>
+            p.id === newFe.productId
+              ? { ...p, quantity: Math.max(0, (p.quantity || 0) + qtyDiff) }
+              : p,
           );
+        } else {
+          db.products = db.products.map((p) => {
+            if (p.id === oldFe.productId)
+              return { ...p, quantity: Math.max(0, (p.quantity || 0) - oldFe.qty) };
+            if (p.id === newFe.productId) return { ...p, quantity: (p.quantity || 0) + newFe.qty };
+            return p;
+          });
         }
-      } else {
-        db.suppliers = db.suppliers.map((s) => {
-          if (s.id === oldFe.supplierId)
-            return { ...s, debt: Math.max(0, (s.debt || 0) - oldCost) };
-          if (s.id === newFe.supplierId) return { ...s, debt: (s.debt || 0) + newCost };
-          return s;
-        });
       }
 
       db.incoming[oldIdx] = newFe;
@@ -252,27 +244,17 @@ router.delete("/:id", authenticateToken, async (req, res) => {
 
       const feInc = toFeIncoming(inc);
 
-      // 1. Tovar miqdorini atomik kamaytirish
-      await supabaseClient.rpc("decrement_product_qty", {
-        p_id: feInc.productId,
-        p_qty: feInc.qty,
-      });
-
-      // 2. Supplier qarzini atomik kamaytirish
-      if (feInc.supplierId) {
-        await supabaseClient.rpc("adjust_supplier_debt", {
-          s_id: feInc.supplierId,
-          delta: -(feInc.qty * feInc.buyPrice),
+      // Tovar miqdorini kamaytirish (faqat bazaga qo'shilgan bo'lsa)
+      if (feInc.status !== "pending") {
+        await supabaseClient.rpc("decrement_product_qty", {
+          p_id: feInc.productId,
+          p_qty: feInc.qty,
         });
       }
 
       await supabaseClient.from("incoming").delete().eq("id", id);
 
-      await Promise.all([
-        clearCached("cache:incoming"),
-        clearCached("cache:products"),
-        clearCached("cache:suppliers"),
-      ]);
+      await Promise.all([clearCached("cache:incoming"), clearCached("cache:products")]);
 
       res.json({ success: true });
     } else {
@@ -280,17 +262,9 @@ router.delete("/:id", authenticateToken, async (req, res) => {
       const inc = db.incoming.find((x) => x.id === id);
       if (!inc) return res.status(404).json({ error: "Kirim topilmadi" });
 
-      // 1. Tovar miqdorini kamaytirish
-      db.products = db.products.map((p) =>
-        p.id === inc.productId ? { ...p, quantity: Math.max(0, (p.quantity || 0) - inc.qty) } : p,
-      );
-
-      // 2. Supplier qarzini kamaytirish
-      if (inc.supplierId) {
-        db.suppliers = db.suppliers.map((s) =>
-          s.id === inc.supplierId
-            ? { ...s, debt: Math.max(0, (s.debt || 0) - inc.qty * inc.buyPrice) }
-            : s,
+      if (inc.status !== "pending") {
+        db.products = db.products.map((p) =>
+          p.id === inc.productId ? { ...p, quantity: Math.max(0, (p.quantity || 0) - inc.qty) } : p,
         );
       }
 

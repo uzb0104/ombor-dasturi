@@ -76,6 +76,7 @@ const initialJsonDb = {
   debt_payments: [],
   audit_logs: [],
   price_history: [],
+  incoming_categories: [],
 };
 
 export function readLocalDb() {

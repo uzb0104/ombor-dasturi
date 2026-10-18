@@ -67,10 +67,11 @@ $$ LANGUAGE plpgsql;
 CREATE OR REPLACE FUNCTION create_incoming_atomic(p_incoming JSONB)
 RETURNS VOID AS $$
 BEGIN
-  INSERT INTO incoming (id, date, supplier_id, product_id, qty, buy_price, invoice)
+  INSERT INTO incoming (id, date, supplier_id, product_id, qty, buy_price, invoice, region)
   VALUES (p_incoming->>'id', p_incoming->>'date', NULLIF(p_incoming->>'supplier_id', ''),
           p_incoming->>'product_id', (p_incoming->>'qty')::NUMERIC,
-          (p_incoming->>'buy_price')::NUMERIC, COALESCE(p_incoming->>'invoice', ''));
+          (p_incoming->>'buy_price')::NUMERIC, COALESCE(p_incoming->>'invoice', ''),
+          NULLIF(p_incoming->>'region', ''));
   UPDATE products SET quantity = quantity + (p_incoming->>'qty')::NUMERIC
   WHERE id = p_incoming->>'product_id';
   IF p_incoming->>'supplier_id' IS NOT NULL AND p_incoming->>'supplier_id' <> '' THEN

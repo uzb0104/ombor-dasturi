@@ -15,13 +15,7 @@ import type {
   UsedBatteryEntry,
 } from "./types";
 import type { Warehouse, Role } from "./constants";
-import {
-  DEFAULT_CATEGORIES,
-  DEFAULT_VEHICLE_BRANDS,
-  DEFAULT_BRANCHES,
-  ALL_PERMISSIONS,
-  fetchCbuRate,
-} from "./constants";
+import { DEFAULT_CATEGORIES, DEFAULT_BRANCHES, ALL_PERMISSIONS, fetchCbuRate } from "./constants";
 import {
   apiLogin,
   apiLogout,
@@ -117,6 +111,7 @@ type State = {
   addIncoming: (i: IncomingStock) => void;
   updateIncoming: (id: string, updates: Partial<IncomingStock>) => void;
   deleteIncoming: (id: string) => void;
+  applyIncomingToProducts: (ids: string[]) => void;
 
   addCategory: (c: string) => void;
   updateCategory: (oldName: string, newName: string) => void;
@@ -274,7 +269,7 @@ export const useStore = create<State>()(
               categories: (categories || [])
                 .slice()
                 .sort((a, b) => a.localeCompare(b, "uz", { sensitivity: "base" })),
-              incomingCategories: (incomingCategories || [])
+              incomingCategories: (Array.isArray(incomingCategories) ? incomingCategories : [])
                 .slice()
                 .sort((a, b) => a.localeCompare(b, "uz", { sensitivity: "base" })),
               vehicleBrands: (vehicleBrands || [])
@@ -751,23 +746,29 @@ export const useStore = create<State>()(
 
         // ─── KIRIMLAR ───
         addIncoming: (i) => {
-          const products = get().products.map((p) =>
-            p.id === i.productId ? { ...p, quantity: p.quantity + i.qty } : p,
-          );
-          const suppliers = get().suppliers.map((s) => {
-            if (i.supplierId && s.id === i.supplierId) {
-              return { ...s, debt: (s.debt || 0) + i.qty * i.buyPrice };
-            }
-            return s;
-          });
-          set({ incoming: [i, ...get().incoming], products, suppliers });
-          syncApi(incomingApi.create(i), { onFail: resync });
-          const prod = products.find((p) => p.id === i.productId);
+          const itemStatus = i.status || "pending";
+          const fullItem: IncomingStock = { ...i, status: itemStatus };
+
+          let products = get().products;
+          // Faqat 'applied' bo'lsa darhol tovar bazasiga qo'shiladi, 'pending' bo'lsa qo'shilmay turadi
+          if (itemStatus === "applied") {
+            products = products.map((p) =>
+              p.id === fullItem.productId ? { ...p, quantity: p.quantity + fullItem.qty } : p,
+            );
+          }
+
+          set({ incoming: [fullItem, ...get().incoming], products });
+          syncApi(incomingApi.create(fullItem), { onFail: resync });
+
+          const prod = get().products.find((p) => p.id === fullItem.productId);
           get().logAudit({
             action: "create",
             entity: "incoming",
-            entityId: i.id,
-            summary: `Kirim: ${prod?.name || ""} +${i.qty} dona`,
+            entityId: fullItem.id,
+            summary:
+              itemStatus === "pending"
+                ? `Kirim qoralama (kutilmoqda): ${prod?.name || ""} +${fullItem.qty} dona`
+                : `Kirim: ${prod?.name || ""} +${fullItem.qty} dona`,
           });
         },
         updateIncoming: (id, updates) => {
@@ -776,49 +777,41 @@ export const useStore = create<State>()(
 
           const newInc = { ...oldInc, ...updates };
 
-          // 1. Tovar zaxiralarini to'g'rilash (optimistik)
           let products = get().products;
-          if (oldInc.productId === newInc.productId) {
-            const qtyDiff = newInc.qty - oldInc.qty;
-            products = products.map((p) =>
-              p.id === newInc.productId ? { ...p, quantity: Math.max(0, p.quantity + qtyDiff) } : p,
-            );
-          } else {
-            products = products.map((p) => {
-              if (p.id === oldInc.productId)
-                return { ...p, quantity: Math.max(0, p.quantity - oldInc.qty) };
-              if (p.id === newInc.productId) return { ...p, quantity: p.quantity + newInc.qty };
-              return p;
-            });
-          }
+          const oldIsApplied = oldInc.status !== "pending";
+          const newIsApplied = newInc.status !== "pending";
 
-          // 2. Yetkazib beruvchi qarzini to'g'rilash (optimistik)
-          let suppliers = get().suppliers;
-          const oldCost = oldInc.qty * oldInc.buyPrice;
-          const newCost = newInc.qty * newInc.buyPrice;
-
-          if (oldInc.supplierId === newInc.supplierId) {
-            const costDiff = newCost - oldCost;
-            if (costDiff !== 0 && newInc.supplierId) {
-              suppliers = suppliers.map((s) =>
-                s.id === newInc.supplierId
-                  ? { ...s, debt: Math.max(0, (s.debt || 0) + costDiff) }
-                  : s,
+          if (oldIsApplied && newIsApplied) {
+            if (oldInc.productId === newInc.productId) {
+              const qtyDiff = newInc.qty - oldInc.qty;
+              products = products.map((p) =>
+                p.id === newInc.productId
+                  ? { ...p, quantity: Math.max(0, p.quantity + qtyDiff) }
+                  : p,
               );
+            } else {
+              products = products.map((p) => {
+                if (p.id === oldInc.productId)
+                  return { ...p, quantity: Math.max(0, p.quantity - oldInc.qty) };
+                if (p.id === newInc.productId) return { ...p, quantity: p.quantity + newInc.qty };
+                return p;
+              });
             }
-          } else {
-            suppliers = suppliers.map((s) => {
-              if (s.id === oldInc.supplierId)
-                return { ...s, debt: Math.max(0, (s.debt || 0) - oldCost) };
-              if (s.id === newInc.supplierId) return { ...s, debt: (s.debt || 0) + newCost };
-              return s;
-            });
+          } else if (!oldIsApplied && newIsApplied) {
+            products = products.map((p) =>
+              p.id === newInc.productId ? { ...p, quantity: p.quantity + newInc.qty } : p,
+            );
+          } else if (oldIsApplied && !newIsApplied) {
+            products = products.map((p) =>
+              p.id === oldInc.productId
+                ? { ...p, quantity: Math.max(0, p.quantity - oldInc.qty) }
+                : p,
+            );
           }
 
           set({
             incoming: get().incoming.map((x) => (x.id === id ? newInc : x)),
             products,
-            suppliers,
           });
 
           syncApi(incomingApi.update(id, updates), { onFail: resync });
@@ -832,22 +825,90 @@ export const useStore = create<State>()(
         deleteIncoming: (id) => {
           const inc = get().incoming.find((x) => x.id === id);
           if (!inc) return;
-          const products = get().products.map((p) =>
-            p.id === inc.productId ? { ...p, quantity: Math.max(0, p.quantity - inc.qty) } : p,
-          );
-          const suppliers = get().suppliers.map((s) => {
-            if (inc.supplierId && s.id === inc.supplierId) {
-              return { ...s, debt: Math.max(0, (s.debt || 0) - inc.qty * inc.buyPrice) };
-            }
-            return s;
-          });
-          set({ incoming: get().incoming.filter((x) => x.id !== id), products, suppliers });
+
+          let products = get().products;
+          if (inc.status !== "pending") {
+            products = products.map((p) =>
+              p.id === inc.productId ? { ...p, quantity: Math.max(0, p.quantity - inc.qty) } : p,
+            );
+          }
+
+          set({ incoming: get().incoming.filter((x) => x.id !== id), products });
           syncApi(incomingApi.delete(id), { onFail: resync });
           get().logAudit({
             action: "delete",
             entity: "incoming",
             entityId: id,
             summary: `Kirim bekor qilindi`,
+          });
+        },
+        applyIncomingToProducts: (ids) => {
+          if (!ids || ids.length === 0) return;
+          const idSet = new Set(ids);
+          const currentIncoming = get().incoming;
+          const currentProducts = get().products;
+
+          const toApply = currentIncoming.filter(
+            (inc) => idSet.has(inc.id) && inc.status === "pending",
+          );
+          if (toApply.length === 0) return;
+
+          const qtyDeltas: Record<string, number> = {};
+          const priceUpdates: Record<
+            string,
+            { buyPrice: number; buyPriceUsd?: number; currency?: "UZS" | "USD" }
+          > = {};
+
+          toApply.forEach((inc) => {
+            qtyDeltas[inc.productId] = (qtyDeltas[inc.productId] || 0) + inc.qty;
+            if (inc.buyPrice > 0) {
+              priceUpdates[inc.productId] = {
+                buyPrice: inc.buyPrice,
+                buyPriceUsd: inc.buyPriceUsd,
+                currency: inc.currency,
+              };
+            }
+          });
+
+          const updatedProducts = currentProducts.map((p) => {
+            const addQty = qtyDeltas[p.id];
+            const priceInfo = priceUpdates[p.id];
+            if (addQty !== undefined || priceInfo !== undefined) {
+              return {
+                ...p,
+                quantity: (p.quantity || 0) + (addQty || 0),
+                ...(priceInfo
+                  ? {
+                      buyPrice: priceInfo.buyPrice,
+                      ...(priceInfo.buyPriceUsd !== undefined
+                        ? { buyPriceUsd: priceInfo.buyPriceUsd }
+                        : {}),
+                      ...(priceInfo.currency ? { currency: priceInfo.currency } : {}),
+                    }
+                  : {}),
+              };
+            }
+            return p;
+          });
+
+          const updatedIncoming = currentIncoming.map((inc) => {
+            if (idSet.has(inc.id) && inc.status === "pending") {
+              return { ...inc, status: "applied" as const };
+            }
+            return inc;
+          });
+
+          set({ products: updatedProducts, incoming: updatedIncoming });
+          syncApi(incomingApi.applyBatch(ids), { onFail: resync });
+
+          toApply.forEach((inc) => {
+            const p = updatedProducts.find((x) => x.id === inc.productId);
+            get().logAudit({
+              action: "update",
+              entity: "incoming",
+              entityId: inc.id,
+              summary: `Tovar bazasiga qo'shildi: ${p?.name || ""} (+${inc.qty} dona)`,
+            });
           });
         },
 

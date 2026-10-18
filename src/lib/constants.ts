@@ -1,32 +1,5 @@
 // Uzbek labels and constants
-export const DEFAULT_VEHICLE_BRANDS = [
-  "Shineray T50",
-  "T3",
-  "Shineray T30 sepli",
-  "Shineray T30 Reminli",
-  "Donfeng 2007",
-  "CH69",
-  "JAC M4",
-  "JAC M3",
-  "Joilon",
-  "Ch-Porter",
-  "Donfeng D50",
-  "X-30",
-  "CH-98",
-  "Sunaray",
-  "Foton TM1",
-  "Foton Miler",
-  "niva",
-  "Jac X-200",
-  "Hayfi 2014",
-  "M7",
-  "CHangan GDI",
-  "CH-plus",
-  "Dongfeng hamer bashara",
-  "Shineray T30",
-  "JAC",
-  "FAW",
-] as const;
+export const DEFAULT_VEHICLE_BRANDS = [] as const;
 export const VEHICLE_BRANDS = DEFAULT_VEHICLE_BRANDS; // backward compat
 export type VehicleBrand = string;
 
@@ -59,7 +32,7 @@ export const NAV = [
     to: "/incoming",
     labelKey: "nav.incoming",
     icon: "PackagePlus",
-    children: [{ to: "/incoming-categories", labelKey: "nav.incomingCategories", icon: "Tags" }],
+    children: [{ to: "/incoming-categories", labelKey: "nav.incomingCategories", icon: "MapPin" }],
   },
   {
     to: "/sales",
@@ -112,6 +85,28 @@ export const formatUsd = (n: number) =>
   }).format(n);
 
 export const formatNumber = (n: number) => new Intl.NumberFormat("uz-UZ").format(n);
+
+export const formatDate = (val: string | Date | number | undefined | null): string => {
+  if (!val) return "—";
+  const d = new Date(val);
+  if (isNaN(d.getTime())) return String(val);
+  const dd = String(d.getDate()).padStart(2, "0");
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const yyyy = d.getFullYear();
+  return `${dd}/${mm}/${yyyy}`;
+};
+
+export const formatDateTime = (val: string | Date | number | undefined | null): string => {
+  if (!val) return "—";
+  const d = new Date(val);
+  if (isNaN(d.getTime())) return String(val);
+  const dd = String(d.getDate()).padStart(2, "0");
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const yyyy = d.getFullYear();
+  const hh = String(d.getHours()).padStart(2, "0");
+  const min = String(d.getMinutes()).padStart(2, "0");
+  return `${dd}/${mm}/${yyyy} ${hh}:${min}`;
+};
 
 export const formatPriceBoth = (
   som: number,

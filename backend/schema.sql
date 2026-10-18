@@ -13,6 +13,11 @@ CREATE TABLE IF NOT EXISTS branches (
     name VARCHAR(100) PRIMARY KEY
 );
 
+CREATE TABLE IF NOT EXISTS incoming_categories (
+    name VARCHAR(100) PRIMARY KEY,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
 -- 2. FOYDALANUVCHILAR (RBAC) JADVALI
 CREATE TABLE IF NOT EXISTS app_users (
     id VARCHAR(100) PRIMARY KEY,
@@ -42,7 +47,7 @@ CREATE TABLE IF NOT EXISTS customers (
     name VARCHAR(255) NOT NULL,
     phone VARCHAR(50),
     address TEXT,
-    vehicle VARCHAR(100) REFERENCES vehicle_brands(name) ON UPDATE CASCADE,
+    vehicle VARCHAR(100) REFERENCES vehicle_brands(name) ON UPDATE CASCADE ON DELETE SET NULL,
     total_purchases NUMERIC(20, 2) DEFAULT 0.00,
     debt NUMERIC(20, 2) DEFAULT 0.00,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
@@ -103,6 +108,7 @@ CREATE TABLE IF NOT EXISTS incoming (
     qty NUMERIC(15, 2) NOT NULL DEFAULT 0.00,
     buy_price NUMERIC(20, 2) NOT NULL DEFAULT 0.00,
     invoice VARCHAR(100),
+    region VARCHAR(100),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -205,20 +211,31 @@ ALTER TABLE employees ADD COLUMN IF NOT EXISTS payment_history JSONB NOT NULL DE
 ALTER TABLE products ADD COLUMN IF NOT EXISTS buy_price_usd NUMERIC(20, 2) DEFAULT 0.00;
 ALTER TABLE products ADD COLUMN IF NOT EXISTS sell_price_usd NUMERIC(20, 2) DEFAULT 0.00;
 ALTER TABLE products ADD COLUMN IF NOT EXISTS currency VARCHAR(10) DEFAULT 'UZS';
+ALTER TABLE incoming ADD COLUMN IF NOT EXISTS region VARCHAR(100);
 
 ALTER TABLE sales DROP CONSTRAINT IF EXISTS sales_payment_type_check;
 ALTER TABLE sales ADD CONSTRAINT sales_payment_type_check
     CHECK (payment_type IN ('Naqd', 'Karta', 'Qarz', 'O''tkazma'));
 
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.table_constraints 
+    WHERE constraint_name = 'customers_vehicle_fkey' AND table_name = 'customers'
+  ) THEN
+    ALTER TABLE customers DROP CONSTRAINT customers_vehicle_fkey;
+  END IF;
+END $$;
+
+ALTER TABLE customers
+ADD CONSTRAINT customers_vehicle_fkey
+FOREIGN KEY (vehicle) REFERENCES vehicle_brands(name)
+ON UPDATE CASCADE ON DELETE SET NULL;
+
 -- BOSHLANG'ICH MATERIALLARNI SEED QILISH (AGAR BO'SH BO'LSA)
 INSERT INTO categories (name) VALUES 
-('Dvigatel'), ('Tormoz tizimi'), ('Elektr'), ('Shinalar (Balon)'), 
-('Akkumulyator'), ('Filtrlar'), ('Moy'), ('Kuzov qismlari'), ('Podveska')
-ON CONFLICT DO NOTHING;
-
-INSERT INTO vehicle_brands (name) VALUES 
-('Shineray T30'), ('JAC'), ('FAW'), ('ISUZU'), ('Chevrolet'),
-('Hyundai'), ('Kia'), ('Toyota'), ('Nexia'), ('Damas'), ('Labo')
+('Shinalar (Balon)'), 
+('Akkumulyator')
 ON CONFLICT DO NOTHING;
 
 INSERT INTO branches (name) VALUES 
