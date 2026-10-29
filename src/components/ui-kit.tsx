@@ -48,23 +48,40 @@ export function StatCard({
       onClick={onClick}
       role={onClick ? "button" : undefined}
     >
-      <CardContent className="p-5">
-        <div className="flex items-start justify-between">
-          <div className="space-y-1 min-w-0">
-            <div className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-              {label}
+      <CardContent className="p-3 sm:p-3.5">
+        {/* Yuqori qism: Nom va ixcham ikonka */}
+        <div className="flex items-center justify-between gap-1.5">
+          <div className="text-[10px] sm:text-[11px] font-semibold text-muted-foreground uppercase tracking-wider truncate">
+            {label}
+          </div>
+          <div
+            className={`grid h-6 w-6 sm:h-7 sm:w-7 place-items-center rounded-md sm:rounded-lg shrink-0 ${accentBg}`}
+          >
+            <Icon className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+          </div>
+        </div>
+
+        {/* Qiymat: butun kartochka kengligida, to'g'ri va sig'adigan hajmda */}
+        <div className="mt-1.5 space-y-0.5">
+          <div
+            className="text-sm sm:text-base font-bold tracking-tight tabular-nums text-foreground truncate"
+            title={value}
+          >
+            {value}
+          </div>
+          {displayHint && (
+            <div
+              className="text-[10px] sm:text-[11px] text-muted-foreground truncate"
+              title={displayHint}
+            >
+              {displayHint}
             </div>
-            <div className="text-2xl font-bold tracking-tight">{value}</div>
-            {displayHint && <div className="text-xs text-muted-foreground">{displayHint}</div>}
-            {onClick && (
-              <div className="text-[10px] text-primary mt-1 font-medium">
-                {t("common.detailsArrow")}
-              </div>
-            )}
-          </div>
-          <div className={`grid h-11 w-11 place-items-center rounded-xl shrink-0 ${accentBg}`}>
-            <Icon className="h-5 w-5" />
-          </div>
+          )}
+          {onClick && (
+            <div className="text-[10px] text-primary pt-0.5 font-medium flex items-center gap-0.5 hover:underline">
+              {t("common.detailsArrow")}
+            </div>
+          )}
         </div>
       </CardContent>
     </Card>

@@ -7,7 +7,7 @@ type Dict = Record<string, string>;
 
 const uz: Dict = {
   "nav.menu": "Menyu",
-  "nav.dashboard": "Boshqaruv paneli",
+  "nav.dashboard": "Dashboard",
   "nav.inventory": "Omborxona",
   "nav.products": "Tovarlar",
   "nav.categories": "Kategoriyalar",
@@ -110,8 +110,8 @@ const uz: Dict = {
   "login.tagline": "Avtomobil biznesingiz uchun yagona platforma",
   "login.taglineDesc": "Omborxona, sotuvlar, mijozlar, qarzlar va hisobotlar — barchasi bir joyda.",
 
-  "dashboard.title": "Boshqaruv paneli",
-  "dashboard.subtitleAll": "Umumiy ko'rsatkichlar",
+  "dashboard.title": "Dashboard",
+  "dashboard.subtitleAll": "Omborxona va savdo umumiy ko'rsatkichlari",
   "dashboard.subtitleFilter": "Filter: {brand}",
   "dashboard.salesToday": "Bugungi sotuv",
   "dashboard.profitToday": "Bugungi foyda",
@@ -127,7 +127,7 @@ const uz: Dict = {
   "dashboard.expenses": "Xarajatlar",
   "dashboard.salary": "Ish haqi (oylik)",
   "dashboard.netProfit": "Sof foyda",
-  "dashboard.debt": "Qarzdorlik",
+  "dashboard.debt": "Mijozlar qarzdorligi",
   "dashboard.totalProducts": "Jami tovarlar",
   "dashboard.lowCount": "Kam qolgan",
   "dashboard.backBrands": "Brendlarga qaytish",
@@ -142,6 +142,7 @@ const uz: Dict = {
   "inventory.bulk": "tovar tanlandi",
 
   "products.title": "Tovarlar",
+  "products.subtitle": "Barcha tovarlar ro'yxati va ombor zaxirasi",
   "products.count": "ta tovar",
   "products.new": "Yangi tovar",
   "products.addMethod": "Tovar qo'shish usulini tanlang",
@@ -177,7 +178,7 @@ const uz: Dict = {
   "products.batteryRequired": "Akkumulyator uchun amperaj majburiy",
   "products.tireSizeRequired": "Balon uchun o'lcham majburiy",
   "products.codeGenerated": "Kod yaratildi",
-  "products.search": "Nom yoki kod...",
+  "products.search": "Tovar nomi...",
   "products.brand": "Brend",
   "products.category": "Kategoriya",
   "products.allBrands": "Barcha brendlar",
@@ -281,7 +282,7 @@ const uz: Dict = {
   "suppliers.notFound": "Yetkazib beruvchilar topilmadi",
 
   "debts.title": "Qarzdorlik",
-  "debts.subtitle": "Mijozlar va ta'minotchilar bilan qarzdorlik",
+  "debts.subtitle": "Mijozlar qarzdorligi",
   "debts.customers": "Mijozlar qarzi",
   "debts.suppliers": "Ta'minotchilar qarzi",
   "debts.pay": "To'lov qilish",
@@ -415,7 +416,7 @@ const uz: Dict = {
 const ruCore: Dict = {
   ...ruBase,
   "nav.menu": "Меню",
-  "nav.dashboard": "Панель управления",
+  "nav.dashboard": "Dashboard",
   "nav.inventory": "Склад",
   "nav.products": "Товары",
   "nav.categories": "Категории",
@@ -494,8 +495,8 @@ const ruCore: Dict = {
   "login.fail": "Неверный email или пароль",
   "login.serverError": "Ошибка связи с сервером",
 
-  "dashboard.title": "Панель управления",
-  "dashboard.subtitleAll": "Общие показатели",
+  "dashboard.title": "Dashboard",
+  "dashboard.subtitleAll": "Общие показатели склада и продаж",
   "dashboard.subtitleFilter": "Фильтр: {brand}",
 
   "inventory.title": "Склад",
@@ -503,6 +504,7 @@ const ruCore: Dict = {
   "inventory.brandCount": "{n} товаров",
 
   "products.title": "Товары",
+  "products.subtitle": "Все товары и складские запасы",
   "products.count": "товаров",
   "products.new": "Новый товар",
   "products.priceHistory": "История цен",
@@ -527,7 +529,7 @@ const ruCore: Dict = {
   "suppliers.subtitle": "{n} партнёров",
 
   "debts.title": "Задолженность",
-  "debts.subtitle": "Долги клиентов и поставщиков",
+  "debts.subtitle": "Задолженность клиентов",
 
   "employees.title": "Сотрудники",
   "employees.subtitle": "{n} сотрудников",

@@ -63,7 +63,10 @@ type State = {
   vehicleFilter: string;
   setVehicleFilter: (v: string) => void;
   usdRate: number;
+  usdRateMode: "manual" | "cbu";
+  cbuRate: number | null;
   setUsdRate: (rate: number) => void;
+  setUsdRateMode: (mode: "manual" | "cbu") => void;
   fetchLiveUsdRate: () => Promise<number | null>;
 
   products: Product[];
@@ -370,11 +373,30 @@ export const useStore = create<State>()(
         vehicleFilter: "all",
         setVehicleFilter: (v) => set({ vehicleFilter: v }),
         usdRate: 12835,
-        setUsdRate: (rate: number) => set({ usdRate: rate > 0 ? rate : 12835 }),
+        usdRateMode: "manual" as "manual" | "cbu",
+        cbuRate: null as number | null,
+        setUsdRate: (rate: number) =>
+          set({ usdRate: rate > 0 ? rate : 12835, usdRateMode: "manual" }),
+        setUsdRateMode: (mode: "manual" | "cbu") => {
+          if (mode === "cbu") {
+            const cbu = get().cbuRate;
+            if (cbu && cbu > 0) {
+              set({ usdRateMode: "cbu", usdRate: cbu });
+            } else {
+              set({ usdRateMode: "cbu" });
+              void get().fetchLiveUsdRate();
+            }
+          } else {
+            set({ usdRateMode: "manual" });
+          }
+        },
         fetchLiveUsdRate: async () => {
           const liveRate = await fetchCbuRate();
           if (liveRate && liveRate > 0) {
-            set({ usdRate: liveRate });
+            set((state) => ({
+              cbuRate: liveRate,
+              usdRate: state.usdRateMode === "cbu" ? liveRate : state.usdRate,
+            }));
             return liveRate;
           }
           return null;
@@ -1132,6 +1154,9 @@ export const useStore = create<State>()(
         warehouse: s.warehouse,
         vehicleFilter: s.vehicleFilter,
         sidebarOpen: s.sidebarOpen,
+        usdRate: s.usdRate,
+        usdRateMode: s.usdRateMode,
+        cbuRate: s.cbuRate,
       }),
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       migrate: (persisted: any) => {

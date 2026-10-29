@@ -156,7 +156,7 @@ export const extraUz: Record<string, string> = {
   "dashboard.detail.expenses": "Xarajatlar — barcha yozuvlar",
   "dashboard.detail.salary": "Ish haqi — faol xodimlar",
   "dashboard.detail.net": "Sof foyda — foyda va xarajatlar",
-  "dashboard.detail.debt": "Qarzdorlik — mijoz va yetkazib beruvchilar",
+  "dashboard.detail.debt": "Mijozlar qarzdorligi (Nasiyalar ro'yxati)",
   "dashboard.profitSection": "Foyda (sotuvlar)",
   "dashboard.customerDebt": "Mijozlar qarzi",
   "dashboard.supplierDebt": "Yetkazib beruvchilar qarzi",
@@ -222,6 +222,7 @@ export const extraUz: Record<string, string> = {
   "common.confirmAction": "Tasdiqlash",
 
   "settings.tab.profile": "Profil",
+  "settings.tab.currency": "Dollar kursi",
   "settings.tab.users": "Foydalanuvchilar",
   "settings.tab.brands": "Avtomobil brendlari",
   "settings.tab.branches": "Filiallar",
@@ -546,7 +547,7 @@ export const extraRu: Record<string, string> = {
   "dashboard.detail.expenses": "Расходы — все записи",
   "dashboard.detail.salary": "Зарплата — активные сотрудники",
   "dashboard.detail.net": "Чистая прибыль — прибыль и расходы",
-  "dashboard.detail.debt": "Задолженность — клиенты и поставщики",
+  "dashboard.detail.debt": "Задолженность клиентов (Список долгов)",
   "dashboard.profitSection": "Прибыль (продажи)",
   "dashboard.customerDebt": "Долг клиентов",
   "dashboard.supplierDebt": "Долг поставщикам",
@@ -606,6 +607,7 @@ export const extraRu: Record<string, string> = {
   "common.confirmAction": "Подтвердить",
 
   "settings.tab.profile": "Профиль",
+  "settings.tab.currency": "Курс доллара",
   "settings.tab.users": "Пользователи",
   "settings.tab.brands": "Марки авто",
   "settings.tab.branches": "Филиалы",

@@ -103,10 +103,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [searchOpen, setSearchOpen] = useState(false);
   const [notifModalOpen, setNotifModalOpen] = useState(false);
   const [now, setNow] = useState(new Date());
-  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({
-    "/inventory": true,
-    "/sales": true,
-  });
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
 
   const productList = Array.isArray(products) ? products : [];
   const lowStock = productList.filter((p) => p.quantity > 0 && p.quantity <= p.minQty);
@@ -171,7 +168,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           const active = isParentActive || isChildActive;
 
           if (hasChildren) {
-            const isOpen = openGroups[item.to] !== false || active;
+            const isOpen = openGroups[item.to] !== undefined ? openGroups[item.to] : active;
             return (
               <div key={item.to} className="my-0.5 space-y-1">
                 <div
@@ -183,7 +180,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 >
                   <Link
                     to={item.to}
-                    onClick={() => setMobileOpen(false)}
+                    onClick={() => {
+                      setMobileOpen(false);
+                      if (!isOpen) {
+                        setOpenGroups((prev) => ({ ...prev, [item.to]: true }));
+                      }
+                    }}
                     className="flex items-center gap-3 flex-1 min-w-0"
                   >
                     <Icon className="h-4 w-4 shrink-0" />
@@ -193,10 +195,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                     type="button"
                     onClick={(e) => {
                       e.stopPropagation();
+                      e.preventDefault();
                       setOpenGroups((prev) => ({ ...prev, [item.to]: !isOpen }));
                     }}
-                    className="p-1 rounded hover:bg-sidebar-accent/50 text-sidebar-foreground/70"
+                    className="p-1.5 rounded hover:bg-sidebar-accent/50 text-sidebar-foreground/70 transition cursor-pointer"
                     title="Bo'limlarni ko'rsatish/yashirish"
+                    aria-expanded={isOpen}
                   >
                     <ChevronDown
                       className={`h-4 w-4 transition-transform duration-200 ${

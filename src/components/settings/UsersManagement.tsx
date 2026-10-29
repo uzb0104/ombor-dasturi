@@ -89,16 +89,21 @@ export function UsersManagement({ appUsers, add, update, remove }: UsersManageme
   };
 
   const submit = () => {
-    if (!form.name.trim() || !form.email.trim()) {
-      toast.error(t("settings.emailNameRequired"));
+    if (!form.name.trim()) {
+      toast.error(t("crm.required.name") || "F.I.SH majburiy");
+      return;
+    }
+    if (!form.email.trim()) {
+      toast.error("Login kiritilishi shart");
       return;
     }
     if (!editing && !(form.password || "").trim()) {
       toast.error(t("toast.passwordRequired"));
       return;
     }
-    if (!editing && appUsers.some((u) => u.email.toLowerCase() === form.email.toLowerCase())) {
-      toast.error(t("toast.emailExists"));
+    const cleanLogin = form.email.trim().toLowerCase();
+    if (appUsers.some((u) => u.id !== editing && u.email.toLowerCase() === cleanLogin)) {
+      toast.error("Bu login allaqachon mavjud");
       return;
     }
     const data: UserForm = {
@@ -164,12 +169,13 @@ export function UsersManagement({ appUsers, add, update, remove }: UsersManageme
                   />
                 </div>
                 <div>
-                  <Label>{t("common.email")} *</Label>
+                  <Label>Login *</Label>
                   <Input
-                    type="email"
+                    type="text"
                     value={form.email}
                     onChange={(e) => setForm({ ...form, email: e.target.value })}
-                    disabled={!!editing}
+                    placeholder="Masalan: sotuvchi1 yoki ali"
+                    autoComplete="username"
                   />
                 </div>
                 <div>
@@ -279,7 +285,7 @@ export function UsersManagement({ appUsers, add, update, remove }: UsersManageme
           <TableHeader>
             <TableRow>
               <TableHead>{t("common.user")}</TableHead>
-              <TableHead>{t("common.email")}</TableHead>
+              <TableHead>Login</TableHead>
               <TableHead>{t("common.role")}</TableHead>
               <TableHead>{t("settings.permissions")}</TableHead>
               <TableHead>{t("common.status")}</TableHead>

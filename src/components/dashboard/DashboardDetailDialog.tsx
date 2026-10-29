@@ -134,15 +134,16 @@ export function DashboardDetailDialog({ kind, onClose, ctx }: DashboardDetailDia
           )}
           {kind === "debt" && (
             <>
-              <div className="font-semibold">{t("dashboard.supplierDebt")}</div>
+              <div className="font-semibold text-rose-500">{t("dashboard.customerDebt")}</div>
               <List
-                rows={ctx.suppliers
-                  .filter((s) => s.debt > 0)
-                  .map((s) => ({
-                    key: s.id,
-                    title: s.name,
-                    sub: s.phone,
-                    amount: formatSom(s.debt),
+                rows={ctx.customers
+                  .filter((c) => c.debt > 0)
+                  .sort((a, b) => b.debt - a.debt)
+                  .map((c) => ({
+                    key: c.id,
+                    title: c.name,
+                    sub: `${c.phone || "Telefon yo'q"} · ${c.address || ""}`,
+                    amount: formatSom(c.debt),
                     tone: "destructive" as const,
                   }))}
               />

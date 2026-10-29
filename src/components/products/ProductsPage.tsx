@@ -219,6 +219,7 @@ export function ProductsPage() {
       {confirmNode}
 
       <PageHeader
+        showBack={false}
         title={t("products.title")}
         subtitle={t("products.subtitle")}
         actions={

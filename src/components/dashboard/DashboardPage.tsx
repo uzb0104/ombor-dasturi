@@ -9,7 +9,15 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { formatSom } from "@/lib/constants";
-import { Wallet, TrendingUp, Calendar, CalendarDays, PiggyBank, AlertTriangle } from "lucide-react";
+import {
+  Wallet,
+  TrendingUp,
+  Calendar,
+  CalendarDays,
+  PiggyBank,
+  AlertTriangle,
+  Package,
+} from "lucide-react";
 import { useT, useLang } from "@/lib/i18n";
 import { DashboardHeroBanner } from "./DashboardHeroBanner";
 import { DashboardDetailDialog, type DetailKind } from "./DashboardDetailDialog";
@@ -28,6 +36,8 @@ export function DashboardPage() {
     vehicleFilter,
     setVehicleFilter,
     vehicleBrands,
+    usdRate,
+    usdRateMode,
   } = useStore();
   const [detail, setDetail] = useState<DetailKind>(null);
 
@@ -45,7 +55,13 @@ export function DashboardPage() {
     };
   }, [products, sales, vehicleFilter]);
 
-  const warehouseValue = filtered.products.reduce((a, p) => a + p.buyPrice * p.quantity, 0);
+  const warehouseValue = filtered.products.reduce(
+    (a, p) => a + (p.buyPrice || 0) * (p.quantity || 0),
+    0,
+  );
+  const totalProductsCount = filtered.products.length;
+  const totalItemsQty = filtered.products.reduce((a, p) => a + (p.quantity || 0), 0);
+
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const weekAgo = new Date(today);
@@ -53,15 +69,24 @@ export function DashboardPage() {
   const monthAgo = new Date(today);
   monthAgo.setDate(monthAgo.getDate() - 30);
 
-  const sum = (arr: typeof sales) => arr.reduce((a, s) => a + s.total, 0);
-  const todaySales = sum(filtered.sales.filter((s) => new Date(s.date) >= today));
-  const weekSales = sum(filtered.sales.filter((s) => new Date(s.date) >= weekAgo));
-  const monthSales = sum(filtered.sales.filter((s) => new Date(s.date) >= monthAgo));
-  const totalProfit = filtered.sales.reduce((a, s) => a + s.profit, 0);
-  const totalExpenses = expenses.reduce((a, e) => a + e.amount, 0);
+  const sum = (arr: typeof filtered.sales) => arr.reduce((a, s) => a + (s.total || 0), 0);
+  const sumProfit = (arr: typeof filtered.sales) => arr.reduce((a, s) => a + (s.profit || 0), 0);
+
+  const todaySalesList = filtered.sales.filter((s) => new Date(s.date) >= today);
+  const weekSalesList = filtered.sales.filter((s) => new Date(s.date) >= weekAgo);
+  const monthSalesList = filtered.sales.filter((s) => new Date(s.date) >= monthAgo);
+
+  const todaySales = sum(todaySalesList);
+  const todayProfit = sumProfit(todaySalesList);
+  const weekSales = sum(weekSalesList);
+  const monthSales = sum(monthSalesList);
+  const totalProfit = sumProfit(filtered.sales);
+  const totalExpenses = expenses.reduce((a, e) => a + (e.amount || 0), 0);
   const netProfit = totalProfit - totalExpenses;
-  const totalDebt =
-    customers.reduce((a, c) => a + c.debt, 0) + suppliers.reduce((a, s) => a + s.debt, 0);
+
+  // Faqat mijozlar qarzi (nasiyalar)
+  const customerDebt = customers.reduce((a, c) => a + (c.debt || 0), 0);
+  const debtCustomersCount = customers.filter((c) => (c.debt || 0) > 0).length;
 
   const lowStock = filtered.products
     .filter((p) => p.quantity > 0 && p.quantity <= p.minQty)
@@ -72,49 +97,61 @@ export function DashboardPage() {
     <div className="space-y-6">
       <PageHeader
         showBack={false}
-        title={t("dashboard.title")}
+        title="Dashboard"
         subtitle={
           vehicleFilter === "all"
             ? t("dashboard.subtitleAll")
             : t("dashboard.subtitleFilter", { brand: vehicleFilter })
         }
         actions={
-          <Select value={vehicleFilter} onValueChange={setVehicleFilter}>
-            <SelectTrigger className="w-48">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">{t("nav.all")}</SelectItem>
-              {vehicleBrands.map((brand) => (
-                <SelectItem key={brand} value={brand}>
-                  {brand}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          vehicleBrands.length > 0 ? (
+            <Select value={vehicleFilter} onValueChange={setVehicleFilter}>
+              <SelectTrigger className="w-48">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{t("nav.all")}</SelectItem>
+                {vehicleBrands.map((brand) => (
+                  <SelectItem key={brand} value={brand}>
+                    {brand}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ) : undefined
         }
       />
 
       <DashboardHeroBanner
-        netProfit={netProfit}
-        totalProfit={totalProfit}
-        totalExpenses={totalExpenses}
+        todaySales={todaySales}
+        todaySalesCount={todaySalesList.length}
+        todayProfit={todayProfit}
         monthSales={monthSales}
-        totalDebt={totalDebt}
+        netProfit={netProfit}
+        warehouseValue={warehouseValue}
+        totalProductsCount={totalProductsCount}
+        totalItemsQty={totalItemsQty}
+        customerDebt={customerDebt}
+        debtCustomersCount={debtCustomersCount}
+        usdRate={usdRate}
+        usdRateMode={usdRateMode}
         lang={lang}
       />
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4">
+      {/* Asosiy ko'rsatkichlar kartochkalari */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5 sm:gap-3">
         <StatCard
           label={t("dashboard.warehouseValue")}
           value={formatSom(warehouseValue)}
-          icon={Wallet}
+          hint={`${totalProductsCount} xil · ${totalItemsQty} dona`}
+          icon={Package}
           accent="primary"
           onClick={() => setDetail("warehouse")}
         />
         <StatCard
           label={t("dashboard.todaySales")}
           value={formatSom(todaySales)}
+          hint={`${todaySalesList.length} ta savdo`}
           icon={TrendingUp}
           accent="success"
           onClick={() => setDetail("today")}
@@ -122,6 +159,7 @@ export function DashboardPage() {
         <StatCard
           label={t("dashboard.weekSales")}
           value={formatSom(weekSales)}
+          hint={`${weekSalesList.length} ta savdo`}
           icon={Calendar}
           accent="info"
           onClick={() => setDetail("week")}
@@ -129,6 +167,7 @@ export function DashboardPage() {
         <StatCard
           label={t("dashboard.monthSales")}
           value={formatSom(monthSales)}
+          hint={`${monthSalesList.length} ta savdo`}
           icon={CalendarDays}
           accent="info"
           onClick={() => setDetail("month")}
@@ -136,26 +175,35 @@ export function DashboardPage() {
         <StatCard
           label={t("dashboard.grossProfit")}
           value={formatSom(totalProfit)}
+          hint={`Sof foyda: ${formatSom(netProfit)}`}
           icon={PiggyBank}
           accent="success"
           onClick={() => setDetail("profit")}
         />
         <StatCard
-          label={t("dashboard.netProfit")}
-          value={formatSom(netProfit)}
-          icon={netProfit >= 0 ? PiggyBank : AlertTriangle}
-          accent={netProfit >= 0 ? "success" : "destructive"}
-          onClick={() => setDetail("net")}
-        />
-        <StatCard
           label={t("dashboard.debt")}
-          value={formatSom(totalDebt)}
-          icon={AlertTriangle}
-          accent="destructive"
+          value={formatSom(customerDebt)}
+          hint={`${debtCustomersCount} ta mijoz qarzdor`}
+          icon={customerDebt > 0 ? AlertTriangle : Wallet}
+          accent={customerDebt > 0 ? "destructive" : "primary"}
           onClick={() => setDetail("debt")}
         />
       </div>
 
+      {/* Kam qolgan yoki tugagan tovarlar ogohlantirishi */}
+      {(lowStock.length > 0 || outStock.length > 0) && (
+        <div className="rounded-2xl border border-warning/40 bg-warning/10 p-4 flex items-start gap-3">
+          <AlertTriangle className="h-5 w-5 text-warning-foreground mt-0.5" />
+          <div className="text-sm">
+            <div className="font-medium">{t("dashboard.stockAlert")}</div>
+            <div className="text-muted-foreground mt-0.5">
+              {t("dashboard.stockAlertDesc", { low: lowStock.length, out: outStock.length })}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Batafsil ma'lumot modali */}
       <DashboardDetailDialog
         kind={detail}
         onClose={() => setDetail(null)}
@@ -169,18 +217,6 @@ export function DashboardPage() {
           usedBatteries,
         }}
       />
-
-      {(lowStock.length > 0 || outStock.length > 0) && (
-        <div className="rounded-2xl border border-warning/40 bg-warning/10 p-4 flex items-start gap-3">
-          <AlertTriangle className="h-5 w-5 text-warning-foreground mt-0.5" />
-          <div className="text-sm">
-            <div className="font-medium">{t("dashboard.stockAlert")}</div>
-            <div className="text-muted-foreground mt-0.5">
-              {t("dashboard.stockAlertDesc", { low: lowStock.length, out: outStock.length })}
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
